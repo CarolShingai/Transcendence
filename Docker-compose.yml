@@ -15,6 +15,11 @@ services:
       - transcendence-net
     restart: unless-stopped
     command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
@@ -27,10 +32,12 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/transcendence_db
       - SPRING_DATASOURCE_USERNAME=transcendence_user
       - SPRING_DATASOURCE_PASSWORD=transcendence_pass
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.MySQLDialect
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     networks:
       - transcendence-net
     restart: unless-stopped
