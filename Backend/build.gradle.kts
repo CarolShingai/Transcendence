@@ -25,6 +25,12 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("tools.jackson.module:jackson-module-kotlin")
+	
+	// Database drivers
+	runtimeOnly("com.mysql:mysql-connector-j")
+	implementation("org.xerial:sqlite-jdbc") // Para desenvolvimento local
+	implementation("org.hibernate.orm:hibernate-community-dialects")
+	
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
 	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")

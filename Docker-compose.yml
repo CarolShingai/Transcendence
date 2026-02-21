@@ -1,0 +1,56 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: transcendence-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: transcendence_db
+      MYSQL_USER: transcendence_user
+      MYSQL_PASSWORD: transcendence_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - transcendence-net
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/transcendence_db
+      - SPRING_DATASOURCE_USERNAME=transcendence_user
+      - SPRING_DATASOURCE_PASSWORD=transcendence_pass
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.MySQLDialect
+    depends_on:
+      - mysql
+    networks:
+      - transcendence-net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - transcendence-net
+    restart: unless-stopped
+
+networks:
+  transcendence-net:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
