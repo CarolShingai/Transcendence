@@ -3,7 +3,7 @@ package com.transcendence.demo
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = ["com.transcendence"])
 class DemoApplication
 
 
