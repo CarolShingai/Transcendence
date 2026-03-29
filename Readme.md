@@ -70,3 +70,14 @@ Cibersecurity
 - Conquistas+=1
 
 Total	= 20
+
+Semama 1 
+2pt
+- Api 5 Endpoints = 2pts
+- Standard User +  Auth Google + 2 Fatores + ORM -> (total: 5pts)
+- - Standard User:
+  -(cadastro, login) + Auth + 2 Fatores  -> Carol
+  - pagina de perfil, update perfil, update foto - Luana e Thiago
+  - add amigo -> Luana e Thiago
+- Jogo - Mecanica - Customizacao - AI (total: 3pts)
+- - Mecanica e Renderizacao do jogo -> Barbara
