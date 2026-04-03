@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tyrannus Savana</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: hsla(103, 89%, 22%, 0.937);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      color: #fff;
+    }
+    #game-container canvas {
+      display: block;
+      image-rendering: pixelated;
+      border: 2px solid #fff;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <!-- Phaser 3 -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
+
+  <!-- Seus scripts -->
+  <script src="utils/TextureFactory.js"></script>
+  <script src="entities/Tyrannus.js"></script>
+  <script src="scenes/GameScene.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
