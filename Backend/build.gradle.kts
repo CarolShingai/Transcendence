@@ -30,6 +30,7 @@ dependencies {
     runtimeOnly("com.mysql:mysql-connector-j")
     implementation("org.xerial:sqlite-jdbc") // Para desenvolvimento local
     implementation("org.hibernate.orm:hibernate-community-dialects")
+    implementation("org.springframework.boot:spring-boot-starter-security")
     
 	// Spring dependencies
     developmentOnly("org.springframework.boot:spring-boot-devtools")
