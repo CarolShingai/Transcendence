@@ -26,11 +26,16 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     
+    // Swagger/OpenAPI
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
+    
+    // Security - BCrypt
+    implementation("org.springframework.security:spring-security-crypto:6.2.2")
+    
     // Database drivers
     runtimeOnly("com.mysql:mysql-connector-j")
     implementation("org.xerial:sqlite-jdbc") // Para desenvolvimento local
     implementation("org.hibernate.orm:hibernate-community-dialects")
-    implementation("org.springframework.boot:spring-boot-starter-security")
     
 	// Spring dependencies
     developmentOnly("org.springframework.boot:spring-boot-devtools")

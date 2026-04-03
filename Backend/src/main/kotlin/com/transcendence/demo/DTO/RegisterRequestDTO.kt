@@ -1,8 +1,8 @@
 package com.transcendence.demo.DTO
 
-data class UserResponseDTO(
-    val id: Long? = null,
+data class RegisterRequestDTO(
     val nickname: String = "",
     val name: String = "",
-    val email: String = ""
+    val email: String = "",
+    val password: String = ""
 )
