@@ -44,7 +44,7 @@ services:
 
   frontend:
     build:
-      context: ./new_frontend
+      context: ./Frontend
       dockerfile: Dockerfile
     ports:
       - "8080:80"
