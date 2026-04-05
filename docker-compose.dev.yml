@@ -10,7 +10,7 @@ services:
       MYSQL_USER: transcendence_user
       MYSQL_PASSWORD: transcendence_pass
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
@@ -46,12 +46,12 @@ services:
 
   frontend:
     build:
-      context: ./new_frontend
+      context: ./Frontend
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
     volumes:
-      - ./new_frontend:/app
+      - ./Frontend:/app
       - /app/node_modules
     depends_on:
       - backend
