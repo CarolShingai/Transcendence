@@ -24,6 +24,9 @@ class UserService(private val userRepository: UserRepository) {
         if (userRepository.findByNickname(request.nickname) != null) {
             return Pair(false, "Nickname already exists")
         }
+        if (userRepository.findByUsername(request.nickname) != null) {
+            return Pair(false, "Username already exists")
+        }
         if (userRepository.findByEmail(request.email) != null) {
             return Pair(false, "Email already registered")
         }
@@ -31,16 +34,19 @@ class UserService(private val userRepository: UserRepository) {
     }
 
     fun createUser(request: RegisterRequestDTO): User {
-        if (registerUser(request).first == false) {
-            throw IllegalArgumentException(registerUser(request).second)
+        val (isValid, message) = registerUser(request)
+        if (!isValid) {
+            throw IllegalArgumentException(message)
         }
 
         val encryptedPassword = passwordEncoder.encode(request.password)
-        
+
         val user = User(
             nickname = request.nickname,
             name = request.name,
             email = request.email,
+            username = request.nickname,
+            passwordHash = encryptedPassword,
             criptpass = encryptedPassword
         )
         return userRepository.save(user)
