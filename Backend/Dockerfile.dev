@@ -1,0 +1,16 @@
+# syntax=docker/dockerfile:1
+
+FROM eclipse-temurin:23-jdk
+
+WORKDIR /workspace
+
+# Copia apenas arquivos de build para aproveitar cache de dependencias
+COPY gradlew ./
+COPY gradle ./gradle
+COPY build.gradle.kts settings.gradle.kts ./
+
+RUN chmod +x gradlew && ./gradlew --no-daemon dependencies || true
+
+EXPOSE 8080
+
+# O comando final fica no docker-compose.dev.yml

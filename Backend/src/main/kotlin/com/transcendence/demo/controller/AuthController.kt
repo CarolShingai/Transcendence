@@ -8,21 +8,11 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.GetMapping
 
 @RestController
 @RequestMapping("/auth")
 class AuthController(private val userService: UserService) {
-
-    // @PostMapping("/register")
-    // fun registerUser(@RequestBody request: RegisterRequestDTO): ResponseEntity<String> {
-    //     val (success, message) = userService.registerUser(request)
-    //     return if (success) {
-    //         userService.createUser(request)
-    //         ResponseEntity.ok(message)
-    //     } else {
-    //         ResponseEntity.badRequest().body(message)
-    //     }
-    // }
     @PostMapping("/register")
     fun registerUser(@RequestBody request: RegisterRequestDTO): ResponseEntity<String> {
         val (success, message) = userService.registerUser(request)

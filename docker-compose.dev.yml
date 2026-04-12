@@ -1,0 +1,78 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: transcendence_db
+      MYSQL_USER: transcendence_user
+      MYSQL_PASSWORD: transcendence_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data_dev:/var/lib/mysql
+    networks:
+      - transcendence-dev-net
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile.dev
+    working_dir: /workspace
+    command: sh -c "chmod +x /workspace/dev-run.sh && /workspace/dev-run.sh"
+    ports:
+      - "8082:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/transcendence_db
+      SPRING_DATASOURCE_USERNAME: transcendence_user
+      SPRING_DATASOURCE_PASSWORD: transcendence_pass
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQLDialect
+    volumes:
+      - ./Backend:/workspace
+      - gradle_cache_dev:/root/.gradle
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - transcendence-dev-net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile.dev
+    working_dir: /app
+    command: sh -c "npm install && npm run start -- --host 0.0.0.0 --port 4200 --poll 1000"
+    ports:
+      - "4200:4200"
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./Frontend:/app
+      - frontend_node_modules_dev:/app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - transcendence-dev-net
+    restart: unless-stopped
+
+networks:
+  transcendence-dev-net:
+    driver: bridge
+
+volumes:
+  mysql_data_dev:
+    driver: local
+  gradle_cache_dev:
+    driver: local
+  frontend_node_modules_dev:
+    driver: local
