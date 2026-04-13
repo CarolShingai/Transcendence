@@ -116,144 +116,148 @@ function App() {
 
   return (
     <div className="App">
-      <header className="App-header">
-        <div className="hero-copy">
-          <p className="birds" aria-hidden="true">🐦‍⬛ 🐦 🐦‍⬛ 🐦 🐦‍⬛</p>
-          <h1>ROTA MIGRATORIA</h1>
-          <p className="hero-subtitle">Guie seu bando pelos ceus</p>
-        </div>
-        <nav className="top-nav" aria-label="Main navigation">
-          <button
-            type="button"
-            className={`nav-button ${view === 'login' ? 'active' : ''}`}
-            onClick={goToLogin}
-          >
-            Observador
-          </button>
-          {isAuthenticated && (
-            <button
-              type="button"
-              className={`nav-button ${view === 'profile' ? 'active' : ''}`}
-              onClick={goToProfile}
-            >
-              Ninho
-            </button>
-          )}
-        </nav>
-      </header>
-
-      <main className="App-main">
-        {!isAuthenticated || view === 'login' ? (
-          <section className="card" aria-label="Login screen">
-            <p className="divider" aria-hidden="true">── ✦ ──</p>
-            <h2>Alinhar bando</h2>
-            <p className="support-text">
-              Entre com suas credenciais para iniciar a migracao.
-            </p>
-
-            <form className="form-grid" onSubmit={handleLogin}>
-              <label htmlFor="email">Observador</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="seu-nome@ninho.com"
-                value={loginForm.email}
-                onChange={handleLoginChange}
-                autoComplete="email"
-              />
-
-              <label htmlFor="password">Senha do Ninho</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="********"
-                value={loginForm.password}
-                onChange={handleLoginChange}
-                autoComplete="current-password"
-              />
-
-              {error && <p className="error">{error}</p>}
-
-              <button type="submit" className="primary-button">
-                ALCAR VOO
-              </button>
-            </form>
-
-            <button type="button" className="text-link" onClick={() => {}}>
-              Primeiro voo? Criar ninho
-            </button>
-          </section>
-        ) : (
-          <section className="card" aria-label="Profile screen">
-            <div className="profile-headline">
-              <div className="avatar" aria-hidden="true">
-                {initials}
-              </div>
-              <div>
-                <p className="divider" aria-hidden="true">~ ~ 🕊️ ~ ~</p>
-                <h2>Ninho do Viajante</h2>
-                <p className="support-text">Atualize as informacoes publicas do seu perfil.</p>
-              </div>
+      <div className="game-shell">
+        <section className="game-stage" aria-label="Area principal do jogo">
+          <header className="App-header">
+            <div className="hero-copy">
+              <p className="birds" aria-hidden="true">🐦‍⬛ 🐦 🐦‍⬛ 🐦 🐦‍⬛</p>
+              <h1>ROTA MIGRATORIA</h1>
+              <p className="hero-subtitle">Guie seu bando pelos ceus</p>
             </div>
-
-            <form className="form-grid" onSubmit={handleProfileSave}>
-              <label htmlFor="name">Nome</label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                value={profileForm.name}
-                onChange={handleProfileChange}
-              />
-
-              <label htmlFor="nickname">Codinome</label>
-              <input
-                id="nickname"
-                name="nickname"
-                type="text"
-                value={profileForm.nickname}
-                onChange={handleProfileChange}
-              />
-
-              <label htmlFor="profile-email">E-mail</label>
-              <input
-                id="profile-email"
-                name="email"
-                type="email"
-                value={profileForm.email}
-                disabled
-                className="input-disabled"
-              />
-
-              <label htmlFor="bio">Rota pessoal</label>
-              <textarea
-                id="bio"
-                name="bio"
-                value={profileForm.bio}
-                onChange={handleProfileChange}
-                rows="4"
-              />
-
-              {error && <p className="error">{error}</p>}
-
-              <div className="actions-row">
-                <button type="submit" className="primary-button">
-                  Guardar trilha
+            <nav className="top-nav" aria-label="Main navigation">
+              <button
+                type="button"
+                className={`nav-button ${view === 'login' ? 'active' : ''}`}
+                onClick={goToLogin}
+              >
+                Observador
+              </button>
+              {isAuthenticated && (
+                <button
+                  type="button"
+                  className={`nav-button ${view === 'profile' ? 'active' : ''}`}
+                  onClick={goToProfile}
+                >
+                  Ninho
                 </button>
-                <button type="button" className="ghost-button" onClick={handleLogout}>
-                  Sair do ninho
-                </button>
-              </div>
-            </form>
-          </section>
-        )}
-      </main>
+              )}
+            </nav>
+          </header>
 
-      <footer className="App-footer">
-        <p>Jornada SPA: Observador -&gt; Ninho</p>
-      </footer>
+          <main className="App-main">
+            {!isAuthenticated || view === 'login' ? (
+              <section className="card" aria-label="Login screen">
+                <p className="divider" aria-hidden="true">── ✦ ──</p>
+                <h2>Alinhar bando</h2>
+                <p className="support-text">
+                  Entre com suas credenciais para iniciar a migracao.
+                </p>
+
+                <form className="form-grid" onSubmit={handleLogin}>
+                  <label htmlFor="email">Observador</label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="seu-nome@ninho.com"
+                    value={loginForm.email}
+                    onChange={handleLoginChange}
+                    autoComplete="email"
+                  />
+
+                  <label htmlFor="password">Senha do Ninho</label>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="********"
+                    value={loginForm.password}
+                    onChange={handleLoginChange}
+                    autoComplete="current-password"
+                  />
+
+                  {error && <p className="error">{error}</p>}
+
+                  <button type="submit" className="primary-button">
+                    ALCAR VOO
+                  </button>
+                </form>
+
+                <button type="button" className="text-link" onClick={() => {}}>
+                  Primeiro voo? Criar ninho
+                </button>
+              </section>
+            ) : (
+              <section className="card" aria-label="Profile screen">
+                <div className="profile-headline">
+                  <div className="avatar" aria-hidden="true">
+                    {initials}
+                  </div>
+                  <div>
+                    <p className="divider" aria-hidden="true">~ ~ 🕊️ ~ ~</p>
+                    <h2>Ninho do Viajante</h2>
+                    <p className="support-text">Atualize as informacoes publicas do seu perfil.</p>
+                  </div>
+                </div>
+
+                <form className="form-grid" onSubmit={handleProfileSave}>
+                  <label htmlFor="name">Nome</label>
+                  <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    value={profileForm.name}
+                    onChange={handleProfileChange}
+                  />
+
+                  <label htmlFor="nickname">Codinome</label>
+                  <input
+                    id="nickname"
+                    name="nickname"
+                    type="text"
+                    value={profileForm.nickname}
+                    onChange={handleProfileChange}
+                  />
+
+                  <label htmlFor="profile-email">E-mail</label>
+                  <input
+                    id="profile-email"
+                    name="email"
+                    type="email"
+                    value={profileForm.email}
+                    disabled
+                    className="input-disabled"
+                  />
+
+                  <label htmlFor="bio">Rota pessoal</label>
+                  <textarea
+                    id="bio"
+                    name="bio"
+                    value={profileForm.bio}
+                    onChange={handleProfileChange}
+                    rows="4"
+                  />
+
+                  {error && <p className="error">{error}</p>}
+
+                  <div className="actions-row">
+                    <button type="submit" className="primary-button">
+                      Guardar trilha
+                    </button>
+                    <button type="button" className="ghost-button" onClick={handleLogout}>
+                      Sair do ninho
+                    </button>
+                  </div>
+                </form>
+              </section>
+            )}
+          </main>
+
+          <footer className="App-footer">
+            <p>Jornada SPA: Observador -&gt; Ninho</p>
+          </footer>
+        </section>
+      </div>
     </div>
   );
 }

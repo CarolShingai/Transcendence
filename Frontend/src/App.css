@@ -11,9 +11,7 @@
 }
 
 .App {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  min-height: 100dvh;
   color: var(--ink);
   background-image:
     linear-gradient(rgba(6, 32, 21, 0.42), rgba(6, 32, 21, 0.52)),
@@ -25,11 +23,24 @@
   font-family: 'Nunito', sans-serif;
 }
 
+.game-shell {
+  min-height: 100dvh;
+  padding: 10dvh 10dvw;
+}
+
+.game-stage {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(210, 250, 211, 0.35);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(4, 30, 20, 0.42), rgba(4, 30, 20, 0.58));
+  backdrop-filter: blur(2px);
+}
+
 .App-header {
   padding: 2.2rem 1rem 1rem;
-  max-width: 980px;
   width: 100%;
-  margin: 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -82,8 +93,6 @@
 .App-main {
   flex: 1;
   width: 100%;
-  max-width: 980px;
-  margin: 0 auto;
   padding: 1rem;
   display: grid;
   place-items: center;
@@ -252,6 +261,12 @@
   padding: 1rem;
   color: #e5ffe3;
   font-size: 0.92rem;
+}
+
+@media (orientation: landscape) {
+  .game-shell {
+    padding: 10dvh 20dvw;
+  }
 }
 
 @media (max-width: 700px) {
