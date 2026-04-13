@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import './App.css';
 import LoginHeader from './components/layout/LoginHeader';
+import HomeHeader from './components/layout/HomeHeader';
 import EditHeader from './components/layout/EditHeader';
 import AppFooter from './components/layout/AppFooter';
 import LoginCard from './components/auth/LoginCard';
@@ -83,7 +84,7 @@ function App() {
     setProfile(nextProfile);
     setProfileForm(nextProfile);
     localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
-    setView('profile');
+    setView('home');
     setLoginForm({ email: '', password: '' });
   };
 
@@ -117,8 +118,14 @@ function App() {
     setView('profile');
   };
 
+  const goToHome = () => {
+    if (!isAuthenticated) return;
+    setView('home');
+  };
+
   const goToLogin = () => setView('login');
   const isLoginView = !isAuthenticated || view === 'login';
+  const isHomeView = isAuthenticated && view === 'home';
 
   return (
     <div className="App">
@@ -126,8 +133,16 @@ function App() {
         <section className="game-stage" aria-label="Area principal do jogo">
           {isLoginView ? (
             <LoginHeader />
+          ) : isHomeView ? (
+            <HomeHeader
+              initials={initials}
+              profileImage={profile?.avatarUrl}
+              welcomeName={profile?.nickname || profile?.name || 'Viajante'}
+              onGoToProfile={goToProfile}
+              onLogout={handleLogout}
+            />
           ) : (
-            <EditHeader onGoToLogin={goToLogin} onGoToProfile={goToProfile} />
+            <EditHeader onGoToHome={goToHome} onLogout={handleLogout} />
           )}
 
           <main className="App-main">
@@ -138,6 +153,8 @@ function App() {
                 onLoginChange={handleLoginChange}
                 onLogin={handleLogin}
               />
+            ) : isHomeView ? (
+              <section className="home-empty" aria-label="Home area" />
             ) : (
               <ProfileCard
                 initials={initials}
