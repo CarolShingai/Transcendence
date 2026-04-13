@@ -1,4 +1,4 @@
-package com.transcendence.demo.DTO
+package com.transcendence.demo.DTO.Request
 
 data class RegisterRequestDTO(
     val nickname: String = "",

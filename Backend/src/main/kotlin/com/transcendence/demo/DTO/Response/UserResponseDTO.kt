@@ -1,4 +1,4 @@
-package com.transcendence.demo.DTO
+package com.transcendence.demo.DTO.Response
 
 data class UserResponseDTO(
     val id: Long? = null,
