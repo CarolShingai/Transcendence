@@ -1,12 +1,25 @@
 import React from 'react';
 import Form from '../form/Form';
 
+import profile00 from '../../assets/profile/Profile_00.jpg';
+import profile01 from '../../assets/profile/Profile_01.jpg';
+import profile02 from '../../assets/profile/Profile_02.jpg';
+import profile03 from '../../assets/profile/Profile_03.jpg';
+import profile04 from '../../assets/profile/Profile_04.jpg';
+import profile05 from '../../assets/profile/Profile_05.jpg';
+
+const AVATAR_OPTIONS = [profile00, profile01, profile02, profile03, profile04, profile05];
+
 function ProfileCard({ initials, profileForm, error, onProfileChange, onProfileSave, onLogout }) {
   return (
     <section className="card" aria-label="Profile screen">
       <div className="profile-headline">
         <div className="avatar" aria-hidden="true">
-          {initials}
+          {profileForm.avatarUrl ? (
+            <img className="avatar-image" src={profileForm.avatarUrl} alt="Avatar selecionado" />
+          ) : (
+            initials
+          )}
         </div>
         <div>
           <p className="divider" aria-hidden="true">~ ~ 🕊️ ~ ~</p>
@@ -52,6 +65,34 @@ function ProfileCard({ initials, profileForm, error, onProfileChange, onProfileS
           onChange={onProfileChange}
           rows="4"
         />
+
+        <label htmlFor="avatarUrl">Avatar</label>
+        <div id="avatarUrl" className="avatar-options" role="radiogroup" aria-label="Selecao de avatar">
+          {AVATAR_OPTIONS.map((avatarSrc, index) => {
+            const isSelected = profileForm.avatarUrl === avatarSrc;
+
+            return (
+              <button
+                key={avatarSrc}
+                type="button"
+                className={`avatar-option ${isSelected ? 'selected' : ''}`}
+                onClick={() =>
+                  onProfileChange({
+                    target: {
+                      name: 'avatarUrl',
+                      value: avatarSrc
+                    }
+                  })
+                }
+                role="radio"
+                aria-checked={isSelected}
+                aria-label={`Avatar ${index + 1}`}
+              >
+                <img src={avatarSrc} alt="" aria-hidden="true" />
+              </button>
+            );
+          })}
+        </div>
 
         {error && <p className="error">{error}</p>}
       </Form>

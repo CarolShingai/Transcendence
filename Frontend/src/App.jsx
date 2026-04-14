@@ -28,7 +28,8 @@ function App() {
         name: '',
         nickname: '',
         email: '',
-        bio: 'Player ready to start the journey.'
+        bio: 'Player ready to start the journey.',
+        avatarUrl: ''
       };
     }
 
@@ -36,7 +37,8 @@ function App() {
       name: profile.name,
       nickname: profile.nickname,
       email: profile.email,
-      bio: profile.bio
+      bio: profile.bio,
+      avatarUrl: profile.avatarUrl || ''
     };
   });
 
@@ -78,7 +80,8 @@ function App() {
       name: generatedName,
       nickname: generatedName,
       email: loginForm.email,
-      bio: 'Player ready to start the journey.'
+      bio: 'Player ready to start the journey.',
+      avatarUrl: ''
     };
 
     setProfile(nextProfile);
@@ -107,7 +110,8 @@ function App() {
       name: '',
       nickname: '',
       email: '',
-      bio: 'Player ready to start the journey.'
+      bio: 'Player ready to start the journey.',
+      avatarUrl: ''
     });
     localStorage.removeItem('transcendence_profile');
     setView('login');
