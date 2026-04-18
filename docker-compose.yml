@@ -35,8 +35,10 @@ services:
       - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.MySQLDialect
-      - JWT_SECRET=${JWT_SECRET}
+      - JWT_SECRET=${JWT_SECRET:-fKHnZqCLlA6j8JktYk2qvfh4UG2KTbcjsRuc2SosMh7YFRfd/vf+qXkOHakG9nexHkAT6fk0l2M0fRKsn4x/MA==}
       - JWT_EXPIRATION_MS=${JWT_EXPIRATION_MS:-86400000}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
     depends_on:
       mysql:
         condition: service_healthy

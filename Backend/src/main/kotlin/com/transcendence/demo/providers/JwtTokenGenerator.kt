@@ -4,6 +4,7 @@ import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.io.Decoders
 import io.jsonwebtoken.security.Keys
 import io.jsonwebtoken.SignatureAlgorithm
+import io.jsonwebtoken.io.DecodingException
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.util.*
@@ -21,7 +22,7 @@ class JwtTokenGenerator {
     fun generateToken(userId: Long, email: String): String {
         val now = Date()
         val expiryDate = Date(now.time + expirationMs)
-        val key: SecretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey.trim()))
+        val key: SecretKey = buildSigningKey()
 
         return Jwts.builder()
             .setSubject(userId.toString())
@@ -30,5 +31,20 @@ class JwtTokenGenerator {
             .setExpiration(expiryDate)
             .signWith(key, SignatureAlgorithm.HS512)
             .compact()
+    }
+
+    private fun buildSigningKey(): SecretKey {
+        val normalized = secretKey.trim()
+        if (normalized.isBlank()) {
+            throw IllegalStateException("JWT_SECRET is empty. Configure a valid Base64 secret with at least 64 bytes for HS512.")
+        }
+
+        val keyBytes = try {
+            Decoders.BASE64.decode(normalized)
+        } catch (_: DecodingException) {
+            throw IllegalStateException("JWT_SECRET must be a valid Base64 value.")
+        }
+
+        return Keys.hmacShaKeyFor(keyBytes)
     }
 }

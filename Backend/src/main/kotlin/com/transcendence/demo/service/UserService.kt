@@ -8,6 +8,7 @@ import com.transcendence.demo.providers.JwtTokenGenerator
 import com.transcendence.demo.repository.UserRepository
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
+import java.util.UUID
 
 @Service
 class UserService(
@@ -62,7 +63,7 @@ class UserService(
 
         val user = userRepository.findByEmail(email)
         return if (user != null && passwordEncoder.matches(password, user.passwordHash)) {
-            val token = jwtTokenGenerator.generateToken(user.id!!, user.nickname)
+            val token = jwtTokenGenerator.generateToken(user.id!!, user.email)
             LoginResponseDTO(
                 success = true,
                 message = "Login successful",
@@ -76,6 +77,66 @@ class UserService(
             )
         } else {
             LoginResponseDTO(success = false, message = "Invalid email or password")
+        }
+    }
+
+    fun loginOrCreateGoogleUser(email: String, name: String?): LoginResponseDTO {
+        if (email.isBlank() || !isValidEmail(email)) {
+            return LoginResponseDTO(success = false, message = "Invalid Google account email")
+        }
+
+        val user = userRepository.findByEmail(email) ?: createGoogleUser(email, name)
+        val token = jwtTokenGenerator.generateToken(user.id!!, user.email)
+
+        return LoginResponseDTO(
+            success = true,
+            message = "Google login successful",
+            token = token,
+            user = UserResponseDTO(
+                id = user.id,
+                nickname = user.nickname,
+                name = user.name,
+                email = user.email
+            )
+        )
+    }
+
+    private fun createGoogleUser(email: String, name: String?): User {
+        val displayName = if (name.isNullOrBlank()) email.substringBefore("@") else name
+        val baseNickname = email.substringBefore("@").ifBlank { "user" }
+        val uniqueNickname = generateUniqueNickname(baseNickname)
+
+        val randomPassword = UUID.randomUUID().toString()
+        val encodedPassword = passwordEncoder.encode(randomPassword)
+
+        val user = User(
+            nickname = uniqueNickname,
+            username = uniqueNickname,
+            name = displayName,
+            email = email,
+            passwordHash = encodedPassword,
+            criptpass = encodedPassword,
+            active = true
+        )
+
+        return userRepository.save(user)
+    }
+
+    private fun generateUniqueNickname(base: String): String {
+        var candidate = base.lowercase().replace(" ", "")
+        if (candidate.isBlank()) candidate = "user"
+
+        if (userRepository.findByNickname(candidate) == null && userRepository.findByUsername(candidate) == null) {
+            return candidate
+        }
+
+        var suffix = 1
+        while (true) {
+            val next = "$candidate$suffix"
+            if (userRepository.findByNickname(next) == null && userRepository.findByUsername(next) == null) {
+                return next
+            }
+            suffix++
         }
     }
 
