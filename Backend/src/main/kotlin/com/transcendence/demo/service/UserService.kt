@@ -101,6 +101,16 @@ class UserService(
         )
     }
 
+    fun getUserProfileByEmail(email: String): UserResponseDTO? {
+        val user = userRepository.findByEmail(email) ?: return null
+        return UserResponseDTO(
+            id = user.id,
+            nickname = user.nickname,
+            name = user.name,
+            email = user.email
+        )
+    }
+
     private fun createGoogleUser(email: String, name: String?): User {
         val displayName = if (name.isNullOrBlank()) email.substringBefore("@") else name
         val baseNickname = email.substringBefore("@").ifBlank { "user" }

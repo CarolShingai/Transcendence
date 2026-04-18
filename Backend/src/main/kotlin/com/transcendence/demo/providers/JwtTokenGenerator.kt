@@ -1,5 +1,7 @@
 package com.transcendence.demo.providers
 
+import io.jsonwebtoken.Claims
+import io.jsonwebtoken.JwtException
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.io.Decoders
 import io.jsonwebtoken.security.Keys
@@ -31,6 +33,29 @@ class JwtTokenGenerator {
             .setExpiration(expiryDate)
             .signWith(key, SignatureAlgorithm.HS512)
             .compact()
+    }
+
+    fun extractEmail(token: String): String? {
+        val claims = parseClaims(token) ?: return null
+        return claims["email"] as? String
+    }
+
+    fun isTokenValid(token: String): Boolean {
+        return parseClaims(token) != null
+    }
+
+    private fun parseClaims(token: String): Claims? {
+        return try {
+            Jwts.parser()
+                .verifyWith(buildSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .payload
+        } catch (_: JwtException) {
+            null
+        } catch (_: IllegalArgumentException) {
+            null
+        }
     }
 
     private fun buildSigningKey(): SecretKey {

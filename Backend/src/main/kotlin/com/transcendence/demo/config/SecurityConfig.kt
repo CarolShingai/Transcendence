@@ -1,11 +1,13 @@
 package com.transcendence.demo.config
 
+import com.transcendence.demo.security.JwtAuthenticationFilter
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.web.cors.CorsConfiguration
@@ -14,7 +16,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableWebSecurity
-class SecurityConfig {
+class SecurityConfig(
+	private val jwtAuthenticationFilter: JwtAuthenticationFilter
+) {
 
 	private val publicPaths = arrayOf(
 		"/oauth2/authorization/google",
@@ -47,6 +51,7 @@ class SecurityConfig {
 				oauth.defaultSuccessUrl("/auth/oauth2/authorize/google/success", true)
 				oauth.failureHandler(SimpleUrlAuthenticationFailureHandler("/auth/oauth2/authorize/google/failure"))
 			}
+			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
 
 		return http.build()
 	}
