@@ -8,6 +8,15 @@ import LoginCard from './components/auth/LoginCard';
 import ProfileCard from './components/profile/ProfileCard';
 
 function App() {
+  const resolveAvatarUrl = (avatarValue) => {
+    if (typeof avatarValue === 'string') return avatarValue;
+    if (avatarValue && typeof avatarValue === 'object' && typeof avatarValue.default === 'string') {
+      return avatarValue.default;
+    }
+
+    return '';
+  };
+
   const [view, setView] = useState('login');
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
@@ -16,7 +25,11 @@ function App() {
     if (!storedProfile) return null;
 
     try {
-      return JSON.parse(storedProfile);
+      const parsedProfile = JSON.parse(storedProfile);
+      return {
+        ...parsedProfile,
+        avatarUrl: resolveAvatarUrl(parsedProfile?.avatarUrl)
+      };
     } catch {
       return null;
     }
@@ -38,7 +51,7 @@ function App() {
       nickname: profile.nickname,
       email: profile.email,
       bio: profile.bio,
-      avatarUrl: profile.avatarUrl || ''
+      avatarUrl: resolveAvatarUrl(profile.avatarUrl)
     };
   });
 
@@ -91,6 +104,24 @@ function App() {
     setLoginForm({ email: '', password: '' });
   };
 
+  const handleGoogleLogin = () => {
+    setError('');
+
+    const nextProfile = {
+      name: 'google player',
+      nickname: 'google player',
+      email: 'google.player@gmail.com',
+      bio: 'Player ready to start the journey.',
+      avatarUrl: ''
+    };
+
+    setProfile(nextProfile);
+    setProfileForm(nextProfile);
+    localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
+    setView('home');
+    setLoginForm({ email: '', password: '' });
+  };
+
   const handleProfileSave = (event) => {
     event.preventDefault();
 
@@ -100,8 +131,12 @@ function App() {
     }
 
     setError('');
-    setProfile(profileForm);
-    localStorage.setItem('transcendence_profile', JSON.stringify(profileForm));
+    const nextProfile = {
+      ...profileForm,
+      avatarUrl: resolveAvatarUrl(profileForm.avatarUrl)
+    };
+    setProfile(nextProfile);
+    localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
   };
 
   const handleLogout = () => {
@@ -156,6 +191,7 @@ function App() {
                 error={error}
                 onLoginChange={handleLoginChange}
                 onLogin={handleLogin}
+                onGoogleLogin={handleGoogleLogin}
               />
             ) : isHomeView ? (
               <section className="home-empty" aria-label="Home area" />

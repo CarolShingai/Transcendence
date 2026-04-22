@@ -383,6 +383,46 @@
   width: 100%;
 }
 
+.google-button {
+  margin-top: 0.7rem;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border: 1px solid #d0d7de;
+  background: #ffffff;
+  color: #1f2937;
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.google-button:hover {
+  border-color: #b6c2ce;
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.google-icon {
+  width: 1.3rem;
+  height: 1.3rem;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1;
+  color: transparent;
+  background: linear-gradient(45deg, #ea4335 0%, #fbbc05 35%, #34a853 65%, #4285f4 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  border: 1px solid #e5e7eb;
+}
+
 .input-disabled {
   background-color: #e8f5e1 !important;
   opacity: 0.65;
@@ -435,9 +475,9 @@
 }
 
 .avatar-options {
-  width: min(100%, 460px);
+  width: 100%;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.6rem;
 }
 

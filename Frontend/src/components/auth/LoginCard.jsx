@@ -1,7 +1,7 @@
 import React from 'react';
 import Form from '../form/Form';
 
-function LoginCard({ loginForm, error, onLoginChange, onLogin }) {
+function LoginCard({ loginForm, error, onLoginChange, onLogin, onGoogleLogin }) {
   return (
     <section className="card" aria-label="Login screen">
       <Form id="login-form" onSubmit={onLogin}>
@@ -32,6 +32,11 @@ function LoginCard({ loginForm, error, onLoginChange, onLogin }) {
 
       <button type="submit" form="login-form" className="primary-button form-submit">
         Acessar
+      </button>
+
+      <button type="button" className="google-button" onClick={onGoogleLogin}>
+        <span className="google-icon" aria-hidden="true">G</span>
+        Continuar com Google
       </button>
 
       <button type="button" className="text-link" onClick={() => {}}>

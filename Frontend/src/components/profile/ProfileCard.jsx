@@ -1,14 +1,15 @@
 import React from 'react';
 import Form from '../form/Form';
 
-import profile00 from '../../assets/profile/Profile_00.jpg';
-import profile01 from '../../assets/profile/Profile_01.jpg';
-import profile02 from '../../assets/profile/Profile_02.jpg';
-import profile03 from '../../assets/profile/Profile_03.jpg';
-import profile04 from '../../assets/profile/Profile_04.jpg';
-import profile05 from '../../assets/profile/Profile_05.jpg';
+const avatarContext = require.context('../../assets/profile', false, /\.(png|jpe?g|webp)$/);
 
-const AVATAR_OPTIONS = [profile00, profile01, profile02, profile03, profile04, profile05];
+const AVATAR_OPTIONS = avatarContext
+  .keys()
+  .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+  .map((key) => {
+    const moduleValue = avatarContext(key);
+    return moduleValue?.default || moduleValue;
+  });
 
 function ProfileCard({ initials, profileForm, error, onProfileChange, onProfileSave, onLogout }) {
   return (
