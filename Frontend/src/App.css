@@ -118,13 +118,13 @@
 }
 
 .header-icon-button {
-  width: clamp(26px, 3.6vh, 37px);
-  height: clamp(26px, 3.6vh, 37px);
+  width: clamp(39px, 5.4vh, 56px);
+  height: clamp(39px, 5.4vh, 56px);
   border-radius: 50%;
   display: grid;
   place-items: center;
   cursor: pointer;
-  font-size: clamp(0.76rem, 1.7vh, 0.98rem);
+  font-size: clamp(1.52rem, 3.4vh, 1.96rem);
   font-weight: 700;
   line-height: 1;
   transition: transform 0.2s ease, filter 0.2s ease;
@@ -250,6 +250,11 @@
   padding: clamp(1.2rem, 2vw, 2rem);
 }
 
+.profile-card {
+  width: 80%;
+  max-width: none;
+}
+
 .card h2 {
   margin: 0;
   font-family: 'Cormorant Garamond', serif;
@@ -286,6 +291,19 @@
 .form-centered {
   width: min(100%, 560px);
   margin-inline: auto;
+}
+
+.profile-form-layout.form-centered {
+  width: 100%;
+  margin: 0;
+}
+
+.profile-form-layout input,
+.profile-form-layout textarea,
+.profile-form-layout .error,
+.profile-form-layout .avatar-options {
+  width: 100%;
+  max-width: none;
 }
 
 .form-grid label {
@@ -437,13 +455,113 @@
   margin-top: 0.4rem;
 }
 
+.profile-save-row {
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.profile-save-row .primary-button {
+  width: min(100%, 240px);
+}
+
 .home-card {
   text-align: center;
 }
 
-.home-support-text {
-  width: min(100%, 520px);
-  margin-inline: auto;
+.home-carousel-card {
+  width: min(100%, 760px);
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-carousel {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid #c3ddb7;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--accent-dark);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 5;
+}
+
+.carousel-arrow-left {
+  left: 2%;
+}
+
+.carousel-arrow-right {
+  right: 2%;
+}
+
+.carousel-stage {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+}
+
+.carousel-item {
+  position: absolute;
+  inset: 10%;
+  transition: transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease;
+}
+
+.carousel-item.is-center {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  z-index: 3;
+}
+
+.carousel-item.is-left {
+  opacity: 0.45;
+  transform: translateX(-58%) scale(0.92);
+  z-index: 2;
+  filter: saturate(0.85);
+}
+
+.carousel-item.is-right {
+  opacity: 0.45;
+  transform: translateX(58%) scale(0.92);
+  z-index: 2;
+  filter: saturate(0.85);
+}
+
+.home-carousel-item-card {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+}
+
+.carousel-dots {
+  margin-top: 0.9rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.carousel-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: #b4d5ab;
+}
+
+.carousel-dot.active {
+  width: 1.1rem;
+  background: var(--accent);
 }
 
 .actions-row-home {
@@ -455,6 +573,31 @@
   gap: 0.9rem;
   align-items: center;
   margin-bottom: 1rem;
+}
+
+.profile-content-grid {
+  display: grid;
+  grid-template-columns: 40% 60%;
+  gap: 1rem;
+  align-items: start;
+}
+
+.profile-avatar-column {
+  display: grid;
+  gap: 0.7rem;
+  align-content: start;
+}
+
+.avatar-column-title {
+  margin: 0;
+  font-size: 0.92rem;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.profile-form-column {
+  min-width: 0;
 }
 
 .avatar {
@@ -479,6 +622,10 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.6rem;
+}
+
+.profile-avatar-column .avatar-options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .avatar-option {
@@ -592,5 +739,33 @@
 
   .actions-row button {
     width: 100%;
+  }
+
+  .profile-content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-carousel {
+    min-height: 0;
+  }
+
+  .carousel-item {
+    inset: 10%;
+  }
+
+  .carousel-item.is-left {
+    transform: translateX(-30%) scale(0.92);
+  }
+
+  .carousel-item.is-right {
+    transform: translateX(30%) scale(0.92);
+  }
+
+  .carousel-arrow-left {
+    left: -0.3rem;
+  }
+
+  .carousel-arrow-right {
+    right: -0.3rem;
   }
 }

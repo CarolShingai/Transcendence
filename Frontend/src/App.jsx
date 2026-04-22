@@ -6,6 +6,7 @@ import EditHeader from './components/layout/EditHeader';
 import AppFooter from './components/layout/AppFooter';
 import LoginCard from './components/auth/LoginCard';
 import ProfileCard from './components/profile/ProfileCard';
+import HomeCard from './components/home/HomeCard';
 
 function App() {
   const resolveAvatarUrl = (avatarValue) => {
@@ -137,6 +138,7 @@ function App() {
     };
     setProfile(nextProfile);
     localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
+    setView('home');
   };
 
   const handleLogout = () => {
@@ -194,7 +196,7 @@ function App() {
                 onGoogleLogin={handleGoogleLogin}
               />
             ) : isHomeView ? (
-              <section className="home-empty" aria-label="Home area" />
+              <HomeCard />
             ) : (
               <ProfileCard
                 initials={initials}
@@ -202,7 +204,6 @@ function App() {
                 error={error}
                 onProfileChange={handleProfileChange}
                 onProfileSave={handleProfileSave}
-                onLogout={handleLogout}
               />
             )}
           </main>
