@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -56,9 +57,27 @@ class AuthController(private val userService: UserService) {
                 .body(LoginResponseDTO(success = false, message = "OAuth2 authentication not found"))
         }
 
-        val principal = authentication.principal as? OAuth2User
-        val email = principal?.getAttribute<String>("email")
-        val name = principal?.getAttribute<String>("name")
+        val oauthAuthentication = authentication as? OAuth2AuthenticationToken
+            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(LoginResponseDTO(success = false, message = "Invalid OAuth2 authentication type"))
+
+        if (oauthAuthentication.authorizedClientRegistrationId != "google") {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(LoginResponseDTO(success = false, message = "Invalid OAuth2 provider"))
+        }
+
+        val principal = oauthAuthentication.principal as? OAuth2User
+            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(LoginResponseDTO(success = false, message = "OAuth2 principal not found"))
+
+        val email = principal.getAttribute<String>("email")
+        val name = principal.getAttribute<String>("name")
+        val emailVerified = parseEmailVerified(principal.getAttribute<Any>("email_verified"))
+
+        if (!emailVerified) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(LoginResponseDTO(success = false, message = "Google account email is not verified"))
+        }
 
         if (email.isNullOrBlank()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -74,11 +93,22 @@ class AuthController(private val userService: UserService) {
     }
 
     @GetMapping("/oauth2/authorize/google/failure")
-    fun oauthGoogleFailure(): ResponseEntity<Map<String, Any>> {
-        val payload = mapOf(
+    fun oauthGoogleFailure(request: HttpServletRequest): ResponseEntity<Map<String, Any>> {
+        val error = request.getParameter("error")
+        val errorDescription = request.getParameter("error_description")
+
+        val payload = mutableMapOf<String, Any>(
             "success" to false,
             "message" to "Google OAuth login failed"
         )
+
+        if (!error.isNullOrBlank()) {
+            payload["error"] = error
+        }
+        if (!errorDescription.isNullOrBlank()) {
+            payload["error_description"] = errorDescription
+        }
+
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(payload)
     }
 
@@ -134,5 +164,13 @@ class AuthController(private val userService: UserService) {
                 "user" to user
             )
         )
+    }
+
+    private fun parseEmailVerified(value: Any?): Boolean {
+        return when (value) {
+            is Boolean -> value
+            is String -> value.equals("true", ignoreCase = true)
+            else -> false
+        }
     }
 }
