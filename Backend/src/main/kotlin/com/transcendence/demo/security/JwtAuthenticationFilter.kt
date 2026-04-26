@@ -32,7 +32,7 @@ class JwtAuthenticationFilter(
             return
         }
 
-        if (!jwtTokenGenerator.isTokenValid(token)) {
+        if (!jwtTokenGenerator.isAccessTokenValid(token)) {
             filterChain.doFilter(request, response)
             return
         }

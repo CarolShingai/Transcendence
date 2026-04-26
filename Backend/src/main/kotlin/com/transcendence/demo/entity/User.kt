@@ -35,6 +35,15 @@ data class User(
     @Column(nullable = false)
     var criptpass: String = "",
 
+    @Column(name = "two_factor_enabled", nullable = false)
+    var twoFactorEnabled: Boolean = false,
+
+    @Column(name = "two_factor_secret_encrypted", length = 512)
+    var twoFactorSecretEncrypted: String? = null,
+
+    @Column(name = "two_factor_confirmed_at")
+    var twoFactorConfirmedAt: LocalDateTime? = null,
+
     @Column(nullable = false)
     var active: Boolean = true,
 

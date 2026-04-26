@@ -53,7 +53,7 @@ class SecurityConfig(
 			.authorizeHttpRequests { auth ->
 				auth
 					.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-					.requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
+					.requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login", "/auth/login/2fa").permitAll()
 					.requestMatchers(*publicPaths).permitAll()
 					.anyRequest().authenticated()
 			}

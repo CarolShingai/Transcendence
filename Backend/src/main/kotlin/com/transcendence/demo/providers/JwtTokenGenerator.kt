@@ -14,30 +14,59 @@ import javax.crypto.SecretKey
 
 @Component
 class JwtTokenGenerator {
+    private companion object {
+        const val PURPOSE_CLAIM = "purpose"
+        const val PURPOSE_ACCESS = "access"
+        const val PURPOSE_TWO_FACTOR = "2fa"
+    }
+
     @Value("\${jwt.secret}")
     private lateinit var secretKey: String
 
     @Value("\${jwt.expiration-ms:86400000}")
     private var expirationMs: Long = 86400000
 
+    @Value("\${jwt.two-factor-expiration-ms:300000}")
+    private var twoFactorExpirationMs: Long = 300000
+
     // Method to generate JWT token based on user information 24 hours expiration
     fun generateToken(userId: Long, email: String): String {
-        val now = Date()
-        val expiryDate = Date(now.time + expirationMs)
-        val key: SecretKey = buildSigningKey()
+        return buildToken(userId, email, PURPOSE_ACCESS, expirationMs)
+    }
 
-        return Jwts.builder()
-            .setSubject(userId.toString())
-            .claim("email", email)
-            .setIssuedAt(now)
-            .setExpiration(expiryDate)
-            .signWith(key, SignatureAlgorithm.HS512)
-            .compact()
+    fun generateTwoFactorChallengeToken(userId: Long, email: String): String {
+        return buildToken(userId, email, PURPOSE_TWO_FACTOR, twoFactorExpirationMs)
     }
 
     fun extractEmail(token: String): String? {
         val claims = parseClaims(token) ?: return null
         return claims["email"] as? String
+    }
+
+    fun isAccessTokenValid(token: String): Boolean {
+        val claims = parseClaims(token) ?: return false
+        val purpose = claims[PURPOSE_CLAIM] as? String
+        return purpose == null || purpose == PURPOSE_ACCESS
+    }
+
+    fun isTwoFactorChallengeToken(token: String): Boolean {
+        val claims = parseClaims(token) ?: return false
+        return claims[PURPOSE_CLAIM] == PURPOSE_TWO_FACTOR
+    }
+
+    private fun buildToken(userId: Long, email: String, purpose: String, expiration: Long): String {
+        val now = Date()
+        val expiryDate = Date(now.time + expiration)
+        val key: SecretKey = buildSigningKey()
+
+        return Jwts.builder()
+            .setSubject(userId.toString())
+            .claim("email", email)
+            .claim(PURPOSE_CLAIM, purpose)
+            .setIssuedAt(now)
+            .setExpiration(expiryDate)
+            .signWith(key, SignatureAlgorithm.HS512)
+            .compact()
     }
 
     fun isTokenValid(token: String): Boolean {
