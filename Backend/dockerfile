@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Build stage: compila o Spring Boot Kotlin usando Gradle Wrapper
-FROM eclipse-temurin:17-jdk AS build
+FROM eclipse-temurin:23-jdk AS build
 WORKDIR /workspace
 
 # Copia arquivos essenciais primeiro para melhor cache
@@ -14,7 +14,7 @@ RUN chmod +x gradlew \
 	&& ./gradlew --no-daemon clean bootJar -x test
 
 # Runtime stage: imagem mais leve só com o JRE
-FROM eclipse-temurin:17-jre AS runtime
+FROM eclipse-temurin:23-jre AS runtime
 WORKDIR /app
 
 # Defina o profile padrão (ajuste conforme necessário)

@@ -26,6 +26,12 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     
+    // Swagger/OpenAPI
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.0")
+    
+    // Security - BCrypt
+    implementation("org.springframework.security:spring-security-crypto:6.2.2")
+    
     // Database drivers
     runtimeOnly("com.mysql:mysql-connector-j")
     implementation("org.xerial:sqlite-jdbc") // Para desenvolvimento local
@@ -36,6 +42,18 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    // Token -JWT
+    implementation("io.jsonwebtoken:jjwt-api:0.12.6")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
+
+    //Oauth
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+
+    // TOTP / QR code support for 2FA
+    implementation("dev.samstevens.totp:totp:1.7.1")
 }
 
 kotlin {

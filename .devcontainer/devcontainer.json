@@ -11,6 +11,7 @@
   "features": {
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
   },
+  
   "customizations": {
     "vscode": {
       "extensions": [
@@ -22,6 +23,8 @@
       ]
     }
   },
+  "remoteUser": "vscode",
+  "updateRemoteUserUID": false,
   "postCreateCommand": "cd Frontend && npm ci && cd ../Backend && chmod +x gradlew && ./gradlew --no-daemon dependencies",
   "forwardPorts": [8080, 8081, 3306],
   "portsAttributes": {
