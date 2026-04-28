@@ -43,6 +43,11 @@ class JwtTokenGenerator {
         return claims["email"] as? String
     }
 
+    fun extractUserId(token: String): Long? {
+        val claims = parseClaims(token) ?: return null
+        return claims.subject?.toLongOrNull()
+    }
+
     fun isAccessTokenValid(token: String): Boolean {
         val claims = parseClaims(token) ?: return false
         val purpose = claims[PURPOSE_CLAIM] as? String

@@ -1,14 +1,19 @@
 package com.transcendence.demo.service
 
 import com.transcendence.demo.DTO.Request.RegisterRequestDTO
+import com.transcendence.demo.DTO.Request.TwoFactorDisableRequestDTO
+import com.transcendence.demo.DTO.Request.TwoFactorSetupConfirmRequestDTO
 import com.transcendence.demo.DTO.Response.LoginResponseDTO
+import com.transcendence.demo.DTO.Response.TwoFactorDisableResponseDTO
+import com.transcendence.demo.DTO.Response.TwoFactorEnableResponseDTO
+import com.transcendence.demo.DTO.Response.TwoFactorSetupResponseDTO
 import com.transcendence.demo.DTO.Response.UserResponseDTO
 import com.transcendence.demo.entity.User
 import com.transcendence.demo.providers.JwtTokenGenerator
 import com.transcendence.demo.repository.UserRepository
-import com.transcendence.demo.service.TwoFactorService
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Service
@@ -66,12 +71,19 @@ class UserService(
         val user = userRepository.findByEmail(email)
         return if (user != null && passwordEncoder.matches(password, user.passwordHash)) {
             if (user.twoFactorEnabled) {
-                val challengeToken = jwtTokenGenerator.generateTwoFactorChallengeToken(user.id!!, user.email)
+                // Generate temporary JWT for 2FA verification
+                val tempToken = jwtTokenGenerator.generateTwoFactorChallengeToken(user.id!!, user.email)
                 LoginResponseDTO(
                     success = true,
-                    message = "Two-factor authentication required",
+                    message = "2FA required",
+                    twoFactorToken = tempToken,
                     requiresTwoFactor = true,
-                    twoFactorToken = challengeToken
+                    user = UserResponseDTO(
+                        id = user.id,
+                        nickname = user.nickname,
+                        name = user.name,
+                        email = user.email
+                    )
                 )
             } else {
                 val token = jwtTokenGenerator.generateToken(user.id!!, user.email)
@@ -92,26 +104,26 @@ class UserService(
         }
     }
 
-    fun completeTwoFactorLogin(twoFactorToken: String, code: String): LoginResponseDTO {
-        if (!jwtTokenGenerator.isTwoFactorChallengeToken(twoFactorToken)) {
-            return LoginResponseDTO(success = false, message = "Invalid two-factor challenge token")
-        }
-
-        val email = jwtTokenGenerator.extractEmail(twoFactorToken)
-            ?: return LoginResponseDTO(success = false, message = "Invalid two-factor challenge token")
-
-        val user = userRepository.findByEmail(email)
+    fun loginWithTwoFactor(userId: Long, token: String): LoginResponseDTO {
+        val user = userRepository.findById(userId).orElse(null)
             ?: return LoginResponseDTO(success = false, message = "User not found")
 
-        if (!user.twoFactorEnabled || !twoFactorService.isCodeValidForUser(user, code)) {
-            return LoginResponseDTO(success = false, message = "Invalid two-factor code")
+        if (!user.twoFactorEnabled) {
+            return LoginResponseDTO(success = false, message = "2FA is not enabled")
         }
 
-        val token = jwtTokenGenerator.generateToken(user.id!!, user.email)
+        val secret = user.twoFactorSecretEncrypted
+            ?: return LoginResponseDTO(success = false, message = "2FA secret not found")
+
+        if (!twoFactorService.verifyToken(token, secret)) {
+            return LoginResponseDTO(success = false, message = "Invalid 2FA token")
+        }
+
+        val finalToken = jwtTokenGenerator.generateToken(user.id!!, user.email)
         return LoginResponseDTO(
             success = true,
             message = "Login successful",
-            token = token,
+            token = finalToken,
             user = UserResponseDTO(
                 id = user.id,
                 nickname = user.nickname,
@@ -121,39 +133,128 @@ class UserService(
         )
     }
 
+    fun setupTwoFactor(userId: Long): TwoFactorSetupResponseDTO {
+        val user = userRepository.findById(userId).orElse(null)
+            ?: throw IllegalArgumentException("User not found")
+
+        if (user.twoFactorEnabled) {
+            throw IllegalArgumentException("2FA is already enabled")
+        }
+
+        val tempSecret = twoFactorService.generateTempSecret()
+    user.twoFactorSecretEncrypted = tempSecret
+    user.twoFactorConfirmedAt = null
+        userRepository.save(user)
+
+        val qrCodeUrl = twoFactorService.generateQrCodeUrl(user.email, tempSecret)
+
+        return TwoFactorSetupResponseDTO(
+            qrCodeUrl = qrCodeUrl,
+            tempSecret = tempSecret
+        )
+    }
+
+    fun enableTwoFactor(userId: Long, request: TwoFactorSetupConfirmRequestDTO): TwoFactorEnableResponseDTO {
+        val user = userRepository.findById(userId).orElse(null)
+            ?: return TwoFactorEnableResponseDTO(
+                success = false,
+                message = "User not found"
+            )
+
+        if (user.twoFactorEnabled) {
+            return TwoFactorEnableResponseDTO(
+                success = false,
+                message = "2FA is already enabled"
+            )
+        }
+
+        val tempSecret = user.twoFactorSecretEncrypted
+            ?: return TwoFactorEnableResponseDTO(
+                success = false,
+                message = "2FA setup not initiated. Please call setup first."
+            )
+
+        if (!twoFactorService.verifyToken(request.code, tempSecret)) {
+            return TwoFactorEnableResponseDTO(
+                success = false,
+                message = "Invalid token"
+            )
+        }
+
+        user.twoFactorEnabled = true
+        user.twoFactorConfirmedAt = LocalDateTime.now()
+        userRepository.save(user)
+
+        return TwoFactorEnableResponseDTO(
+            success = true,
+            message = "2FA enabled successfully"
+        )
+    }
+
+    fun disableTwoFactor(userId: Long, request: TwoFactorDisableRequestDTO): TwoFactorDisableResponseDTO {
+        val user = userRepository.findById(userId).orElse(null)
+            ?: return TwoFactorDisableResponseDTO(
+                success = false,
+                message = "User not found"
+            )
+
+        if (!user.twoFactorEnabled) {
+            return TwoFactorDisableResponseDTO(
+                success = false,
+                message = "2FA is not enabled"
+            )
+        }
+
+        val secret = user.twoFactorSecretEncrypted
+            ?: return TwoFactorDisableResponseDTO(
+                success = false,
+                message = "2FA secret not found"
+            )
+
+        if (!passwordEncoder.matches(request.password, user.passwordHash)) {
+            return TwoFactorDisableResponseDTO(
+                success = false,
+                message = "Invalid password"
+            )
+        }
+
+        if (!twoFactorService.verifyToken(request.code, secret)) {
+            return TwoFactorDisableResponseDTO(
+                success = false,
+                message = "Invalid token"
+            )
+        }
+
+        user.twoFactorEnabled = false
+        user.twoFactorSecretEncrypted = null
+        user.twoFactorConfirmedAt = null
+        userRepository.save(user)
+
+        return TwoFactorDisableResponseDTO(
+            success = true,
+            message = "2FA disabled successfully"
+        )
+    }
+
     fun loginOrCreateGoogleUser(email: String, name: String?): LoginResponseDTO {
         if (email.isBlank() || !isValidEmail(email)) {
             return LoginResponseDTO(success = false, message = "Invalid Google account email")
         }
 
         val user = userRepository.findByEmail(email) ?: createGoogleUser(email, name)
+        val token = jwtTokenGenerator.generateToken(user.id!!, user.email)
 
-        return if (user.twoFactorEnabled) {
-            val challengeToken = jwtTokenGenerator.generateTwoFactorChallengeToken(user.id!!, user.email)
-            LoginResponseDTO(
-                success = true,
-                message = "Two-factor authentication required",
-                requiresTwoFactor = true,
-                twoFactorToken = challengeToken
+        return LoginResponseDTO(
+            success = true,
+            message = "Google login successful",
+            token = token,
+            user = UserResponseDTO(
+                id = user.id,
+                nickname = user.nickname,
+                name = user.name,
+                email = user.email
             )
-        } else {
-            val token = jwtTokenGenerator.generateToken(user.id!!, user.email)
-            LoginResponseDTO(
-                success = true,
-                message = "Google login successful",
-                token = token,
-                user = UserResponseDTO(
-                    id = user.id,
-                    nickname = user.nickname,
-                    name = user.name,
-                    email = user.email
-                )
-            )
-        }
-    }
-
-    fun getUserByEmail(email: String): User? {
-        return userRepository.findByEmail(email)
+        )
     }
 
     fun getUserProfileByEmail(email: String): UserResponseDTO? {

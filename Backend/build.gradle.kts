@@ -51,6 +51,9 @@ dependencies {
     //Oauth
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+
+    // TOTP / QR code support for 2FA
+    implementation("dev.samstevens.totp:totp:1.7.1")
 }
 
 kotlin {
