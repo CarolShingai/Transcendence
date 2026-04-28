@@ -58,6 +58,33 @@ services:
       - transcendence-net
     restart: unless-stopped
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: transcendence-prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - transcendence-net
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: transcendence-grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - transcendence-net
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
 networks:
   transcendence-net:
     driver: bridge
