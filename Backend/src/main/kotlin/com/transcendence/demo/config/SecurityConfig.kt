@@ -15,6 +15,7 @@ import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
@@ -25,7 +26,9 @@ class SecurityConfig(
 	private val jwtAuthenticationFilter: JwtAuthenticationFilter,
 	private val clientRegistrationRepository: ClientRegistrationRepository,
 	private val oAuth2AuthenticationFailureHandler: OAuth2AuthenticationFailureHandler,
-	private val cookieOAuth2AuthorizationRequestRepository: CookieOAuth2AuthorizationRequestRepository
+	private val cookieOAuth2AuthorizationRequestRepository: CookieOAuth2AuthorizationRequestRepository,
+	@Value("\${app.cors.allowed-origins:http://localhost:4200}")
+	private val corsAllowedOrigins: String
 ) {
 
 	private val publicPaths = arrayOf(
@@ -75,7 +78,10 @@ class SecurityConfig(
 	@Bean
 	fun corsConfigurationSource(): CorsConfigurationSource {
 		val config = CorsConfiguration()
-		config.allowedOrigins = listOf("http://localhost:4200")
+		config.allowedOrigins = corsAllowedOrigins
+			.split(",")
+			.map { it.trim() }
+			.filter { it.isNotBlank() }
 		config.allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
 		config.allowedHeaders = listOf("*")
 		config.allowCredentials = true
