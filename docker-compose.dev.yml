@@ -30,6 +30,11 @@ services:
       - "8082:8080"
     environment:
       SPRING_PROFILES_ACTIVE: dev
+      # HTTPS (dev): o profile dev usa ./certs/keystore-dev.p12 dentro de /workspace
+      SSL_KEYSTORE_PASSWORD: ${SSL_KEYSTORE_PASSWORD:-changeit}
+      SSL_KEYSTORE_TYPE: ${SSL_KEYSTORE_TYPE:-PKCS12}
+      SSL_KEY_ALIAS: ${SSL_KEY_ALIAS_DEV:-transcendence-dev}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS_DEV:-http://localhost:4200}
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/transcendence_db
       SPRING_DATASOURCE_USERNAME: transcendence_user
       SPRING_DATASOURCE_PASSWORD: transcendence_pass
