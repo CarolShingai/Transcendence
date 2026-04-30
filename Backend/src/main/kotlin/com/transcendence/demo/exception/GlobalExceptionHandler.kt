@@ -84,6 +84,20 @@ class GlobalExceptionHandler {
         )
     }
 
+    @ExceptionHandler(TwoFactorQrGenerationException::class)
+    fun handleTwoFactorQrGeneration(
+        ex: TwoFactorQrGenerationException,
+        request: HttpServletRequest
+    ): ResponseEntity<ApiErrorResponse> {
+        logger.error("2FA QR generation error on {}: {}", request.requestURI, ex.message, ex)
+
+        return buildResponse(
+            status = HttpStatus.INTERNAL_SERVER_ERROR,
+            message = "Falha ao gerar QR code do 2FA",
+            path = request.requestURI
+        )
+    }
+
     private fun buildResponse(
         status: HttpStatus,
         message: String,

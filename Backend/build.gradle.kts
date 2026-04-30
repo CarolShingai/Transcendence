@@ -54,6 +54,7 @@ dependencies {
 
     // TOTP / QR code support for 2FA
     implementation("dev.samstevens.totp:totp:1.7.1")
+    implementation("com.google.zxing:core:3.5.1")
 }
 
 kotlin {

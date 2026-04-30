@@ -8,6 +8,8 @@ import dev.samstevens.totp.qr.ZxingPngQrGenerator
 import dev.samstevens.totp.secret.DefaultSecretGenerator
 import dev.samstevens.totp.secret.SecretGenerator
 import dev.samstevens.totp.time.SystemTimeProvider
+import com.transcendence.demo.exception.TwoFactorQrGenerationException
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.*
 import kotlin.random.Random
@@ -17,7 +19,7 @@ class TwoFactorService {
 
     private val secretGenerator: SecretGenerator = DefaultSecretGenerator()
     private val codeVerifier: CodeVerifier = DefaultCodeVerifier(DefaultCodeGenerator(), SystemTimeProvider())
-
+     private val logger = LoggerFactory.getLogger(TwoFactorService::class.java)
     /**
      * Generates a temporary TOTP secret for 2FA setup
      */
@@ -25,9 +27,6 @@ class TwoFactorService {
         return secretGenerator.generate()
     }
 
-    /**
-     * Generates QR code URL for TOTP setup
-     */
     fun generateQrCodeUrl(email: String, secret: String): String {
         val qrData = QrData.Builder()
             .label(email)
@@ -39,27 +38,12 @@ class TwoFactorService {
         return try {
             val imageData = qrGenerator.generate(qrData)
             Base64.getEncoder().encodeToString(imageData)
+        } catch (e: IllegalArgumentException) {
+            logger.warn("Invalid data while generating 2FA QR. email={}", email, e)
+            throw TwoFactorQrGenerationException("Invalid data to generate 2FA QR code", e)
         } catch (e: Exception) {
-            throw RuntimeException("Failed to generate QR code", e)
-        }
-    }
-
-    /**
-     * Generates QR code image as base64 string
-     */
-    fun generateQrCodeImage(email: String, secret: String): String {
-        val qrData = QrData.Builder()
-            .label(email)
-            .secret(secret)
-            .issuer("Transcendence")
-            .build()
-
-        val qrGenerator = ZxingPngQrGenerator()
-        return try {
-            val imageData = qrGenerator.generate(qrData)
-            Base64.getEncoder().encodeToString(imageData)
-        } catch (e: Exception) {
-            throw RuntimeException("Failed to generate QR code", e)
+            logger.error("Unexpected error while generating 2FA QR. email={}", email, e)
+            throw TwoFactorQrGenerationException("Unable to generate 2FA QR code at this time", e)
         }
     }
 
