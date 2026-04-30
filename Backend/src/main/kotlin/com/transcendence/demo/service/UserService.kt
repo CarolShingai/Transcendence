@@ -61,7 +61,7 @@ class UserService(
             email = request.email,
             username = request.nickname,
             passwordHash = encryptedPassword,
-            criptpass = encryptedPassword
+        
         )
         return userRepository.save(user)
     }
@@ -281,7 +281,6 @@ class UserService(
             name = displayName,
             email = email,
             passwordHash = encodedPassword,
-            criptpass = encodedPassword,
             active = true
         )
 
