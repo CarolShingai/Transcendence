@@ -33,7 +33,7 @@ data class User(
     var passwordHash: String = "",
 
     @Column(nullable = false)
-    var criptpass: String = "",
+    var profilePic: Int = 0,
 
     @Column(name = "two_factor_enabled", nullable = false)
     var twoFactorEnabled: Boolean = false,
