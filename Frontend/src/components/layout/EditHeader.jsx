@@ -13,7 +13,7 @@ function EditHeader({ onGoToHome, onLogout }) {
           aria-label="Ir para home"
           title="Ir para home"
         >
-          ⌂
+          🏠
         </button>
         <button
           type="button"

@@ -3,7 +3,7 @@ import React from 'react';
 function AppFooter() {
   return (
     <footer className="App-footer">
-      <p>Jornada SPA: Observador -&gt; Ninho</p>
+      <p>Equipe TRANSCENDENCE: Bárbara, Carol, Luana e Thiago - Todos os direitos reservados</p>
     </footer>
   );
 }

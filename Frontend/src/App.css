@@ -29,6 +29,12 @@
   padding: 10dvh 10dvw;
 }
 
+@media (orientation: portrait) {
+  .game-shell {
+    padding: 10dvw; /* top/right/bottom/left equal to side spacing */
+  }
+}
+
 .game-stage {
   height: 100%;
   min-height: 0;
@@ -47,8 +53,37 @@
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+  min-height: clamp(64px, 8vh, 96px); /* keep header height proportional */
+  box-sizing: border-box;
+  overflow: hidden; /* prevent children from expanding header */
 }
 
+/* Title in home header: keep single line, scale and ellipsize if needed */
+.home-header-title {
+  margin: 0;
+  color: #efffe8;
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.15rem, 2.6vw, 2rem);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  align-self: center;
+}
+
+/* Ensure action buttons keep stable size and don't push header */
+.home-header-actions {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-icon-button {
+  width: clamp(39px, 5.4vh, 56px);
+  height: clamp(39px, 5.4vh, 56px);
+}
 .App-header-login {
   justify-content: center;
   text-align: center;
@@ -59,6 +94,23 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   border-bottom: 1px solid rgba(227, 255, 220, 0.35);
+}
+
+/* When using the login header, reduce the vertical space allocated to the main
+   area by 50% so the login card is closer to header and footer. */
+.game-stage > .App-header {
+  flex: 0 0 auto;
+}
+
+.game-stage > .App-main {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center; /* center children horizontally by default */
+  justify-content: center;
+}
+
+.game-stage > .App-footer {
+  flex: 0 0 auto;
 }
 
 .App-header-edit {
@@ -198,6 +250,30 @@
   flex-wrap: nowrap;
 }
 
+/* Place the logo so there is 20% margin on each side (logo width = 60% of parent)
+   and keep it proportional when viewport changes. Center horizontally. */
+.App-header-login .birds-row {
+  width: 100%;
+  justify-content: center;
+}
+
+.trans-logo {
+  width: 80%; /* leaves 10% space on each side */
+  max-width: calc(100% - 20%); /* defensive, same effect as width:80% */
+  height: auto;
+  display: block;
+  margin: 0 10%;
+  object-fit: contain;
+}
+
+@media (max-width: 480px) {
+  .trans-logo {
+    width: 80%;
+    margin: 0 10%;
+  }
+}
+
+
 .hero-subtitle {
   margin: 0.2rem 0 0;
   font-size: clamp(0.84rem, 1.6vh, 1rem);
@@ -230,8 +306,10 @@
   min-height: 0;
   width: 100%;
   padding: 0.65rem 1rem;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch; /* allow children to fill full height */
+  justify-content: center;
 }
 
 .home-empty {
@@ -469,17 +547,31 @@
 }
 
 .home-carousel-card {
-  width: min(100%, 760px);
+  width: 100%;
+  max-width: none; /* allow card to match parent's content width */
   height: 100%;
   max-height: 100%;
   display: flex;
   flex-direction: column;
+  align-items: center; /* center carousel horizontally inside the card */
+  box-sizing: border-box;
+  margin: 0; /* respect parent's padding and not add extra margins */
 }
 
 .home-carousel {
   position: relative;
   flex: 1;
   min-height: 0;
+}
+
+.home-carousel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto; /* center the carousel horizontally */
+  align-self: stretch; /* allow carousel to stretch horizontally inside App-main */
 }
 
 .carousel-arrow {
@@ -511,11 +603,13 @@
   height: 100%;
   min-height: 0;
 }
+ 
 
 .carousel-item {
   position: absolute;
-  inset: 10%;
+  inset: 0 10%;
   transition: transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease;
+  will-change: transform, opacity;
 }
 
 .carousel-item.is-center {
@@ -537,13 +631,224 @@
   z-index: 2;
   filter: saturate(0.85);
 }
-
+ 
 .home-carousel-item-card {
-  width: 100%;
-  max-width: none;
   height: 100%;
-  max-height: none;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  padding-top: max(20%, 48px);
 }
+
+/* Card header: 20% of card height, 50% darker than card background with shadow */
+.home-card-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--card) 50%, black);
+  background: rgba(0, 0, 0, 0.06);
+  box-shadow: 0 6px 14px rgba(3, 20, 12, 0.12);
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+}
+
+/* Footer for card 3: 10% of card height (50% of header), positioned at bottom */
+.home-card-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 10%;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--card) 50%, black);
+  background: rgba(0, 0, 0, 0.06);
+  box-shadow: 0 -6px 14px rgba(3, 20, 12, 0.12);
+  border-bottom-left-radius: 14px;
+  border-bottom-right-radius: 14px;
+}
+
+.home-card-add-friend-button {
+  padding: 0.5rem 1rem;
+  background-color: var(--danger);
+  color: #f3fde8;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(0.75rem, 1.2vw, 0.95rem);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-transform: capitalize;
+  letter-spacing: 0.3px;
+}
+
+.home-card-add-friend-button:hover {
+  background-color: #a82828;
+  transform: scale(1.05);
+}
+
+.home-card-add-friend-button:active {
+  transform: scale(0.98);
+}
+
+/* Image inside header for the first card: 5% from left, vertically centered */
+.home-card-header-img {
+  position: absolute;
+  left: 5%;
+  top: 50%;
+  transform: translateY(-50%);
+  height: auto;
+  max-height: 56px;
+  width: auto;
+  object-fit: contain;
+  transform: translateY(-50%) scale(1.5);
+  transform-origin: left center;
+}
+
+.home-card-header-title {
+  margin: 0;
+  color: rgba(255,255,255,0.95);
+  font-size: clamp(0.95rem, 1.6vw, 1.25rem);
+  font-weight: 700;
+}
+
+/* Record display on the right side of card header */
+.home-card-record {
+  position: absolute;
+  right: 5%;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.home-card-record-label {
+  font-family: 'Courier New', 'Courier', monospace;
+  font-size: clamp(1.6rem, 2.4vw, 2rem);
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #ff9500;
+  line-height: 1;
+}
+
+.home-card-record-time {
+  font-family: 'Courier New', 'Courier', monospace;
+  font-size: clamp(2rem, 3.6vw, 2.6rem);
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #ff9500;
+  line-height: 1;
+}
+
+.home-card-history-label {
+  font-family: 'Courier New', 'Courier', monospace;
+  font-size: clamp(2rem, 3.6vw, 2.6rem);
+  font-weight: 900;
+  color: #ff9500;
+  text-align: center;
+  line-height: 1;
+  padding: 0.5rem 1rem;
+  margin: 0;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.home-card-history-divider {
+  height: 2px;
+  background-color: #ff9500;
+  margin: 0.5rem 1rem;
+  flex-shrink: 0;
+}
+
+.home-card-matches-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.5rem 1rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.home-card-match-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 149, 0, 0.2);
+  font-family: 'Courier New', 'Courier', monospace;
+  font-size: clamp(0.85rem, 1.4vw, 1rem);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.home-card-match-date {
+  font-weight: 600;
+  color: rgba(255, 149, 0, 0.9);
+}
+
+.home-card-match-time {
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  min-width: 50px;
+  text-align: right;
+}
+
+.home-card-play-button {
+  align-self: stretch;
+  flex-shrink: 0;
+  height: 10%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 2rem;
+  margin: 0;
+  margin-bottom: 0;
+  box-sizing: border-box;
+  background-color: #0f5f3e;
+  color: #f3fde8;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(1rem, 1.6vw, 1.3rem);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.home-card-play-button:hover {
+  background-color: #0d4a30;
+  transform: scale(1.05);
+}
+
+.home-card-play-button:active {
+  transform: scale(0.98);
+}
+
+.home-card-body {
+  flex: 0 1 auto;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+ 
 
 .carousel-dots {
   margin-top: 0.9rem;
@@ -676,10 +981,11 @@
   }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 700px), (orientation: portrait) {
   .App-header {
     align-items: start;
     flex-direction: column;
+    overflow: visible; /* allow header children to flow in portrait */
   }
 
   .App-header-home {
@@ -710,10 +1016,12 @@
   .home-header-title {
     grid-row: 1;
     grid-column: 1;
-    font-size: clamp(1rem, 4.2vw, 1.25rem);
-    padding-inline: clamp(2.2rem, 16vw, 4.8rem);
+    font-size: clamp(0.95rem, 4.2vw, 1.25rem);
+    padding-inline: clamp(1rem, 8vw, 2rem);
+    white-space: normal; /* allow wrapping on small screens */
+    overflow: visible;
+    text-overflow: unset;
   }
-
   .edit-header-title {
     font-size: clamp(0.88rem, 2.9vw, 1.1rem);
   }
@@ -726,6 +1034,12 @@
   .home-header-actions {
     grid-row: 1;
     grid-column: 1;
+  }
+
+  /* Ensure title can occupy multiple lines without forcing header growth too much */
+  .home-header-title {
+    line-height: 1.12;
+    max-height: calc(2 * 1.2em); /* allow up to 2 lines */
   }
 
   .top-nav {
@@ -750,7 +1064,7 @@
   }
 
   .carousel-item {
-    inset: 10%;
+    inset: 0 10%;
   }
 
   .carousel-item.is-left {
