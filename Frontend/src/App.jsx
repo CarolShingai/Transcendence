@@ -3,8 +3,10 @@ import './App.css';
 import LoginHeader from './components/layout/LoginHeader';
 import HomeHeader from './components/layout/HomeHeader';
 import EditHeader from './components/layout/EditHeader';
+import RegisterHeader from './components/layout/RegisterHeader';
 import AppFooter from './components/layout/AppFooter';
 import LoginCard from './components/auth/LoginCard';
+import RegisterCard from './components/auth/RegisterCard';
 import ProfileCard from './components/profile/ProfileCard';
 import HomeCard from './components/home/HomeCard';
 
@@ -21,6 +23,13 @@ function App() {
   const [view, setView] = useState('login');
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const emptyProfileForm = {
+    name: '',
+    nickname: '',
+    email: '',
+    bio: 'Player ready to start the journey.',
+    avatarUrl: ''
+  };
   const [profile, setProfile] = useState(() => {
     const storedProfile = localStorage.getItem('transcendence_profile');
     if (!storedProfile) return null;
@@ -37,15 +46,7 @@ function App() {
   });
 
   const [profileForm, setProfileForm] = useState(() => {
-    if (!profile) {
-      return {
-        name: '',
-        nickname: '',
-        email: '',
-        bio: 'Player ready to start the journey.',
-        avatarUrl: ''
-      };
-    }
+    if (!profile) return emptyProfileForm;
 
     return {
       name: profile.name,
@@ -55,6 +56,8 @@ function App() {
       avatarUrl: resolveAvatarUrl(profile.avatarUrl)
     };
   });
+
+  const [registerForm, setRegisterForm] = useState(emptyProfileForm);
 
   const isAuthenticated = Boolean(profile);
 
@@ -73,6 +76,11 @@ function App() {
   const handleLoginChange = (event) => {
     const { name, value } = event.target;
     setLoginForm((previous) => ({ ...previous, [name]: value }));
+  };
+
+  const handleRegisterChange = (event) => {
+    const { name, value } = event.target;
+    setRegisterForm((previous) => ({ ...previous, [name]: value }));
   };
 
   const handleProfileChange = (event) => {
@@ -123,6 +131,43 @@ function App() {
     setLoginForm({ email: '', password: '' });
   };
 
+  const handleGoToRegister = () => {
+    setError('');
+    setRegisterForm((previous) => ({
+      ...previous,
+      email: loginForm.email || previous.email
+    }));
+    setView('register');
+  };
+
+  const handleRegisterSave = (event) => {
+    event.preventDefault();
+
+    if (!registerForm.name || !registerForm.nickname || !registerForm.email) {
+      setError('Name, nickname and email are required.');
+      return;
+    }
+
+    setError('');
+    const nextProfile = {
+      ...registerForm,
+      avatarUrl: resolveAvatarUrl(registerForm.avatarUrl)
+    };
+
+    setProfile(nextProfile);
+    setProfileForm(nextProfile);
+    localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
+    setView('home');
+    setLoginForm({ email: '', password: '' });
+    setRegisterForm(emptyProfileForm);
+  };
+
+  const handleRegisterExit = () => {
+    setError('');
+    setRegisterForm(emptyProfileForm);
+    setView('login');
+  };
+
   const handleProfileSave = (event) => {
     event.preventDefault();
 
@@ -143,13 +188,7 @@ function App() {
 
   const handleLogout = () => {
     setProfile(null);
-    setProfileForm({
-      name: '',
-      nickname: '',
-      email: '',
-      bio: 'Player ready to start the journey.',
-      avatarUrl: ''
-    });
+    setProfileForm(emptyProfileForm);
     localStorage.removeItem('transcendence_profile');
     setView('login');
   };
@@ -165,7 +204,8 @@ function App() {
   };
 
   const goToLogin = () => setView('login');
-  const isLoginView = !isAuthenticated || view === 'login';
+  const isLoginView = !isAuthenticated && view === 'login';
+  const isRegisterView = !isAuthenticated && view === 'register';
   const isHomeView = isAuthenticated && view === 'home';
 
   return (
@@ -174,6 +214,8 @@ function App() {
         <section className="game-stage" aria-label="Area principal do jogo">
           {isLoginView ? (
             <LoginHeader />
+          ) : isRegisterView ? (
+            <RegisterHeader onGoToLogin={handleRegisterExit} />
           ) : isHomeView ? (
             <HomeHeader
               initials={initials}
@@ -194,6 +236,15 @@ function App() {
                 onLoginChange={handleLoginChange}
                 onLogin={handleLogin}
                 onGoogleLogin={handleGoogleLogin}
+                onCreateAccount={handleGoToRegister}
+              />
+            ) : isRegisterView ? (
+              <RegisterCard
+                initials={initials}
+                registerForm={registerForm}
+                error={error}
+                onRegisterChange={handleRegisterChange}
+                onRegisterSave={handleRegisterSave}
               />
             ) : isHomeView ? (
               <HomeCard />

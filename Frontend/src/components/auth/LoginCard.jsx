@@ -1,7 +1,7 @@
 import React from 'react';
 import Form from '../form/Form';
 
-function LoginCard({ loginForm, error, onLoginChange, onLogin, onGoogleLogin }) {
+function LoginCard({ loginForm, error, onLoginChange, onLogin, onGoogleLogin, onCreateAccount }) {
   return (
     <section className="card" aria-label="Login screen">
       <Form id="login-form" onSubmit={onLogin}>
@@ -39,7 +39,7 @@ function LoginCard({ loginForm, error, onLoginChange, onLogin, onGoogleLogin }) 
         Continuar com Google
       </button>
 
-      <button type="button" className="text-link" onClick={() => {}}>
+      <button type="button" className="text-link" onClick={onCreateAccount}>
         Crie sua conta agora!
       </button>
     </section>
