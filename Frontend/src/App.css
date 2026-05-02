@@ -823,6 +823,23 @@
   gap: 0.7rem;
 }
 
+.home-card-empty-state {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.home-card-empty-state p {
+  color: var(--muted);
+  font-size: clamp(0.95rem, 1.6vw, 1.1rem);
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
 .home-card-match-item {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -909,6 +926,23 @@
   height: 100%;
 }
 
+.friends-empty-state {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.friends-empty-state p {
+  color: var(--muted);
+  font-size: clamp(0.95rem, 1.6vw, 1.1rem);
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
 .friends-list {
   flex: 1 1 auto;
   min-height: 0;
@@ -977,19 +1011,9 @@
   background: #def4e7;
 }
 
-.friend-status-jogando {
-  color: #7a4f00;
-  background: #ffe7b8;
-}
-
 .friend-status-offline {
   color: #5b6472;
   background: #e5e7eb;
-}
-
-.friend-status-pausado {
-  color: #7f1d1d;
-  background: #fde2e2;
 }
  
 

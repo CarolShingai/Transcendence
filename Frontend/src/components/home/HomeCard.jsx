@@ -5,24 +5,7 @@ import amigosTrans from '../../assets/logo/trans_amigos1.png';
 
 const EMPTY_CARDS = [{ id: 1 }, { id: 2 }, { id: 3 }];
 
-const MOCK_MATCHES = [
-  { id: 1, date: '2024-04-30', time: '00:00' },
-  { id: 2, date: '2024-04-29', time: '00:00' },
-  { id: 3, date: '2024-04-28', time: '00:00' },
-  { id: 4, date: '2024-04-27', time: '00:00' },
-  { id: 5, date: '2024-04-26', time: '00:00' },
-  { id: 6, date: '2024-04-25', time: '00:00' },
-];
-
-const MOCK_FRIENDS = [
-  { id: 1, name: 'Ana Silva', nickname: 'anas', status: 'Online' },
-  { id: 2, name: 'Bruno Costa', nickname: 'brunoc', status: 'Jogando' },
-  { id: 3, name: 'Carla Mendes', nickname: 'carlam', status: 'Offline' },
-  { id: 4, name: 'Diego Santos', nickname: 'diegos', status: 'Online' },
-  { id: 5, name: 'Ester Lima', nickname: 'esterl', status: 'Pausado' },
-];
-
-function HomeCard() {
+function HomeCard({ matches = [], friends = [] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const goToPrevious = () => {
@@ -99,42 +82,54 @@ function HomeCard() {
                   )}
                   {(index === 0 || index === 1) && (
                     <div className="home-card-matches-list">
-                      {MOCK_MATCHES.map((match) => (
-                        <div key={match.id} className="home-card-match-item">
-                          <span className="home-card-match-date">{match.date}</span>
-                          <span className="home-card-match-time">{match.time}</span>
+                      {matches.length === 0 ? (
+                        <div className="home-card-empty-state">
+                          <p>Nenhuma partida registrada!</p>
                         </div>
-                      ))}
+                      ) : (
+                        matches.map((match) => (
+                          <div key={match.id} className="home-card-match-item">
+                            <span className="home-card-match-date">{match.date}</span>
+                            <span className="home-card-match-time">{match.time}</span>
+                          </div>
+                        ))
+                      )}
                     </div>
                   )}
                   <div className={`home-card-body ${index === 2 ? 'home-card-body-friends' : ''}`}>
                     {index === 2 && (
                       <div className="friends-panel" aria-label="Lista de amigos">
-                        <div className="friends-list">
-                          {MOCK_FRIENDS.map((friend) => {
-                            const initials = friend.name
-                              .split(' ')
-                              .filter(Boolean)
-                              .slice(0, 2)
-                              .map((token) => token[0].toUpperCase())
-                              .join('');
+                        {friends.length === 0 ? (
+                          <div className="friends-empty-state">
+                            <p>Nenhum amigo registrado!</p>
+                          </div>
+                        ) : (
+                          <div className="friends-list">
+                            {friends.map((friend) => {
+                              const initials = friend.name
+                                .split(' ')
+                                .filter(Boolean)
+                                .slice(0, 2)
+                                .map((token) => token[0].toUpperCase())
+                                .join('');
 
-                            return (
-                              <article key={friend.id} className="friend-item">
-                                <div className="friend-avatar" aria-hidden="true">
-                                  {initials}
-                                </div>
-                                <div className="friend-info">
-                                  <div className="friend-name">{friend.name}</div>
-                                  <div className="friend-nickname">@{friend.nickname}</div>
-                                </div>
-                                <div className={`friend-status friend-status-${friend.status.toLowerCase()}`}>
-                                  {friend.status}
-                                </div>
-                              </article>
-                            );
-                          })}
-                        </div>
+                              return (
+                                <article key={friend.id} className="friend-item">
+                                  <div className="friend-avatar" aria-hidden="true">
+                                    {initials}
+                                  </div>
+                                  <div className="friend-info">
+                                    <div className="friend-name">{friend.name}</div>
+                                    <div className="friend-nickname">@{friend.nickname}</div>
+                                  </div>
+                                  <div className={`friend-status friend-status-${friend.status.toLowerCase()}`}>
+                                    {friend.status}
+                                  </div>
+                                </article>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
