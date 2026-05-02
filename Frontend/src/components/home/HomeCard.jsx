@@ -5,7 +5,7 @@ import amigosTrans from '../../assets/logo/trans_amigos1.png';
 
 const EMPTY_CARDS = [{ id: 1 }, { id: 2 }, { id: 3 }];
 
-function HomeCard({ matches = [], friends = [] }) {
+function HomeCard({ matches = [], friends = [], onPlayGame }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const goToPrevious = () => {
@@ -135,13 +135,19 @@ function HomeCard({ matches = [], friends = [] }) {
                   </div>
                   <footer className="home-card-footer" aria-hidden="true">
                     {(index === 0 || index === 1) && (
-                      <button className="home-card-add-friend-button footer-play-button">
+                      <button
+                        type="button"
+                        className="home-card-add-friend-button footer-play-button"
+                        onClick={onPlayGame}
+                      >
                         <span className="play-icon">▶</span>
                         JOGUE AGORA!
                       </button>
                     )}
                     {index === 2 && (
-                      <button className="home-card-add-friend-button">+ Adicionar amigos</button>
+                      <button type="button" className="home-card-add-friend-button">
+                        + Adicionar amigos
+                      </button>
                     )}
                   </footer>
                 </div>

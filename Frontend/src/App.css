@@ -109,8 +109,86 @@
   justify-content: center;
 }
 
+.App-main-game {
+  padding: 0;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
 .game-stage > .App-footer {
   flex: 0 0 auto;
+}
+
+.game-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #061912;
+  border: 1px solid rgba(227, 255, 220, 0.2);
+  box-shadow: 0 22px 46px rgba(11, 46, 29, 0.25);
+}
+
+.game-card-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #061912;
+}
+
+.game-card-header,
+.game-card-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1rem;
+  box-sizing: border-box;
+  backdrop-filter: blur(8px);
+}
+
+.game-card-header {
+  top: 0;
+  min-height: clamp(64px, 8vh, 96px);
+  background: transparent;
+  border: 0;
+  pointer-events: none;
+}
+
+.game-card-timer-box {
+  position: absolute;
+  top: clamp(0.5rem, 1.2vh, 0.85rem);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.45rem 0.85rem;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffb347, #ff9500);
+  box-shadow: 0 8px 20px rgba(255, 149, 0, 0.35);
+  border: 1px solid rgba(255, 244, 224, 0.26);
+  pointer-events: auto;
+}
+
+.game-card-timer {
+  color: #fff8ee;
+  font-family: 'Courier New', 'Courier', monospace;
+  font-size: clamp(1.2rem, 2.8vw, 2rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
+.game-card-exit {
+  position: absolute;
+  top: clamp(0.5rem, 1.2vh, 0.85rem);
+  right: 1rem;
+  pointer-events: auto;
 }
 
 .App-header-edit {

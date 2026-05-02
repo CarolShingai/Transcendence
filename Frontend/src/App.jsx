@@ -9,6 +9,7 @@ import LoginCard from './components/auth/LoginCard';
 import RegisterCard from './components/auth/RegisterCard';
 import ProfileCard from './components/profile/ProfileCard';
 import HomeCard from './components/home/HomeCard';
+import GameCard from './components/game/GameCard';
 
 function App() {
   const resolveAvatarUrl = (avatarValue) => {
@@ -168,6 +169,11 @@ function App() {
     setView('login');
   };
 
+  const handleGoToGame = () => {
+    if (!isAuthenticated) return;
+    setView('game');
+  };
+
   const handleProfileSave = (event) => {
     event.preventDefault();
 
@@ -203,10 +209,17 @@ function App() {
     setView('home');
   };
 
+  const handleExitGame = () => {
+    if (!isAuthenticated) return;
+    setView('home');
+  };
+
   const goToLogin = () => setView('login');
   const isLoginView = !isAuthenticated && view === 'login';
   const isRegisterView = !isAuthenticated && view === 'register';
   const isHomeView = isAuthenticated && view === 'home';
+  const isGameView = isAuthenticated && view === 'game';
+  const gameEndpoint = process.env.REACT_APP_GAME_ENDPOINT || '/game';
 
   return (
     <div className="App">
@@ -224,11 +237,11 @@ function App() {
               onGoToProfile={goToProfile}
               onLogout={handleLogout}
             />
-          ) : (
+          ) : isGameView ? null : (
             <EditHeader onGoToHome={goToHome} onLogout={handleLogout} />
           )}
 
-          <main className="App-main">
+          <main className={`App-main ${isGameView ? 'App-main-game' : ''}`}>
             {isLoginView ? (
               <LoginCard
                 loginForm={loginForm}
@@ -247,7 +260,9 @@ function App() {
                 onRegisterSave={handleRegisterSave}
               />
             ) : isHomeView ? (
-              <HomeCard />
+              <HomeCard onPlayGame={handleGoToGame} />
+            ) : isGameView ? (
+              <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} />
             ) : (
               <ProfileCard
                 initials={initials}
@@ -259,7 +274,7 @@ function App() {
             )}
           </main>
 
-          <AppFooter />
+          {!isGameView && <AppFooter />}
         </section>
       </div>
     </div>
