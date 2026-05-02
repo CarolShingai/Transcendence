@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import singleTrans from '../../assets/logo/SINGLE_TRANS.png';
+import rankedTrans from '../../assets/logo/RANKED_TRANS.png';
 
-function GameCard({ gameEndpoint = '/game', onExitGame, footerLabel = 'Partida em andamento' }) {
+function GameCard({ gameEndpoint = '/game', onExitGame, footerLabel = 'Partida em andamento', gameOrigin = null }) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
@@ -28,6 +30,12 @@ function GameCard({ gameEndpoint = '/game', onExitGame, footerLabel = 'Partida e
       />
 
       <header className="game-card-header" aria-label="Barra superior do jogo">
+        {gameOrigin === 'single' && (
+          <img src={singleTrans} alt="Single" className="game-card-header-img-left" />
+        )}
+        {gameOrigin === 'ranked' && (
+          <img src={rankedTrans} alt="Ranked" className="game-card-header-img-left" />
+        )}
         <div className="game-card-timer-box" aria-live="polite">
           <div className="game-card-timer">{formattedTime}</div>
         </div>

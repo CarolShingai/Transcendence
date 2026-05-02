@@ -184,6 +184,16 @@
   line-height: 1;
 }
 
+/* Keep left image compact so header size doesn't change */
+.game-card-header-img-left {
+  height: clamp(40px, 5.2vh, 60px);
+  width: auto;
+  object-fit: contain;
+  justify-self: start;
+  align-self: center;
+  pointer-events: none;
+}
+
 .game-card-exit {
   position: absolute;
   top: clamp(0.5rem, 1.2vh, 0.85rem);

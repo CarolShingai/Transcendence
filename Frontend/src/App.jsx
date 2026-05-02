@@ -173,6 +173,13 @@ function App() {
     if (!isAuthenticated) return;
     setView('game');
   };
+  const [gameOrigin, setGameOrigin] = useState(null);
+
+  const handleGoToGameWithOrigin = (origin) => {
+    if (!isAuthenticated) return;
+    setGameOrigin(origin || null);
+    setView('game');
+  };
 
   const handleProfileSave = (event) => {
     event.preventDefault();
@@ -260,9 +267,9 @@ function App() {
                 onRegisterSave={handleRegisterSave}
               />
             ) : isHomeView ? (
-              <HomeCard onPlayGame={handleGoToGame} />
+              <HomeCard onPlayGame={handleGoToGameWithOrigin} />
             ) : isGameView ? (
-              <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} />
+              <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
             ) : (
               <ProfileCard
                 initials={initials}

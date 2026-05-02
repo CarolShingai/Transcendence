@@ -138,7 +138,7 @@ function HomeCard({ matches = [], friends = [], onPlayGame }) {
                       <button
                         type="button"
                         className="home-card-add-friend-button footer-play-button"
-                        onClick={onPlayGame}
+                        onClick={() => onPlayGame(index === 0 ? 'single' : 'ranked')}
                       >
                         <span className="play-icon">▶</span>
                         JOGUE AGORA!
