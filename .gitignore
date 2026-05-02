@@ -1,0 +1,55 @@
+# Backend - Gradle
+Backend/build/
+Backend/.gradle/
+Backend/.idea/
+Backend/*.iml
+Backend/*.iws
+Backend/*.ipr
+
+# Backend - IDE
+Backend/.vscode/
+Backend/.classpath
+Backend/.project
+Backend/.settings/
+Backend/bin/
+
+# Backend - Dependencies & Cache
+Backend/.kotlin/
+Backend/.m2/
+Backend/*.log
+
+# Frontend - Node
+Frontend/node_modules/
+Frontend/npm-debug.log*
+Frontend/yarn-debug.log*
+Frontend/yarn-error.log*
+Frontend/package-lock.json
+
+# Frontend - Build
+Frontend/dist/
+Frontend/build/
+Frontend/.angular/
+
+# Frontend - IDE
+Frontend/.vscode/
+Frontend/.idea/
+Frontend/*.iml
+Frontend/*.iws
+Frontend/*.ipr
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.env
+.env.local
+.env.*.local
+
+# General
+*.class
+*.jar
+*.log
+.gradle
+docker-compose.override.yml

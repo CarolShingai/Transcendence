@@ -1,83 +1,210 @@
-Transcendence
-
-Posições:
-
-Barbara - Product Owner
-Luana - Product Manager
-Carol - Teach Lead
-
-Preferencias:
-Thiago: Frontend
-Barbara: Banco de dados
 
 
-Client Side Rendering
-- Client Side: Exige Menos do Server
-- Pior SEO
 
-Server Side Rendering:
-- Melhor SEO
-- Exige do Server
-- Mais ponto
+# 🔐 Auth Backend com 2FA (Spring Boot + Kotlin)
 
-Linguagem:
-- Back: Kotlin -> spring
-- Front: ? -> Thiago
+![Java](https://img.shields.io/badge/Java-17%2B-blue)
+![Kotlin](https://img.shields.io/badge/Kotlin-1.9-purple)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen)
+![Docker](https://img.shields.io/badge/Docker-supported-blue)
+![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
-Sobre o Jogo:
-- Imagem topdown
-- Aves serem coletáveis e viajar juntas
-- Talvez um multiplayer
-- Lugar degradado
-- Uma barra indicando a distancia percorrida
-- Colocar Curiosidades enquanto corre o jogo:
-- 1- Dormir com metade do cérebro
-- 2- Ferro como bússula
-- Talvez uma feature que desbloqueia as curiosidades
-- Colocar um cérebro de ave que vai preenchendo conforme coleta algo, dependendo pode descansar parte do cérebro (talvez um power up)
+---
 
-Por onde começa?
+## 📌 Visão Geral
 
-1- Infra e Banco de Dados
+Backend para autenticação segura com suporte a **JWT + 2FA (TOTP)**.
 
-Módulos:
-- WEB:
-  - Major(framework Front e Back) += 2
-  - WebSocket += 2
-  - API com 5 endpoints += 2
-  - Sever Side Rendering += 1
-  - Custom Made Design += 1
-- Internacionalization:
-  - 3 linguas += 1
-  - Suporte em mais de 2 browsers += 1
+* 🔑 Login com JWT
+* 📱 Autenticação em dois fatores (Google Authenticator, Authy, etc.)
+* 🔒 HTTPS com certificado local (dev)
+* 🌐 Integração com frontend Angular
 
-User Management:
-- Standard User += 2
-- Autotification pelo google - Carol +=1
-- Autontification em dois fatores - Carol +=1
+---
 
-IA:
-- Inteligencia do inimigo += 2
-Cibersecurity
-- Multiplayer += 2
-- Remote player += 2
-- Game customization += 1
-- Infra
-- Monitoring with Grafana e Prometheus += 2
-- Help check +=1
-- Gaveta:
-- 3d +=1
-- Conquistas+=1
+## 🧱 Arquitetura
 
-Total	= 20
+```mermaid
+graph TD
+    A[Frontend Angular] -->|JWT| B[AuthController]
+    B --> C[UserService]
+    B --> D[TwoFactorService]
+    C --> E[(Database)]
+    D --> F[TOTP Generator]
+```
 
-Semama 1 
-2pt
-- Api 5 Endpoints = 2pts
-- Standard User +  Auth Google + 2 Fatores + ORM -> (total: 5pts)
-- - Standard User:
-  -(cadastro, login) + Auth + 2 Fatores  -> Carol
-  - pagina de perfil, update perfil, update foto - Luana e Thiago
-  - add amigo -> Luana e Thiago
-- Jogo - Mecanica - Customizacao - AI (total: 3pts)
-- - Mecanica e Renderizacao do jogo -> Barbara
+### 🔍 Componentes
+
+* **AuthController** → Entrada da API
+* **UserService** → Regras de negócio (usuário)
+* **TwoFactorService** → Geração e validação de TOTP
+* **SecurityConfig** → Segurança e filtros JWT
+
+---
+
+## ⚙️ Stack
+
+* Java 17+
+* Kotlin
+* Spring Boot
+* Spring Security
+* JWT
+* TOTP (2FA)
+* Docker (opcional)
+
+---
+
+## 🚀 Setup
+
+### Pré-requisitos
+
+* Java 17+
+* Gradle (ou usar wrapper)
+* Docker (opcional)
+
+---
+
+## 🔐 HTTPS (Dev)
+
+```bash
+./certs/generate-keystore.sh
+```
+
+Ou configure:
+
+```bash
+SSL_KEYSTORE_PATH=file:./certs/keystore-dev.p12
+SSL_KEYSTORE_PASSWORD=changeit
+```
+
+---
+
+## ▶️ Rodando o projeto
+
+### Build
+
+```bash
+./gradlew build
+```
+
+### Run (dev)
+
+```bash
+./gradlew bootRun --args='--spring.profiles.active=dev'
+```
+
+---
+
+## 🐳 Docker
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+---
+
+## 📘 Swagger
+
+Acesse:
+
+```
+https://localhost:8081/swagger-ui/index.html
+```
+
+⚠️ Aceite o certificado autoassinado
+
+---
+
+## 🔑 Fluxo de Autenticação
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant B as Backend
+
+    U->>F: Login
+    F->>B: POST /auth/login
+    B-->>F: JWT
+
+    F->>B: POST /auth/2fa/setup
+    B-->>F: QR Code + Secret
+
+    U->>App: Escaneia QR
+    U->>F: Código TOTP
+
+    F->>B: POST /auth/2fa/enable
+    B-->>F: 2FA ativado
+```
+
+---
+
+## 🧪 Exemplos
+
+### Login
+
+```bash
+curl -k -X POST "https://localhost:8081/auth/login" \
+-H "Content-Type: application/json" \
+-d '{"email":"user@email.com","password":"123"}'
+```
+
+---
+
+### Gerar 2FA
+
+```bash
+curl -k -X POST "https://localhost:8081/auth/2fa/setup" \
+-H "Authorization: Bearer SEU_TOKEN"
+```
+
+---
+
+## 📱 QR Code
+
+```html
+<img src="data:image/png;base64,BASE64_DO_QR">
+```
+
+---
+
+## ⚠️ Troubleshooting
+
+### 400 - JSON inválido
+
+* Verifique formatação
+* Use `Content-Type: application/json`
+
+### 401 - Unauthorized
+
+* Token inválido ou expirado
+
+### CORS / Swagger
+
+* Aceite certificado HTTPS
+* Verifique origens permitidas
+
+---
+
+## 🛠️ Comandos úteis
+
+```bash
+./gradlew build
+./gradlew bootRun
+./gradlew test
+```
+
+---
+
+## 🔮 Melhorias futuras
+
+* Refresh Token
+* Rate Limiting
+* Auditoria de login
+* Suporte a múltiplos dispositivos 2FA
+
+---
+
+## 📄 Licença
+
+MIT

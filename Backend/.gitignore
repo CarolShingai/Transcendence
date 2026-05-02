@@ -38,3 +38,12 @@ out/
 
 ### Kotlin ###
 .kotlin
+
+### Local TLS certs/keystores (dev) ###
+certs/*.p12
+certs/*.jks
+certs/*.pem
+certs/*.crt
+certs/*.cer
+certs/*.key
+certs/*.pfx
