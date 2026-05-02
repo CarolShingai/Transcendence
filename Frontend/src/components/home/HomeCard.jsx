@@ -1,16 +1,25 @@
 import React, { useState } from 'react';
 import singleTrans from '../../assets/logo/SINGLE_TRANS.png';
 import rankedTrans from '../../assets/logo/RANKED_TRANS.png';
+import amigosTrans from '../../assets/logo/trans_amigos1.png';
 
 const EMPTY_CARDS = [{ id: 1 }, { id: 2 }, { id: 3 }];
 
 const MOCK_MATCHES = [
-  { id: 1, date: '2024-04-30', time: '12:34' },
-  { id: 2, date: '2024-04-29', time: '08:45' },
-  { id: 3, date: '2024-04-28', time: '15:22' },
-  { id: 4, date: '2024-04-27', time: '09:11' },
-  { id: 5, date: '2024-04-26', time: '22:33' },
-  { id: 6, date: '2024-04-25', time: '11:44' },
+  { id: 1, date: '2024-04-30', time: '00:00' },
+  { id: 2, date: '2024-04-29', time: '00:00' },
+  { id: 3, date: '2024-04-28', time: '00:00' },
+  { id: 4, date: '2024-04-27', time: '00:00' },
+  { id: 5, date: '2024-04-26', time: '00:00' },
+  { id: 6, date: '2024-04-25', time: '00:00' },
+];
+
+const MOCK_FRIENDS = [
+  { id: 1, name: 'Ana Silva', nickname: 'anas', status: 'Online' },
+  { id: 2, name: 'Bruno Costa', nickname: 'brunoc', status: 'Jogando' },
+  { id: 3, name: 'Carla Mendes', nickname: 'carlam', status: 'Offline' },
+  { id: 4, name: 'Diego Santos', nickname: 'diegos', status: 'Online' },
+  { id: 5, name: 'Ester Lima', nickname: 'esterl', status: 'Pausado' },
 ];
 
 function HomeCard() {
@@ -49,7 +58,10 @@ function HomeCard() {
 
             return (
               <article key={card.id} className={`carousel-item ${positionClass}`}>
-                <div className="card home-carousel-item-card" aria-hidden="true">
+                <div
+                  className="card home-carousel-item-card has-footer-layout"
+                  aria-hidden="true"
+                >
                   <header className="home-card-header" aria-hidden="true">
                     {index === 0 && (
                       <img
@@ -63,6 +75,13 @@ function HomeCard() {
                         src={rankedTrans}
                         alt="Ranked"
                         className="home-card-header-img"
+                      />
+                    )}
+                    {index === 2 && (
+                      <img
+                        src={amigosTrans}
+                        alt="Amigos"
+                        className="home-card-header-img home-card-header-img-center"
                       />
                     )}
                     {(index === 0 || index === 1) && (
@@ -88,15 +107,48 @@ function HomeCard() {
                       ))}
                     </div>
                   )}
-                  {(index === 0 || index === 1) && (
-                    <button className="home-card-play-button">JOGUE AGORA!</button>
-                  )}
-                  <div className="home-card-body" />
-                  {index === 2 && (
-                    <footer className="home-card-footer" aria-hidden="true">
+                  <div className={`home-card-body ${index === 2 ? 'home-card-body-friends' : ''}`}>
+                    {index === 2 && (
+                      <div className="friends-panel" aria-label="Lista de amigos">
+                        <div className="friends-list">
+                          {MOCK_FRIENDS.map((friend) => {
+                            const initials = friend.name
+                              .split(' ')
+                              .filter(Boolean)
+                              .slice(0, 2)
+                              .map((token) => token[0].toUpperCase())
+                              .join('');
+
+                            return (
+                              <article key={friend.id} className="friend-item">
+                                <div className="friend-avatar" aria-hidden="true">
+                                  {initials}
+                                </div>
+                                <div className="friend-info">
+                                  <div className="friend-name">{friend.name}</div>
+                                  <div className="friend-nickname">@{friend.nickname}</div>
+                                </div>
+                                <div className={`friend-status friend-status-${friend.status.toLowerCase()}`}>
+                                  {friend.status}
+                                </div>
+                              </article>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <footer className="home-card-footer" aria-hidden="true">
+                    {(index === 0 || index === 1) && (
+                      <button className="home-card-add-friend-button footer-play-button">
+                        <span className="play-icon">▶</span>
+                        JOGUE AGORA!
+                      </button>
+                    )}
+                    {index === 2 && (
                       <button className="home-card-add-friend-button">+ Adicionar amigos</button>
-                    </footer>
-                  )}
+                    )}
+                  </footer>
                 </div>
               </article>
             );
