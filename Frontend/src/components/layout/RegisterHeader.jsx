@@ -3,7 +3,7 @@ import React from 'react';
 function RegisterHeader({ onGoToLogin }) {
   return (
     <header className="App-header App-header-home App-header-edit">
-      <h1 className="edit-header-title">Cadastre-se na sua conta!</h1>
+      <h1 className="edit-header-title">Cadastre-se!</h1>
 
       <div className="home-header-actions" aria-label="Acoes do cadastro">
         <button
