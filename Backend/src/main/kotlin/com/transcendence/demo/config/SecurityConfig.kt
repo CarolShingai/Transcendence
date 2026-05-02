@@ -27,7 +27,7 @@ class SecurityConfig(
 	private val clientRegistrationRepository: ClientRegistrationRepository,
 	private val oAuth2AuthenticationFailureHandler: OAuth2AuthenticationFailureHandler,
 	private val cookieOAuth2AuthorizationRequestRepository: CookieOAuth2AuthorizationRequestRepository,
-	@Value("\${app.cors.allowed-origins:http://localhost:4200}")
+	@Value("\${app.cors.allowed-origins:http://localhost:3000}")
 	private val corsAllowedOrigins: String
 ) {
 
