@@ -23,7 +23,7 @@ services:
   backend:
     build:
       context: ./Backend
-      dockerfile: Dockerfile.dev
+      dockerfile: dockerfile.dev
     working_dir: /workspace
     command: sh -c "chmod +x /workspace/dev-run.sh && /workspace/dev-run.sh"
     ports:

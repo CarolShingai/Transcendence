@@ -1,210 +1,217 @@
+# Transcendence
 
+Aplicacao full-stack com frontend Angular, backend Spring Boot em Kotlin, autenticacao com JWT, suporte a 2FA e Swagger/OpenAPI.
 
+## Visao geral
 
-# 🔐 Auth Backend com 2FA (Spring Boot + Kotlin)
+O projeto e dividido em duas partes principais:
 
-![Java](https://img.shields.io/badge/Java-17%2B-blue)
-![Kotlin](https://img.shields.io/badge/Kotlin-1.9-purple)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen)
-![Docker](https://img.shields.io/badge/Docker-supported-blue)
-![License](https://img.shields.io/badge/license-MIT-lightgrey)
+- Backend: API REST responsavel por autenticacao, autorizacao, 2FA, documentacao da API e acesso ao banco.
+- Frontend: aplicacao Angular responsavel pela interface do usuario e pela comunicacao com o backend.
 
----
+A infraestrutura local usa Docker e Docker Compose para orquestrar os servicos e simplificar a execucao tanto em desenvolvimento quanto em producao.
 
-## 📌 Visão Geral
+## Como o projeto e composto
 
-Backend para autenticação segura com suporte a **JWT + 2FA (TOTP)**.
+### Backend
 
-* 🔑 Login com JWT
-* 📱 Autenticação em dois fatores (Google Authenticator, Authy, etc.)
-* 🔒 HTTPS com certificado local (dev)
-* 🌐 Integração com frontend Angular
+O backend fica em [Backend](Backend) e e implementado com Spring Boot + Kotlin. Ele expoe endpoints REST para:
 
----
+- cadastro e login
+- emissao e validacao de JWT
+- configuracao e validacao de 2FA
+- documentacao Swagger/OpenAPI
 
-## 🧱 Arquitetura
+Arquivos importantes:
+
+- [Backend/build.gradle.kts](Backend/build.gradle.kts)
+- [Backend/src/main/kotlin/com/transcendence/demo/config/SecurityConfig.kt](Backend/src/main/kotlin/com/transcendence/demo/config/SecurityConfig.kt)
+- [Backend/src/main/kotlin/com/transcendence/demo/config/OpenApiConfig.kt](Backend/src/main/kotlin/com/transcendence/demo/config/OpenApiConfig.kt)
+- [Backend/src/main/resources/application-dev.properties](Backend/src/main/resources/application-dev.properties)
+- [Backend/src/main/resources/application-prod.properties](Backend/src/main/resources/application-prod.properties)
+
+### Frontend
+
+O frontend fica em [Frontend](Frontend) e e uma aplicacao Angular. Em desenvolvimento, ele roda com hot reload. Em producao, ele e servido por Nginx.
+
+Arquivos importantes:
+
+- [Frontend/package.json](Frontend/package.json)
+- [Frontend/nginx.conf](Frontend/nginx.conf)
+- [Frontend/Dockerfile.dev](Frontend/Dockerfile.dev)
+
+### Infraestrutura
+
+Os ambientes sao definidos por dois arquivos de compose:
+
+- [docker-compose.dev.yml](docker-compose.dev.yml): ambiente de desenvolvimento.
+- [docker-compose.yml](docker-compose.yml): ambiente de producao.
+
+O [Makefile](Makefile) aponta para o compose de desenvolvimento e facilita os comandos mais usados.
+
+## Arquitetura
 
 ```mermaid
 graph TD
-    A[Frontend Angular] -->|JWT| B[AuthController]
-    B --> C[UserService]
-    B --> D[TwoFactorService]
-    C --> E[(Database)]
-    D --> F[TOTP Generator]
+    U[Usuario] --> F[Frontend Angular]
+    F -->|HTTP/HTTPS + JWT| B[Backend Spring Boot]
+    B --> S[Swagger / OpenAPI]
+    B --> D[(MySQL)]
+    F --> N[Nginx em producao]
 ```
 
-### 🔍 Componentes
+### Fluxo de execucao
 
-* **AuthController** → Entrada da API
-* **UserService** → Regras de negócio (usuário)
-* **TwoFactorService** → Geração e validação de TOTP
-* **SecurityConfig** → Segurança e filtros JWT
+1. O usuario acessa o frontend.
+2. O frontend chama o backend para autenticar e acessar dados.
+3. O backend valida credenciais, emite JWT e aplica as regras de seguranca.
+4. O backend persiste dados no MySQL.
+5. A documentacao da API e disponibilizada pelo proprio backend via Swagger.
 
----
+## Dependencias
 
-## ⚙️ Stack
+Para rodar localmente, voce precisa de:
 
-* Java 17+
-* Kotlin
-* Spring Boot
-* Spring Security
-* JWT
-* TOTP (2FA)
-* Docker (opcional)
+- Docker
+- Docker Compose
+- Make
 
----
+Se quiser executar fora do Docker, tambem precisa de:
 
-## 🚀 Setup
+- Java 23 para o backend
+- Node.js 24 para o frontend
 
-### Pré-requisitos
+Observacao: o projeto foi organizado para funcionar bem com Docker, entao voce nao precisa instalar Java e Node localmente se for usar apenas os containers.
 
-* Java 17+
-* Gradle (ou usar wrapper)
-* Docker (opcional)
+## Como rodar o projeto
 
----
+### Desenvolvimento com Makefile
 
-## 🔐 HTTPS (Dev)
+Este e o modo recomendado para desenvolvimento local.
+
+Suba a stack completa:
 
 ```bash
-./certs/generate-keystore.sh
+make start
 ```
 
-Ou configure:
+Veja os containers ativos:
 
 ```bash
-SSL_KEYSTORE_PATH=file:./certs/keystore-dev.p12
-SSL_KEYSTORE_PASSWORD=changeit
+make ps
 ```
 
----
-
-## ▶️ Rodando o projeto
-
-### Build
+Veja os logs:
 
 ```bash
-./gradlew build
+make logs
 ```
 
-### Run (dev)
+Pare o ambiente:
 
 ```bash
-./gradlew bootRun --args='--spring.profiles.active=dev'
+make down
 ```
 
----
+No ambiente de desenvolvimento, os servicos ficam em:
 
-## 🐳 Docker
+- Frontend: http://localhost:3000
+- Backend: https://localhost:8082
+- Swagger: https://localhost:8082/swagger-ui/index.html
+
+### Desenvolvimento sem Makefile
+
+Se preferir chamar o Compose diretamente:
 
 ```bash
-docker compose -f docker-compose.dev.yml up --build
+docker compose -f docker-compose.dev.yml up --build -d
 ```
 
----
+Esse comando sobe a mesma stack usada pelo Makefile.
 
-## 📘 Swagger
+### Producao / ambiente raiz
+
+Para subir a configuracao de producao localmente:
+
+```bash
+docker compose -f docker-compose.yml up --build -d
+```
+
+Nesse modo, os servicos ficam em:
+
+- Frontend: http://localhost:8080
+- Backend: https://localhost:8081
+- Swagger: https://localhost:8081/swagger-ui/index.html
+
+## Backend em detalhe
+
+O backend usa Spring Security, JWT, 2FA e springdoc-openapi.
+
+Pontos importantes:
+
+- Em desenvolvimento, o profile dev habilita HTTPS com certificado local.
+- Em producao, o backend tambem roda com HTTPS usando o keystore informado por variaveis de ambiente.
+- O Swagger e servido pelo proprio backend, nao por um container separado.
+- As rotas de Swagger ja estao liberadas na configuracao de seguranca.
+
+## Frontend em detalhe
+
+O frontend e uma aplicacao Angular empacotada via Docker.
+
+Em desenvolvimento:
+
+- roda com hot reload
+- escuta na porta 3000
+- se comunica com o backend pela rede do Compose
+
+Em producao:
+
+- e servido por Nginx
+- usa a porta 8080 no host
+
+O Nginx tambem pode encaminhar requisicoes da interface para a API quando necessario.
+
+## Banco de dados
+
+O projeto usa MySQL via Docker.
+
+- No desenvolvimento, o banco sobe junto com a stack de dev.
+- No ambiente de producao, o banco sobe pela composicao principal.
+
+As credenciais e nomes de database estao definidos nos arquivos de Compose e podem ser ajustados por variaveis de ambiente.
+
+## Swagger / documentacao da API
+
+A documentacao da API e fornecida pelo backend.
 
 Acesse:
 
-```
-https://localhost:8081/swagger-ui/index.html
-```
+- Desenvolvimento: https://localhost:8082/swagger-ui/index.html
+- Producao: https://localhost:8081/swagger-ui/index.html
 
-⚠️ Aceite o certificado autoassinado
+Se o navegador alertar sobre certificado autoassinado, aceite a excecao durante o desenvolvimento.
 
----
-
-## 🔑 Fluxo de Autenticação
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant F as Frontend
-    participant B as Backend
-
-    U->>F: Login
-    F->>B: POST /auth/login
-    B-->>F: JWT
-
-    F->>B: POST /auth/2fa/setup
-    B-->>F: QR Code + Secret
-
-    U->>App: Escaneia QR
-    U->>F: Código TOTP
-
-    F->>B: POST /auth/2fa/enable
-    B-->>F: 2FA ativado
-```
-
----
-
-## 🧪 Exemplos
-
-### Login
+## Comandos uteis
 
 ```bash
-curl -k -X POST "https://localhost:8081/auth/login" \
--H "Content-Type: application/json" \
--d '{"email":"user@email.com","password":"123"}'
+make start
+make ps
+make logs
+make down
+docker compose -f docker-compose.dev.yml logs backend
+docker compose -f docker-compose.yml logs backend
 ```
 
----
+## Troubleshooting
 
-### Gerar 2FA
+Se algo nao subir corretamente, verifique:
 
-```bash
-curl -k -X POST "https://localhost:8081/auth/2fa/setup" \
--H "Authorization: Bearer SEU_TOKEN"
-```
+- se o comando usou o compose correto, dev ou producao
+- se a porta acessada no navegador bate com a configuracao do ambiente
+- se voce esta usando HTTPS quando o backend exige certificado
+- se o container do backend terminou de iniciar sem erro
+- se o banco MySQL subiu e ficou saudavel antes do backend
 
----
-
-## 📱 QR Code
-
-```html
-<img src="data:image/png;base64,BASE64_DO_QR">
-```
-
----
-
-## ⚠️ Troubleshooting
-
-### 400 - JSON inválido
-
-* Verifique formatação
-* Use `Content-Type: application/json`
-
-### 401 - Unauthorized
-
-* Token inválido ou expirado
-
-### CORS / Swagger
-
-* Aceite certificado HTTPS
-* Verifique origens permitidas
-
----
-
-## 🛠️ Comandos úteis
-
-```bash
-./gradlew build
-./gradlew bootRun
-./gradlew test
-```
-
----
-
-## 🔮 Melhorias futuras
-
-* Refresh Token
-* Rate Limiting
-* Auditoria de login
-* Suporte a múltiplos dispositivos 2FA
-
----
-
-## 📄 Licença
+## Licenca
 
 MIT

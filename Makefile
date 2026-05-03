@@ -15,6 +15,10 @@ front:
 start:
 	$(COMPOSE) up --build -d
 
+# Para subir os container após o build
+up:
+	$(COMPOSE) up -d
+
 # Para e remove os containers da stack de desenvolvimento.
 down:
 	$(COMPOSE) down
