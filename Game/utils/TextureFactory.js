@@ -5,5 +5,7 @@ class TextureFactory {
   }
   generateAll() {
     // Imagens carregadas em GameScene.preload()
+      this._loadHarpia();
+
   }
 }

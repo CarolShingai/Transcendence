@@ -15,6 +15,17 @@ class Tyrannus {
     this._wingInterval = 160;
     this._wingFrame    = 0;
 
+    // Sistema de escudo
+    this.shieldActive   = false;
+    this.shieldTimer    = 0;
+    this.shieldDuration = 0;
+    this.shieldGraphics = null;
+
+    // Sistema de ímã
+    this.magnetActive   = false;
+    this.magnetRadius   = 200; // Raio de atração do ímã
+    this._magnetGraphics = null;
+
     // Sprite do Tyrannus
     this.sprite = scene.physics.add.image(x, y, 'tyrannus');
     this.sprite.setCollideWorldBounds(true);
@@ -42,6 +53,8 @@ class Tyrannus {
 
     this._handleMovement();
     this._animateWings(delta);
+    this._updateShield(delta);
+    this._updateMagnetism(delta);
   }
 
   // ── Movimento 4 direções ──────────────────────────────────────────────────
@@ -74,6 +87,95 @@ class Tyrannus {
       this._wingTimer = 0;
       this._wingFrame = this._wingFrame === 0 ? 1 : 0;
       this.sprite.setTexture(this._wingFrame === 0 ? 'tyrannus' : 'tyrannus2');
+    }
+  }
+
+  // ── Sistema de escudo ──────────────────────────────────────────────────────
+
+  activateShield(duration) {
+    this.shieldActive = true;
+    this.shieldTimer = 0;
+    this.shieldDuration = duration;
+    this._createShieldGraphics();
+  }
+
+  // ── Sistema de ímã ─────────────────────────────────────────────────────────
+
+  _updateMagnetism(delta) {
+    if (this.magnetActive) {
+      // Cria/atualiza visual do ímã
+      if (!this._magnetGraphics) {
+        this._magnetGraphics = this.scene.add.graphics().setDepth(7);
+      }
+
+      this._magnetGraphics.clear();
+      this._magnetGraphics.lineStyle(2, 0xff00ff, 0.7); // Magenta
+      this._magnetGraphics.strokeCircle(this.sprite.x, this.sprite.y, this.magnetRadius);
+
+      // Desenha linhas de atração
+      this._magnetGraphics.lineStyle(1, 0xff00ff, 0.4);
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const x1 = this.sprite.x + Math.cos(angle) * (this.magnetRadius - 20);
+        const y1 = this.sprite.y + Math.sin(angle) * (this.magnetRadius - 20);
+        const x2 = this.sprite.x + Math.cos(angle) * this.magnetRadius;
+        const y2 = this.sprite.y + Math.sin(angle) * this.magnetRadius;
+        this._magnetGraphics.lineBetween(x1, y1, x2, y2);
+      }
+    } else {
+      // Destrói o visual do ímã quando desativado
+      if (this._magnetGraphics) {
+        this._magnetGraphics.destroy();
+        this._magnetGraphics = null;
+      }
+    }
+  }
+
+  _updateShield(delta) {
+    if (!this.shieldActive) return;
+
+    this.shieldTimer += delta;
+
+    // Redesenha o escudo para acompanhar o Tyrannus
+    if (this.shieldGraphics) {
+      this.shieldGraphics.clear();
+      this.shieldGraphics.lineStyle(3, 0x00ccff, 0.9);
+      this.shieldGraphics.strokeCircle(this.sprite.x, this.sprite.y, 55);
+    }
+
+    // Desfaz o escudo quando tempo expira
+    if (this.shieldTimer >= this.shieldDuration) {
+      this._deactivateShield();
+    }
+  }
+
+  _createShieldGraphics() {
+    // Destrói o escudo anterior se existir
+    if (this.shieldGraphics) {
+      this.scene.tweens.killTweensOf(this.shieldGraphics);
+      if (this.shieldGraphics.particleSystem) {
+        this.shieldGraphics.particleSystem.destroy();
+      }
+      this.shieldGraphics.destroy();
+    }
+
+    this.shieldGraphics = this.scene.add.graphics().setDepth(8);
+    
+    // Desenha círculo de escudo
+    this.shieldGraphics.lineStyle(3, 0x00ccff, 0.9);
+    this.shieldGraphics.strokeCircle(this.sprite.x, this.sprite.y, 55);
+  }
+
+  _deactivateShield() {
+    this.shieldActive = false;
+
+    if (this.shieldGraphics) {
+      // Para todos os tweens associados ao graphics
+      this.scene.tweens.killTweensOf(this.shieldGraphics);
+      
+      // Destrói o graphics
+      this.shieldGraphics.destroy();
+      this.shieldGraphics = null;
     }
   }
 }
