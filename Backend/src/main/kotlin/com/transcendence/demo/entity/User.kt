@@ -35,6 +35,9 @@ data class User(
     @Column(nullable = false)
     var profilePic: Int = 0,
 
+    @Column(name = "status", nullable = false)
+    var status: String = "offline",
+
     @Column(name = "two_factor_enabled", nullable = false)
     var twoFactorEnabled: Boolean = false,
 
