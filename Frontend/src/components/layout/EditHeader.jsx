@@ -3,7 +3,7 @@ import React from 'react';
 function EditHeader({ onGoToHome, onLogout }) {
   return (
     <header className="App-header App-header-home App-header-edit">
-      <h1 className="edit-header-title">Edite suas informacoes e imagem do perfil!</h1>
+      <h1 className="edit-header-title">Editar perfil!</h1>
 
       <div className="home-header-actions" aria-label="Acoes da edicao">
         <button

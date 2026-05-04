@@ -7,31 +7,12 @@ const FRIENDS_TABS = [
   { id: 'search', label: 'Pesquisar amigos' },
 ];
 
-const MOCK_FRIENDS = [
-  { id: 1, name: 'Thiago Santos', nickname: 't_santos', status: 'Online' },
-  { id: 2, name: 'Ana Clara', nickname: 'anac', status: 'Offline' },
-  { id: 3, name: 'Bruno Lima', nickname: 'brlima', status: 'Online' },
-  { id: 4, name: 'Marina Costa', nickname: 'maric', status: 'Offline' },
-];
-
-const MOCK_INVITES = [
-  { id: 101, name: 'João Pedro', nickname: 'jpedro' },
-  { id: 102, name: 'Lívia Rocha', nickname: 'livrocha' },
-];
-
-const MOCK_DISCOVER_USERS = [
-  { id: 201, name: 'Carlos Eduardo', nickname: 'c_eduardo' },
-  { id: 202, name: 'Paula Mendes', nickname: 'paulam' },
-  { id: 203, name: 'Rafael Souza', nickname: 'rafaels' },
-  { id: 204, name: 'Camila Nunes', nickname: 'camilan' },
-];
-
 function HomeFriendsCard({ friends = [], invites = [] }) {
   const [activeTab, setActiveTab] = useState('friends');
   const [searchQuery, setSearchQuery] = useState('');
-  const [friendsList, setFriendsList] = useState(friends.length > 0 ? friends : MOCK_FRIENDS);
-  const [inviteList, setInviteList] = useState(invites.length > 0 ? invites : MOCK_INVITES);
-  const [discoverUsers, setDiscoverUsers] = useState(MOCK_DISCOVER_USERS);
+  const [friendsList, setFriendsList] = useState(friends);
+  const [inviteList, setInviteList] = useState(invites);
+  const [discoverUsers, setDiscoverUsers] = useState([]);
   const [sentInviteIds, setSentInviteIds] = useState([]);
 
   const getInitials = (name = '') => name
