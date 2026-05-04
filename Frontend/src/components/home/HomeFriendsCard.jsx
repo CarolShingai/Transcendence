@@ -115,7 +115,7 @@ function HomeFriendsCard({ friends = [], invites = [] }) {
           <input
             type="search"
             className="friends-search-input"
-            placeholder="Pesquisar por nome ou nickname"
+            placeholder="🔍 Pesquisar por nome ou nickname"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             aria-label="Pesquisar amigos"
