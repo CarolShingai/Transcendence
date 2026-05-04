@@ -54,11 +54,8 @@ class WebSocketPresenceHandler(
                 onlineUsers = presenceService.getOnlineUsers()
             )
 
-            sendEvent(
-                session,
-                presenceEvent
-            )
-            broadcastEvent(presenceEvent)
+            sendEvent(session, presenceEvent)
+            broadcastEventExcluding(presenceEvent, session.id)
         } catch (ex: Exception) {
             logger.warn("WebSocket connection rejected: {}", ex.message)
             safeSendError(session, ex.message ?: "Connection rejected")
@@ -133,6 +130,16 @@ class WebSocketPresenceHandler(
         sessions.values.forEach { session ->
             runCatching {
                 sendEvent(session, event)
+            }
+        }
+    }
+
+    private fun broadcastEventExcluding(event: WebSocketEventDTO, excludeSessionId: String) {
+        sessions.values.forEach { session ->
+            if (session.id != excludeSessionId) {
+                runCatching {
+                    sendEvent(session, event)
+                }
             }
         }
     }
