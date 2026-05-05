@@ -37,12 +37,18 @@ class GameScene extends Phaser.Scene {
     
     // Cria o grupo de libelulas (power-ups de escudo)
     this._libelulas = new LibelulaGroup(this);
+    
+    // Passa as referências para o Tyrannus (para o magnetismo funcionar)
+    this._tyrannus.libelulas = this._libelulas;
+    
+    // Cria o grupo de imãs (power-ups de magnetismo)
+    this._imans = new MagnetGroup(this);
 
     // Ativa o personagem (permite movimento)
     this._tyrannus.activate();
 
     // Fundo simples com cor
-    this.cameras.main.setBackgroundColor('#1a3a2a');
+    this.cameras.main.setBackgroundColor('#419169');
 
     // ── HUD ──────────────────────────────────────────────────────────────
 
@@ -64,12 +70,6 @@ class GameScene extends Phaser.Scene {
       fill: '#fff'
     }).setDepth(100);
 
-    // ── Controle de ímã ───────────────────────────────────────────────────────
-
-    this.input.keyboard.on('keydown-M', () => {
-      this._tyrannus.magnetActive = !this._tyrannus.magnetActive;
-      this._magnetText.setText(`🧲 Ímã: ${this._tyrannus.magnetActive ? 'ON' : 'OFF'}`);
-    });
 
     // ── Colisões ─────────────────────────────────────────────────────────
 
@@ -96,6 +96,15 @@ class GameScene extends Phaser.Scene {
       null,
       this
     );
+
+    // Colisão com imã
+    this.physics.add.overlap(
+      this._tyrannus.sprite,
+      this._imans.getGroup(),
+      this._collectMagnet,
+      null,
+      this
+    );
   }
 
   update(_time, delta) {
@@ -108,13 +117,26 @@ class GameScene extends Phaser.Scene {
     // Atualiza os carcarás
     this._carcaras.update(delta, this.scale.height);
 
-    // Atualiza as libelulas (passa Tyrannus para aplicar ímã)
-    this._libelulas.update(delta, this.scale.width, this.scale.height, this._tyrannus);
+    // Atualiza as libelulas (passa Tyrannus e magnetGroup para aplicar atração)
+    this._libelulas.update(delta, this.scale.width, this.scale.height, this._tyrannus, this._imans);
+
+    // Atualiza os imãs (passa Tyrannus para aplicar efeito de atração)
+    this._imans.update(delta, this.scale.width, this.scale.height, this._tyrannus);
 
     // Aumenta pontos (1 ponto a cada frame enquanto vivo)
     if (this._tyrannus.alive) {
       this._score += 1;
       this._scoreText.setText(`Quilômetros: ${Math.floor(this._score / 60)}`); // Converte para segundos
+    }
+
+    // Atualiza HUD de magnetismo
+    if (this._tyrannus.magnetActive) {
+      const remainingTime = Math.ceil((this._tyrannus.magnetDuration - this._tyrannus.magnetTimer) / 1000);
+      this._magnetText.setText(`🧲 Ímã: ${remainingTime}s`);
+      this._magnetText.setFill('#ffcc00'); // Amarelo quando ativo
+    } else {
+      this._magnetText.setText(`🧲 Ímã: OFF`);
+      this._magnetText.setFill('#fff');
     }
   }
 
@@ -181,12 +203,28 @@ class GameScene extends Phaser.Scene {
     });
   }
 
+  // ── Coleta de Imã (power-up de magnetismo) ──────────────────────────────────
+
+  _collectMagnet(tyrannus, imanSprite) {
+    const powerup = this._imans.collect(imanSprite);
+    
+    // Ativa o magnetismo no Tyrannus
+    this._tyrannus.activateMagnet(powerup.duration);
+    
+    // Efeito visual: pisca o Tyrannus em amarelo
+    this._tyrannus.sprite.setTint(0xffcc00);
+    this.time.delayedCall(100, () => {
+      this._tyrannus.sprite.clearTint();
+    });
+  }
+
   _gameOver() {
     this._tyrannus.alive = false;
     this._tyrannus.sprite.setVelocity(0, 0);
     this._harpias.stop();
     this._carcaras.stop();
     this._libelulas.stop();
+    this._imans.stop();
 
     const gameOverText = this.add.text(
       this.scale.width / 2,

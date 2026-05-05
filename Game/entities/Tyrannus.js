@@ -101,33 +101,24 @@ class Tyrannus {
 
   // ── Sistema de ímã ─────────────────────────────────────────────────────────
 
+  activateMagnet(duration) {
+    this.magnetActive = true;
+    this.magnetTimer = 0;
+    this.magnetDuration = duration;
+  }
+
+  _deactivateMagnet() {
+    this.magnetActive = false;
+  }
+
   _updateMagnetism(delta) {
-    if (this.magnetActive) {
-      // Cria/atualiza visual do ímã
-      if (!this._magnetGraphics) {
-        this._magnetGraphics = this.scene.add.graphics().setDepth(7);
-      }
+    if (!this.magnetActive) return;
 
-      this._magnetGraphics.clear();
-      this._magnetGraphics.lineStyle(2, 0xff00ff, 0.7); // Magenta
-      this._magnetGraphics.strokeCircle(this.sprite.x, this.sprite.y, this.magnetRadius);
+    this.magnetTimer = (this.magnetTimer || 0) + delta;
 
-      // Desenha linhas de atração
-      this._magnetGraphics.lineStyle(1, 0xff00ff, 0.4);
-      for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI * 2;
-        const x1 = this.sprite.x + Math.cos(angle) * (this.magnetRadius - 20);
-        const y1 = this.sprite.y + Math.sin(angle) * (this.magnetRadius - 20);
-        const x2 = this.sprite.x + Math.cos(angle) * this.magnetRadius;
-        const y2 = this.sprite.y + Math.sin(angle) * this.magnetRadius;
-        this._magnetGraphics.lineBetween(x1, y1, x2, y2);
-      }
-    } else {
-      // Destrói o visual do ímã quando desativado
-      if (this._magnetGraphics) {
-        this._magnetGraphics.destroy();
-        this._magnetGraphics = null;
-      }
+    // Desfaz o ímã quando tempo expira
+    if (this.magnetTimer >= this.magnetDuration) {
+      this._deactivateMagnet();
     }
   }
 

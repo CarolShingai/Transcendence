@@ -15,7 +15,7 @@ class LibelulaGroup {
 
   // ── Update: Spawn e movimento ──────────────────────────────────────────────
 
-  update(delta, sceneWidth, sceneHeight, tyrannus = null) {
+  update(delta, sceneWidth, sceneHeight, tyrannus = null, magnetGroup = null) {
     // Spawna nova Libelula periodicamente
     this.spawnTimer += delta;
     if (this.spawnTimer >= this.spawnInterval) {
@@ -23,10 +23,10 @@ class LibelulaGroup {
       this.spawn(sceneWidth);
     }
 
-    // Atrai libelulas para o ímã do Tyrannus
-    // if (tyrannus && tyrannus.magnetActive) {
-    //   this._applyMagnetism(tyrannus);
-    // }
+    // Atrai libelulas para o player quando um ímã está próximo
+    if (tyrannus && magnetGroup) {
+      this._applyMagnetAttractionNearby(tyrannus, magnetGroup);
+    }
 
     // Remove Libelulas fora da tela
     this.group.getChildren().forEach((libelula) => {
@@ -36,27 +36,55 @@ class LibelulaGroup {
     });
   }
 
-//   // ── Ímã: atrai libelulas para o Tyrannus ───────────────────────────────────
+  // ── Ímã: atrai libelulas para o player quando ímã está próximo ───────────────
 
-//   _applyMagnetism(tyrannus) {
-//     const tx = tyrannus.sprite.x;
-//     const ty = tyrannus.sprite.y;
-//     const magnetRadius = tyrannus.magnetRadius;
+  _applyMagnetAttractionNearby(tyrannus, magnetGroup) {
+    const magnetDetectionRadius = 180; // Raio de detecção do ímã
+    const attractionForce = 500; // Força de atração para o player
+    const tx = tyrannus.sprite.x;
+    const ty = tyrannus.sprite.y;
 
-//     this.group.getChildren().forEach((libelula) => {
-//       const dx = tx - libelula.x;
-//       const dy = ty - libelula.y;
-//       const dist = Math.sqrt(dx * dx + dy * dy);
+    // Para cada libélula, verifica se há um ímã próximo
+    this.group.getChildren().forEach((libelula) => {
+      const imanGroup = magnetGroup.getGroup();
+      let nearbyMagnet = null;
+      let minDist = magnetDetectionRadius;
 
-//       if (dist < magnetRadius) {
-//         // Quanto mais perto, mais forte a atração
-//         const force = Phaser.Math.Clamp((magnetRadius - dist) / magnetRadius, 0, 1) * 300;
-//         if (dist > 0) {
-//           libelula.setVelocity((dx / dist) * force, (dy / dist) * force);
-//         }
-//       }
-//     });
-//   }
+      // Encontra o ímã mais próximo da libélula
+      imanGroup.getChildren().forEach((iman) => {
+        const dx = iman.x - libelula.x;
+        const dy = iman.y - libelula.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < minDist) {
+          minDist = dist;
+          nearbyMagnet = iman;
+        }
+      });
+
+      // Se um ímã está próximo, atrai a libélula para o player
+      if (nearbyMagnet && minDist < magnetDetectionRadius) {
+        const dx = tx - libelula.x;
+        const dy = ty - libelula.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > 0) {
+          // Força de atração aumenta conforme o ímã fica mais perto
+          const proximityFactor = Phaser.Math.Clamp(
+            (magnetDetectionRadius - minDist) / magnetDetectionRadius,
+            0,
+            1
+          );
+          const force = attractionForce * proximityFactor;
+          libelula.setVelocity((dx / dist) * force, (dy / dist) * force);
+        }
+      } else {
+        // Volta ao comportamento normal de cair quando o ímã se afasta
+        libelula.setVelocityY(100);
+        libelula.setVelocityX(0);
+      }
+    });
+  }
 
   // ── Spawn: cria uma nova Libelula em posição aleatória ─────────────────────
 
