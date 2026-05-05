@@ -76,7 +76,6 @@ class PresenceService(
             id = id!!,
             nickname = nickname,
             name = name,
-            email = email,
             status = status
         )
     }
