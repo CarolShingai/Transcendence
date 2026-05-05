@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import amigosTrans from '../../assets/logo/trans_amigos1.png';
+import FriendsSearch from '../elements/FriendsSearch';
 
 const FRIENDS_TABS = [
   { id: 'friends', label: 'Amigos' },
@@ -9,11 +10,10 @@ const FRIENDS_TABS = [
 
 function HomeFriendsCard({ friends = [], invites = [] }) {
   const [activeTab, setActiveTab] = useState('friends');
-  const [searchQuery, setSearchQuery] = useState('');
   const [friendsList, setFriendsList] = useState(friends);
   const [inviteList, setInviteList] = useState(invites);
-  const [discoverUsers, setDiscoverUsers] = useState([]);
   const [sentInviteIds, setSentInviteIds] = useState([]);
+
 
   const getInitials = (name = '') => name
     .split(' ')
@@ -40,28 +40,8 @@ function HomeFriendsCard({ friends = [], invites = [] }) {
   };
 
   const filteredFriends = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    if (!query) {
-      return friendsList;
-    }
-
-    return friendsList.filter((friend) => [friend.name, friend.nickname]
-      .filter(Boolean)
-      .some((value) => value.toLowerCase().includes(query)));
-  }, [friendsList, searchQuery]);
-
-  const filteredDiscoverUsers = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    if (!query) {
-      return discoverUsers;
-    }
-
-    return discoverUsers.filter((user) => [user.name, user.nickname]
-      .filter(Boolean)
-      .some((value) => value.toLowerCase().includes(query)));
-  }, [discoverUsers, searchQuery]);
+    return friendsList;
+  }, [friendsList]);
 
   const handleAcceptInvite = (invite) => {
     setInviteList((previous) => previous.filter((item) => item.id !== invite.id));
@@ -78,7 +58,6 @@ function HomeFriendsCard({ friends = [], invites = [] }) {
 
   const handleSendInvite = (user) => {
     setSentInviteIds((previous) => [...previous, user.id]);
-    setDiscoverUsers((previous) => previous.filter((item) => item.id !== user.id));
   };
 
   const renderPanel = () => {
@@ -111,46 +90,10 @@ function HomeFriendsCard({ friends = [], invites = [] }) {
 
     if (activeTab === 'search') {
       return (
-        <>
-          <input
-            type="search"
-            className="friends-search-input"
-            placeholder="🔍 Pesquisar por nome ou nickname"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            aria-label="Pesquisar amigos"
-          />
-
-          <div className="friends-search-results">
-            {filteredDiscoverUsers.length === 0 ? (
-              <div className="friends-empty-state">
-                <p>Nenhum usuário encontrado!</p>
-              </div>
-            ) : (
-              filteredDiscoverUsers.map((user) => {
-                const alreadySent = sentInviteIds.includes(user.id);
-
-                return (
-                  <article key={user.id} className="friend-item friend-search-item">
-                    <div className="friend-avatar" aria-hidden="true">{getInitials(user.name)}</div>
-                    <div className="friend-info">
-                      <div className="friend-name">{user.name}</div>
-                      <div className="friend-nickname">@{user.nickname}</div>
-                    </div>
-                    <button
-                      type="button"
-                      className="friend-action-button friend-send-button"
-                      onClick={() => handleSendInvite(user)}
-                      disabled={alreadySent}
-                    >
-                      {alreadySent ? 'Convite enviado' : 'Enviar convite'}
-                    </button>
-                  </article>
-                );
-              })
-            )}
-          </div>
-        </>
+        <FriendsSearch
+          onSendInvite={handleSendInvite}
+          sentInviteIds={sentInviteIds}
+        />
       );
     }
 
