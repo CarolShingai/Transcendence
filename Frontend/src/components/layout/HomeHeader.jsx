@@ -1,6 +1,7 @@
 import React from 'react';
+import transLogo from '../../assets/logo/trans_logo.png';
 
-function HomeHeader({ initials, profileImage, welcomeName, onGoToProfile, onLogout }) {
+function HomeHeader({ initials, profileImage, onGoToProfile, onLogout }) {
   return (
     <header className="App-header App-header-home">
       <div className="header-user-slot" aria-label="Imagem do usuario">
@@ -11,7 +12,7 @@ function HomeHeader({ initials, profileImage, welcomeName, onGoToProfile, onLogo
         )}
       </div>
 
-      <h1 className="home-header-title">Bem-vindo, {welcomeName}!</h1>
+      <img className="home-header-logo" src={transLogo} alt="Transcendence" />
 
       <div className="home-header-actions" aria-label="Acoes da home">
         <button
