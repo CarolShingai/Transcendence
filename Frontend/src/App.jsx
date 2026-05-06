@@ -10,7 +10,7 @@ import RegisterCard from './components/auth/RegisterCard';
 import ProfileCard from './components/profile/ProfileCard';
 import HomeCard from './components/home/HomeCard';
 import GameCard from './components/game/GameCard';
-import authService from './services/authService';
+import api from './services/api';
 import './services/fetchInterceptor'; // Load fetch interceptor
 
 function App() {
@@ -94,9 +94,10 @@ function App() {
   // Initialize auth state on app load
   useEffect(() => {
     const initializeAuth = async () => {
-      if (authService.isAuthenticated() && !profile) {
+      const token = localStorage.getItem('auth_token');
+      if (token && !profile) {
         try {
-          const user = await authService.getCurrentUser();
+          const user = await api.me();
           if (user) {
             const nextProfile = {
               name: user.name,
@@ -111,7 +112,7 @@ function App() {
           }
         } catch (err) {
           console.error('Failed to initialize auth:', err);
-          authService.logout();
+          await api.logout();
         }
       }
     };
@@ -168,9 +169,8 @@ function App() {
     setIsLoading(true);
 
     try {
-      const response = await authService.login(loginForm.email, loginForm.password);
+      const response = await api.login({ email: loginForm.email, password: loginForm.password });
 
-      // Check if 2FA is required
       if (response.requiresTwoFactor) {
         setRequiresTwoFactor(true);
         setTwoFactorQrCode(response.twoFactorQrCode || '');
@@ -179,7 +179,6 @@ function App() {
         return;
       }
 
-      // Login successful
       if (response.user) {
         const nextProfile = {
           name: response.user.name,
@@ -189,7 +188,6 @@ function App() {
           avatarUrl: normalizeAvatarUrl(response.user.profilePic),
           twoFactorEnabled: Boolean(response.user.twoFactorEnabled)
         };
-
         setProfile(nextProfile);
         setProfileForm(nextProfile);
         localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
@@ -216,33 +214,9 @@ function App() {
 
     setIsLoading(true);
 
-    try {
-      const response = await authService.verifyTwoFactor(twoFactorCode.trim());
-
-      if (response.user) {
-        const nextProfile = {
-          name: response.user.name,
-          nickname: response.user.nickname,
-          email: response.user.email,
-          bio: response.user.bio || 'Player ready to start the journey.',
-          avatarUrl: normalizeAvatarUrl(response.user.profilePic),
-          twoFactorEnabled: Boolean(response.user.twoFactorEnabled)
-        };
-
-        setProfile(nextProfile);
-        setProfileForm(nextProfile);
-        localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
-        setView('home');
-        setLoginForm({ email: '', password: '' });
-        setRequiresTwoFactor(false);
-        setTwoFactorCode('');
-        setTwoFactorQrCode('');
-      }
-    } catch (err) {
-      setError(err.message || 'Falha ao verificar o código 2FA.');
-    } finally {
-      setIsLoading(false);
-    }
+    // TODO: Implementar verificação de 2FA via api.js se necessário
+    setError('Verificação de 2FA não implementada no novo serviço.');
+    setIsLoading(false);
   };
 
   const handleCloseTwoFactorPopup = () => {
@@ -295,17 +269,17 @@ function App() {
     setIsLoading(true);
 
     try {
-      await authService.register(
-        registerForm.nickname,
-        registerForm.name,
-        registerForm.email,
-        registerForm.password,
-        Boolean(registerForm.twoFactorEnabled)
-      );
+      await api.register({
+        nickname: registerForm.nickname,
+        name: registerForm.name,
+        email: registerForm.email,
+        password: registerForm.password,
+        twoFactorEnabled: Boolean(registerForm.twoFactorEnabled)
+      });
 
       setError('');
-      // After successful registration, login automatically
-      const loginResponse = await authService.login(registerForm.email, registerForm.password);
+      // Após cadastro, login automático
+      const loginResponse = await api.login({ email: registerForm.email, password: registerForm.password });
 
       if (loginResponse.requiresTwoFactor) {
         setRequiresTwoFactor(true);
@@ -325,7 +299,6 @@ function App() {
           avatarUrl: normalizeAvatarUrl(loginResponse.user.profilePic),
           twoFactorEnabled: Boolean(loginResponse.user.twoFactorEnabled)
         };
-
         setProfile(nextProfile);
         setProfileForm(nextProfile);
         localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
@@ -369,28 +342,13 @@ function App() {
     setIsLoading(true);
     setError('');
 
-    authService.updateTwoFactorPreference(Boolean(profileForm.twoFactorEnabled))
-      .then((result) => {
-        const nextProfile = {
-          ...profileForm,
-          avatarUrl: normalizeAvatarUrl(profileForm.avatarUrl),
-          twoFactorEnabled: Boolean(result.twoFactorEnabled)
-        };
-        setProfile(nextProfile);
-        setProfileForm(nextProfile);
-        localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
-        setView('home');
-      })
-      .catch((err) => {
-        setError(err.message || 'Failed to update 2FA preference.');
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    // TODO: Implementar updateTwoFactorPreference via api.js se necessário
+    setError('Atualização de 2FA não implementada no novo serviço.');
+    setIsLoading(false);
   };
 
-  const handleLogout = () => {
-    authService.logout();
+  const handleLogout = async () => {
+    await api.logout();
     setProfile(null);
     setProfileForm(emptyProfileForm);
     setRequiresTwoFactor(false);
