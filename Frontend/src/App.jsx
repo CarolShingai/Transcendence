@@ -1,4 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import GoogleCallback from './pages/GoogleCallback';
 import './App.css';
 import LoginHeader from './components/layout/LoginHeader';
 import HomeHeader from './components/layout/HomeHeader';
@@ -228,20 +230,34 @@ function App() {
 
   const handleGoogleLogin = () => {
     setError('');
-
-    const nextProfile = {
-      name: 'google player',
-      nickname: 'google player',
-      email: 'google.player@gmail.com',
-      bio: 'Player ready to start the journey.',
-      avatarUrl: ''
-    };
-
-    setProfile(nextProfile);
-    setProfileForm(nextProfile);
-    localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
-    setView('home');
-    setLoginForm({ email: '', password: '' });
+    const popup = api.googleLogin();
+    // Listener para receber mensagem do popup
+    window.addEventListener('message', async (event) => {
+      if (event.origin !== window.location.origin) return;
+      const { token } = event.data || {};
+      if (token) {
+        try {
+          const user = await api.handleGoogleCallback(token);
+          if (user) {
+            const nextProfile = {
+              name: user.name,
+              nickname: user.nickname,
+              email: user.email,
+              bio: user.bio || 'Player ready to start the journey.',
+              avatarUrl: user.profilePic || ''
+            };
+            setProfile(nextProfile);
+            setProfileForm(nextProfile);
+            localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
+            setView('home');
+            setLoginForm({ email: '', password: '' });
+            popup.close();
+          }
+        } catch (err) {
+          setError('Falha ao autenticar com Google.');
+        }
+      }
+    }, { once: true });
   };
 
   const handleGoToRegister = () => {
@@ -381,71 +397,78 @@ function App() {
   const gameEndpoint = process.env.REACT_APP_GAME_ENDPOINT || '/game';
 
   return (
-    <div className="App">
-      <div className="game-shell">
-        <section className="game-stage" aria-label="Area principal do jogo">
-          {isLoginView ? (
-            <LoginHeader />
-          ) : isRegisterView ? (
-            <RegisterHeader onGoToLogin={handleRegisterExit} />
-          ) : isHomeView ? (
-            <HomeHeader
-              initials={initials}
-              profileImage={profile?.avatarUrl}
-              welcomeName={profile?.nickname || profile?.name || 'Viajante'}
-              onGoToProfile={goToProfile}
-              onLogout={handleLogout}
-            />
-          ) : isGameView ? null : (
-            <EditHeader onGoToHome={goToHome} onLogout={handleLogout} />
-          )}
+    <Router>
+      <Routes>
+        <Route path="/google-callback" element={<GoogleCallback />} />
+        <Route path="*" element={
+          <div className="App">
+            <div className="game-shell">
+              <section className="game-stage" aria-label="Area principal do jogo">
+                {isLoginView ? (
+                  <LoginHeader />
+                ) : isRegisterView ? (
+                  <RegisterHeader onGoToLogin={handleRegisterExit} />
+                ) : isHomeView ? (
+                  <HomeHeader
+                    initials={initials}
+                    profileImage={profile?.avatarUrl}
+                    welcomeName={profile?.nickname || profile?.name || 'Viajante'}
+                    onGoToProfile={goToProfile}
+                    onLogout={handleLogout}
+                  />
+                ) : isGameView ? null : (
+                  <EditHeader onGoToHome={goToHome} onLogout={handleLogout} />
+                )}
 
-          <main className={`App-main ${isGameView ? 'App-main-game' : ''}`}>
-            {isLoginView ? (
-              <LoginCard
-                loginForm={loginForm}
-                requiresTwoFactor={requiresTwoFactor}
-                twoFactorCode={twoFactorCode}
-                twoFactorQrCode={twoFactorQrCode}
-                error={error}
-                onLoginChange={handleLoginChange}
-                onTwoFactorCodeChange={handleTwoFactorCodeChange}
-                onLogin={handleLogin}
-                onVerifyTwoFactor={handleVerifyTwoFactor}
-                onCloseTwoFactorPopup={handleCloseTwoFactorPopup}
-                onGoogleLogin={handleGoogleLogin}
-                onCreateAccount={handleGoToRegister}
-                isLoading={isLoading}
-              />
-            ) : isRegisterView ? (
-              <RegisterCard
-                initials={initials}
-                registerForm={registerForm}
-                error={error}
-                onRegisterChange={handleRegisterChange}
-                onRegisterSave={handleRegisterSave}
-                isLoading={isLoading}
-              />
-            ) : isHomeView ? (
-              <HomeCard onPlayGame={handleGoToGameWithOrigin} />
-            ) : isGameView ? (
-              <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
-            ) : (
-              <ProfileCard
-                initials={initials}
-                profileForm={profileForm}
-                error={error}
-                onProfileChange={handleProfileChange}
-                onProfileSave={handleProfileSave}
-                isLoading={isLoading}
-              />
-            )}
-          </main>
+                <main className={`App-main ${isGameView ? 'App-main-game' : ''}`}>
+                  {isLoginView ? (
+                    <LoginCard
+                      loginForm={loginForm}
+                      requiresTwoFactor={requiresTwoFactor}
+                      twoFactorCode={twoFactorCode}
+                      twoFactorQrCode={twoFactorQrCode}
+                      error={error}
+                      onLoginChange={handleLoginChange}
+                      onTwoFactorCodeChange={handleTwoFactorCodeChange}
+                      onLogin={handleLogin}
+                      onVerifyTwoFactor={handleVerifyTwoFactor}
+                      onCloseTwoFactorPopup={handleCloseTwoFactorPopup}
+                      onGoogleLogin={handleGoogleLogin}
+                      onCreateAccount={handleGoToRegister}
+                      isLoading={isLoading}
+                    />
+                  ) : isRegisterView ? (
+                    <RegisterCard
+                      initials={initials}
+                      registerForm={registerForm}
+                      error={error}
+                      onRegisterChange={handleRegisterChange}
+                      onRegisterSave={handleRegisterSave}
+                      isLoading={isLoading}
+                    />
+                  ) : isHomeView ? (
+                    <HomeCard onPlayGame={handleGoToGameWithOrigin} />
+                  ) : isGameView ? (
+                    <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
+                  ) : (
+                    <ProfileCard
+                      initials={initials}
+                      profileForm={profileForm}
+                      error={error}
+                      onProfileChange={handleProfileChange}
+                      onProfileSave={handleProfileSave}
+                      isLoading={isLoading}
+                    />
+                  )}
+                </main>
 
-          {!isGameView && <AppFooter />}
-        </section>
-      </div>
-    </div>
+                {!isGameView && <AppFooter />}
+              </section>
+            </div>
+          </div>
+        } />
+      </Routes>
+    </Router>
   );
 }
 

@@ -234,44 +234,34 @@ class AuthController(
     }
 
     @GetMapping("/oauth2/authorize/google/success")
-    fun oauthGoogleSuccess(authentication: Authentication?): ResponseEntity<LoginResponseDTO> {
+    fun oauthGoogleSuccess(authentication: Authentication?, response: HttpServletResponse) {
         if (authentication == null || !authentication.isAuthenticated) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(LoginResponseDTO(success = false, message = "OAuth2 authentication not found"))
+            response.sendRedirect("http://localhost:3000/login?error=oauth2")
+            return
         }
 
         val oauthAuthentication = authentication as? OAuth2AuthenticationToken
-            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(LoginResponseDTO(success = false, message = "Invalid OAuth2 authentication type"))
-
-        if (oauthAuthentication.authorizedClientRegistrationId != "google") {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(LoginResponseDTO(success = false, message = "Invalid OAuth2 provider"))
+        if (oauthAuthentication == null || oauthAuthentication.authorizedClientRegistrationId != "google") {
+            response.sendRedirect("http://localhost:3000/login?error=oauth2")
+            return
         }
 
         val principal = oauthAuthentication.principal as? OAuth2User
-            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(LoginResponseDTO(success = false, message = "OAuth2 principal not found"))
+        val email = principal?.getAttribute<String>("email")
+        val name = principal?.getAttribute<String>("name")
+        val emailVerified = parseEmailVerified(principal?.getAttribute<Any>("email_verified"))
 
-        val email = principal.getAttribute<String>("email")
-        val name = principal.getAttribute<String>("name")
-        val emailVerified = parseEmailVerified(principal.getAttribute<Any>("email_verified"))
-
-        if (!emailVerified) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(LoginResponseDTO(success = false, message = "Google account email is not verified"))
+        if (email.isNullOrBlank() || !emailVerified) {
+            response.sendRedirect("http://localhost:3000/login?error=oauth2")
+            return
         }
 
-        if (email.isNullOrBlank()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(LoginResponseDTO(success = false, message = "Google account email not found"))
-        }
-
-        val response = userService.loginOrCreateGoogleUser(email, name)
-        return if (response.success) {
-            ResponseEntity.ok(response)
+        val loginResponse = userService.loginOrCreateGoogleUser(email, name)
+        if (loginResponse.success && loginResponse.token != null) {
+            val frontendUrl = "http://localhost:3000/google-callback?token=${loginResponse.token}"
+            response.sendRedirect(frontendUrl)
         } else {
-            ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response)
+            response.sendRedirect("http://localhost:3000/login?error=oauth2")
         }
     }
 
