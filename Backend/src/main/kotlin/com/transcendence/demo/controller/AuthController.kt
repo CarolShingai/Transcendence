@@ -4,6 +4,7 @@ import com.transcendence.demo.DTO.Request.LoginRequestDTO
 import com.transcendence.demo.DTO.Request.RegisterRequestDTO
 import com.transcendence.demo.DTO.Request.TwoFactorDisableRequestDTO
 import com.transcendence.demo.DTO.Request.TwoFactorLoginRequestDTO
+import com.transcendence.demo.DTO.Request.TwoFactorPreferenceRequestDTO
 import com.transcendence.demo.DTO.Request.TwoFactorSetupConfirmRequestDTO
 import com.transcendence.demo.DTO.Response.LoginResponseDTO
 import com.transcendence.demo.DTO.Response.RegisterResponseDTO
@@ -185,6 +186,46 @@ class AuthController(
         } else {
             ResponseEntity.badRequest().body(response)
         }
+    }
+
+    @Operation(
+        summary = "Enable or disable 2FA for the authenticated user",
+        security = [SecurityRequirement(name = "bearerAuth")]
+    )
+    @PostMapping("/2fa/preference")
+    fun updateTwoFactorPreference(
+        @RequestBody request: TwoFactorPreferenceRequestDTO,
+        authentication: Authentication
+    ): ResponseEntity<Map<String, Any>> {
+        if (authentication == null || !authentication.isAuthenticated) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(mapOf("success" to false, "message" to "Unauthorized"))
+        }
+
+        val email = when (val principal = authentication.principal) {
+            is OAuth2User -> principal.getAttribute<String>("email")
+            is String -> principal
+            else -> null
+        }
+
+        if (email.isNullOrBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(mapOf("success" to false, "message" to "Unauthorized"))
+        }
+
+        val user = userService.getUserProfileByEmail(email)
+            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("success" to false, "message" to "User not found"))
+
+        val updated = userService.updateTwoFactorPreference(user.id!!, request.enabled)
+
+        return ResponseEntity.ok(
+            mapOf(
+                "success" to true,
+                "twoFactorEnabled" to updated.twoFactorEnabled,
+                "message" to if (updated.twoFactorEnabled) "2FA enabled" else "2FA disabled"
+            )
+        )
     }
 
     @GetMapping("/oauth2/authorize/google")

@@ -46,6 +46,8 @@ function App() {
 
   const [view, setView] = useState('login');
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorQrCode, setTwoFactorQrCode] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
@@ -80,7 +82,8 @@ function App() {
       nickname: profile.nickname,
       email: profile.email,
       bio: profile.bio,
-      avatarUrl: normalizeAvatarUrl(profile.avatarUrl)
+      avatarUrl: normalizeAvatarUrl(profile.avatarUrl),
+      twoFactorEnabled: Boolean(profile.twoFactorEnabled)
     };
   });
 
@@ -133,6 +136,10 @@ function App() {
     setLoginForm((previous) => ({ ...previous, [name]: value }));
   };
 
+  const handleTwoFactorCodeChange = (event) => {
+    setTwoFactorCode(event.target.value);
+  };
+
   const handleRegisterChange = (event) => {
     const { name, type, value, checked } = event.target;
     setRegisterForm((previous) => ({
@@ -166,7 +173,9 @@ function App() {
       // Check if 2FA is required
       if (response.requiresTwoFactor) {
         setRequiresTwoFactor(true);
-        setError('');
+        setTwoFactorQrCode(response.twoFactorQrCode || '');
+        setTwoFactorCode('');
+        setError('Confirme o código 2FA para concluir o login.');
         return;
       }
 
@@ -177,7 +186,8 @@ function App() {
           nickname: response.user.nickname,
           email: response.user.email,
           bio: response.user.bio || 'Player ready to start the journey.',
-          avatarUrl: normalizeAvatarUrl(response.user.profilePic)
+          avatarUrl: normalizeAvatarUrl(response.user.profilePic),
+          twoFactorEnabled: Boolean(response.user.twoFactorEnabled)
         };
 
         setProfile(nextProfile);
@@ -186,12 +196,60 @@ function App() {
         setView('home');
         setLoginForm({ email: '', password: '' });
         setRequiresTwoFactor(false);
+        setTwoFactorQrCode('');
+        setTwoFactorCode('');
       }
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleVerifyTwoFactor = async () => {
+    setError('');
+
+    if (!twoFactorCode.trim()) {
+      setError('Informe o código de 2FA.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await authService.verifyTwoFactor(twoFactorCode.trim());
+
+      if (response.user) {
+        const nextProfile = {
+          name: response.user.name,
+          nickname: response.user.nickname,
+          email: response.user.email,
+          bio: response.user.bio || 'Player ready to start the journey.',
+          avatarUrl: normalizeAvatarUrl(response.user.profilePic),
+          twoFactorEnabled: Boolean(response.user.twoFactorEnabled)
+        };
+
+        setProfile(nextProfile);
+        setProfileForm(nextProfile);
+        localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
+        setView('home');
+        setLoginForm({ email: '', password: '' });
+        setRequiresTwoFactor(false);
+        setTwoFactorCode('');
+        setTwoFactorQrCode('');
+      }
+    } catch (err) {
+      setError(err.message || 'Falha ao verificar o código 2FA.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCloseTwoFactorPopup = () => {
+    setRequiresTwoFactor(false);
+    setTwoFactorCode('');
+    setTwoFactorQrCode('');
+    setError('');
   };
 
   const handleGoogleLogin = () => {
@@ -241,12 +299,22 @@ function App() {
         registerForm.nickname,
         registerForm.name,
         registerForm.email,
-        registerForm.password
+        registerForm.password,
+        Boolean(registerForm.twoFactorEnabled)
       );
 
       setError('');
       // After successful registration, login automatically
       const loginResponse = await authService.login(registerForm.email, registerForm.password);
+
+      if (loginResponse.requiresTwoFactor) {
+        setRequiresTwoFactor(true);
+        setTwoFactorQrCode(loginResponse.twoFactorQrCode || '');
+        setTwoFactorCode('');
+        setError('Conta criada com 2FA. Escaneie o QR e confirme o código para entrar.');
+        setView('login');
+        return;
+      }
 
       if (loginResponse.user) {
         const nextProfile = {
@@ -254,7 +322,8 @@ function App() {
           nickname: loginResponse.user.nickname,
           email: loginResponse.user.email,
           bio: loginResponse.user.bio || 'Player ready to start the journey.',
-          avatarUrl: loginResponse.user.profilePic || ''
+          avatarUrl: normalizeAvatarUrl(loginResponse.user.profilePic),
+          twoFactorEnabled: Boolean(loginResponse.user.twoFactorEnabled)
         };
 
         setProfile(nextProfile);
@@ -297,20 +366,36 @@ function App() {
       return;
     }
 
+    setIsLoading(true);
     setError('');
-    const nextProfile = {
-      ...profileForm,
-      avatarUrl: normalizeAvatarUrl(profileForm.avatarUrl)
-    };
-    setProfile(nextProfile);
-    localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
-    setView('home');
+
+    authService.updateTwoFactorPreference(Boolean(profileForm.twoFactorEnabled))
+      .then((result) => {
+        const nextProfile = {
+          ...profileForm,
+          avatarUrl: normalizeAvatarUrl(profileForm.avatarUrl),
+          twoFactorEnabled: Boolean(result.twoFactorEnabled)
+        };
+        setProfile(nextProfile);
+        setProfileForm(nextProfile);
+        localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
+        setView('home');
+      })
+      .catch((err) => {
+        setError(err.message || 'Failed to update 2FA preference.');
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   };
 
   const handleLogout = () => {
     authService.logout();
     setProfile(null);
     setProfileForm(emptyProfileForm);
+    setRequiresTwoFactor(false);
+    setTwoFactorCode('');
+    setTwoFactorQrCode('');
     localStorage.removeItem('transcendence_profile');
     setView('login');
   };
@@ -361,11 +446,18 @@ function App() {
             {isLoginView ? (
               <LoginCard
                 loginForm={loginForm}
+                requiresTwoFactor={requiresTwoFactor}
+                twoFactorCode={twoFactorCode}
+                twoFactorQrCode={twoFactorQrCode}
                 error={error}
                 onLoginChange={handleLoginChange}
+                onTwoFactorCodeChange={handleTwoFactorCodeChange}
                 onLogin={handleLogin}
+                onVerifyTwoFactor={handleVerifyTwoFactor}
+                onCloseTwoFactorPopup={handleCloseTwoFactorPopup}
                 onGoogleLogin={handleGoogleLogin}
                 onCreateAccount={handleGoToRegister}
+                isLoading={isLoading}
               />
             ) : isRegisterView ? (
               <RegisterCard

@@ -42,7 +42,7 @@ class AuthService {
   }
 
   // Register
-  async register(nickname, name, email, password) {
+  async register(nickname, name, email, password, twoFactorEnabled = false) {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
@@ -54,7 +54,8 @@ class AuthService {
           nickname,
           name,
           email,
-          password
+          password,
+          twoFactorEnabled
         })
       });
 
@@ -98,10 +99,40 @@ class AuthService {
       }
 
       const data = await response.json();
-      return data;
+      return data.user || null;
     } catch (error) {
       console.error('Get current user error:', error);
       return null;
+    }
+  }
+
+  async updateTwoFactorPreference(enabled) {
+    try {
+      const token = this.getToken();
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/2fa/preference`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include',
+        body: JSON.stringify({ enabled })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update 2FA preference');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Update 2FA preference error:', error);
+      throw error;
     }
   }
 
@@ -196,11 +227,13 @@ class AuthService {
       const response = await fetch(`${API_BASE_URL}/auth/verify-2fa`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${twoFactorToken}`
+          'Content-Type': 'application/json'
         },
         credentials: 'include',
-        body: JSON.stringify({ code })
+        body: JSON.stringify({
+          twoFactorToken,
+          code
+        })
       });
 
       if (!response.ok) {

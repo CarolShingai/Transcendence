@@ -4,5 +4,6 @@ data class RegisterRequestDTO(
     val nickname: String = "",
     val name: String = "",
     val email: String = "",
-    val password: String = ""
+    val password: String = "",
+    val twoFactorEnabled: Boolean? = false
 )

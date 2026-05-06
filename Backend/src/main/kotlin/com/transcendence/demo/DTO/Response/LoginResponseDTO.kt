@@ -6,5 +6,6 @@ data class LoginResponseDTO(
     val token: String? = null,
     val user: UserResponseDTO? = null,
     val requiresTwoFactor: Boolean = false,
-    val twoFactorToken: String? = null
+    val twoFactorToken: String? = null,
+    val twoFactorQrCode: String? = null
 )

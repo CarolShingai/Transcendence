@@ -54,6 +54,8 @@ class UserService(
         }
 
         val encryptedPassword = passwordEncoder.encode(request.password)
+        val shouldEnableTwoFactor = request.twoFactorEnabled == true
+        val tempSecret = if (shouldEnableTwoFactor) twoFactorService.generateTempSecret() else null
 
         val user = User(
             nickname = request.nickname,
@@ -61,7 +63,8 @@ class UserService(
             email = request.email,
             username = request.nickname,
             passwordHash = encryptedPassword,
-        
+            twoFactorEnabled = shouldEnableTwoFactor,
+            twoFactorSecretEncrypted = tempSecret,
         )
         return userRepository.save(user)
     }
@@ -71,6 +74,12 @@ class UserService(
         val user = userRepository.findByEmail(email)
         return if (user != null && passwordEncoder.matches(password, user.passwordHash)) {
             if (user.twoFactorEnabled) {
+                if (user.twoFactorSecretEncrypted.isNullOrBlank()) {
+                    user.twoFactorSecretEncrypted = twoFactorService.generateTempSecret()
+                    userRepository.save(user)
+                }
+
+                val qrCodeBase64 = twoFactorService.generateQrCodeUrl(user.email, user.twoFactorSecretEncrypted!!)
                 // Generate temporary JWT for 2FA verification
                 val tempToken = jwtTokenGenerator.generateTwoFactorChallengeToken(user.id!!, user.email)
                 LoginResponseDTO(
@@ -78,11 +87,13 @@ class UserService(
                     message = "2FA required",
                     twoFactorToken = tempToken,
                     requiresTwoFactor = true,
+                    twoFactorQrCode = "data:image/png;base64,$qrCodeBase64",
                     user = UserResponseDTO(
                         id = user.id,
                         nickname = user.nickname,
                         name = user.name,
-                        email = user.email
+                        email = user.email,
+                        twoFactorEnabled = user.twoFactorEnabled
                     )
                 )
             } else {
@@ -95,7 +106,8 @@ class UserService(
                         id = user.id,
                         nickname = user.nickname,
                         name = user.name,
-                        email = user.email
+                        email = user.email,
+                        twoFactorEnabled = user.twoFactorEnabled
                     )
                 )
             }
@@ -128,7 +140,8 @@ class UserService(
                 id = user.id,
                 nickname = user.nickname,
                 name = user.name,
-                email = user.email
+                email = user.email,
+                twoFactorEnabled = user.twoFactorEnabled
             )
         )
     }
@@ -252,7 +265,8 @@ class UserService(
                 id = user.id,
                 nickname = user.nickname,
                 name = user.name,
-                email = user.email
+                email = user.email,
+                twoFactorEnabled = user.twoFactorEnabled
             )
         )
     }
@@ -263,8 +277,26 @@ class UserService(
             id = user.id,
             nickname = user.nickname,
             name = user.name,
-            email = user.email
+            email = user.email,
+            twoFactorEnabled = user.twoFactorEnabled
         )
+    }
+
+    fun updateTwoFactorPreference(userId: Long, enabled: Boolean): User {
+        val user = userRepository.findById(userId).orElseThrow { IllegalArgumentException("User not found") }
+
+        if (enabled) {
+            user.twoFactorEnabled = true
+            if (user.twoFactorSecretEncrypted.isNullOrBlank()) {
+                user.twoFactorSecretEncrypted = twoFactorService.generateTempSecret()
+            }
+        } else {
+            user.twoFactorEnabled = false
+            user.twoFactorSecretEncrypted = null
+            user.twoFactorConfirmedAt = null
+        }
+
+        return userRepository.save(user)
     }
 
     private fun createGoogleUser(email: String, name: String?): User {
