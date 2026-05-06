@@ -1,7 +1,6 @@
 package com.transcendence.demo.controller
 
 import com.transcendence.demo.DTO.Request.ProfileUpdateRequestDTO
-import com.transcendence.demo.DTO.Response.UserResponseDTO
 import com.transcendence.demo.service.UserService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
