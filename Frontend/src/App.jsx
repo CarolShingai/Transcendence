@@ -216,9 +216,33 @@ function App() {
 
     setIsLoading(true);
 
-    // TODO: Implementar verificação de 2FA via api.js se necessário
-    setError('Verificação de 2FA não implementada no novo serviço.');
-    setIsLoading(false);
+    try {
+      const response = await authService.verifyTwoFactor(twoFactorCode.trim());
+
+      if (response.user) {
+        const nextProfile = {
+          name: response.user.name,
+          nickname: response.user.nickname,
+          email: response.user.email,
+          bio: response.user.bio || 'Player ready to start the journey.',
+          avatarUrl: normalizeAvatarUrl(response.user.profilePic),
+          twoFactorEnabled: Boolean(response.user.twoFactorEnabled)
+        };
+
+        setProfile(nextProfile);
+        setProfileForm(nextProfile);
+        localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
+        setView('home');
+        setLoginForm({ email: '', password: '' });
+        setRequiresTwoFactor(false);
+        setTwoFactorCode('');
+        setTwoFactorQrCode('');
+      }
+    } catch (err) {
+      setError(err.message || 'Falha ao verificar o código 2FA.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCloseTwoFactorPopup = () => {
@@ -285,17 +309,17 @@ function App() {
     setIsLoading(true);
 
     try {
-      await api.register({
-        nickname: registerForm.nickname,
-        name: registerForm.name,
-        email: registerForm.email,
-        password: registerForm.password,
-        twoFactorEnabled: Boolean(registerForm.twoFactorEnabled)
-      });
+      await authService.register(
+        registerForm.nickname,
+        registerForm.name,
+        registerForm.email,
+        registerForm.password,
+        Boolean(registerForm.twoFactorEnabled)
+      );
 
       setError('');
-      // Após cadastro, login automático
-      const loginResponse = await api.login({ email: registerForm.email, password: registerForm.password });
+      // After successful registration, login automatically
+      const loginResponse = await authService.login(registerForm.email, registerForm.password);
 
       if (loginResponse.requiresTwoFactor) {
         setRequiresTwoFactor(true);
@@ -358,9 +382,24 @@ function App() {
     setIsLoading(true);
     setError('');
 
-    // TODO: Implementar updateTwoFactorPreference via api.js se necessário
-    setError('Atualização de 2FA não implementada no novo serviço.');
-    setIsLoading(false);
+    authService.updateTwoFactorPreference(Boolean(profileForm.twoFactorEnabled))
+      .then((result) => {
+        const nextProfile = {
+          ...profileForm,
+          avatarUrl: normalizeAvatarUrl(profileForm.avatarUrl),
+          twoFactorEnabled: Boolean(result.twoFactorEnabled)
+        };
+        setProfile(nextProfile);
+        setProfileForm(nextProfile);
+        localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
+        setView('home');
+      })
+      .catch((err) => {
+        setError(err.message || 'Failed to update 2FA preference.');
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   };
 
   const handleLogout = async () => {
@@ -420,47 +459,47 @@ function App() {
                   <EditHeader onGoToHome={goToHome} onLogout={handleLogout} />
                 )}
 
-                <main className={`App-main ${isGameView ? 'App-main-game' : ''}`}>
-                  {isLoginView ? (
-                    <LoginCard
-                      loginForm={loginForm}
-                      requiresTwoFactor={requiresTwoFactor}
-                      twoFactorCode={twoFactorCode}
-                      twoFactorQrCode={twoFactorQrCode}
-                      error={error}
-                      onLoginChange={handleLoginChange}
-                      onTwoFactorCodeChange={handleTwoFactorCodeChange}
-                      onLogin={handleLogin}
-                      onVerifyTwoFactor={handleVerifyTwoFactor}
-                      onCloseTwoFactorPopup={handleCloseTwoFactorPopup}
-                      onGoogleLogin={handleGoogleLogin}
-                      onCreateAccount={handleGoToRegister}
-                      isLoading={isLoading}
-                    />
-                  ) : isRegisterView ? (
-                    <RegisterCard
-                      initials={initials}
-                      registerForm={registerForm}
-                      error={error}
-                      onRegisterChange={handleRegisterChange}
-                      onRegisterSave={handleRegisterSave}
-                      isLoading={isLoading}
-                    />
-                  ) : isHomeView ? (
-                    <HomeCard onPlayGame={handleGoToGameWithOrigin} />
-                  ) : isGameView ? (
-                    <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
-                  ) : (
-                    <ProfileCard
-                      initials={initials}
-                      profileForm={profileForm}
-                      error={error}
-                      onProfileChange={handleProfileChange}
-                      onProfileSave={handleProfileSave}
-                      isLoading={isLoading}
-                    />
-                  )}
-                </main>
+          <main className={`App-main ${isGameView ? 'App-main-game' : ''}`}>
+            {isLoginView ? (
+              <LoginCard
+                loginForm={loginForm}
+                requiresTwoFactor={requiresTwoFactor}
+                twoFactorCode={twoFactorCode}
+                twoFactorQrCode={twoFactorQrCode}
+                error={error}
+                onLoginChange={handleLoginChange}
+                onTwoFactorCodeChange={handleTwoFactorCodeChange}
+                onLogin={handleLogin}
+                onVerifyTwoFactor={handleVerifyTwoFactor}
+                onCloseTwoFactorPopup={handleCloseTwoFactorPopup}
+                onGoogleLogin={handleGoogleLogin}
+                onCreateAccount={handleGoToRegister}
+                isLoading={isLoading}
+              />
+            ) : isRegisterView ? (
+              <RegisterCard
+                initials={initials}
+                registerForm={registerForm}
+                error={error}
+                onRegisterChange={handleRegisterChange}
+                onRegisterSave={handleRegisterSave}
+                isLoading={isLoading}
+              />
+            ) : isHomeView ? (
+              <HomeCard onPlayGame={handleGoToGameWithOrigin} />
+            ) : isGameView ? (
+              <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
+            ) : (
+              <ProfileCard
+                initials={initials}
+                profileForm={profileForm}
+                error={error}
+                onProfileChange={handleProfileChange}
+                onProfileSave={handleProfileSave}
+                isLoading={isLoading}
+              />
+            )}
+          </main>
 
                 {!isGameView && <AppFooter />}
               </section>
