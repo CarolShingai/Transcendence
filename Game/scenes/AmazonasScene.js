@@ -1,8 +1,8 @@
-// Cena principal: seu Tyrannus se movendo e desviando de harpias.
+// Cena Amazonas: seu Tyrannus se movendo e desviando de carcarás e libelulas (sem harpias).
 
-class GameScene extends Phaser.Scene {
+class AmazonasScene extends Phaser.Scene {
 
-  constructor() { super('GameScene'); }
+  constructor() { super('AmazonasScene'); }
 
   // ── Ciclo de vida ─────────────────────────────────────────────────────────
 
@@ -10,9 +10,6 @@ class GameScene extends Phaser.Scene {
     // Carrega as imagens do Tyrannus
     this.load.image('tyrannus', 'assets/images/tyrannus1.png');
     this.load.image('tyrannus2', 'assets/images/tyrannus2.png');
-    
-    // Carrega a imagem da harpia
-    this.load.image('harpia', 'assets/images/harpia.png');
     
     // Carrega a imagem do carcará
     this.load.image('carcara', 'assets/images/carcara.png');
@@ -27,10 +24,6 @@ class GameScene extends Phaser.Scene {
 
     // Cria o Tyrannus no centro da tela
     this._tyrannus = new Tyrannus(this, W / 2, H / 2);
-    
-    // Cria o grupo de harpias
-    this._harpias = new HarpiaGroup(this);
-    this._harpias.setTarget(this._tyrannus); // Harpias rastreiam o Tyrannus
     
     // Cria o grupo de carcarás
     this._carcaras = new CarcaraGroup(this);
@@ -47,8 +40,8 @@ class GameScene extends Phaser.Scene {
     // Ativa o personagem (permite movimento)
     this._tyrannus.activate();
 
-    // Fundo simples com cor
-    this.cameras.main.setBackgroundColor('#419169');
+    // Fundo simples com cor diferente para Amazonas
+    this.cameras.main.setBackgroundColor('#2a5a3a');
 
     // ── HUD ──────────────────────────────────────────────────────────────
 
@@ -71,20 +64,12 @@ class GameScene extends Phaser.Scene {
     }).setDepth(100);
 
     // Texto do nome da fase
-    this.add.text(W / 2, H - 20, 'FASE: SAVANA', {
+    this.add.text(W / 2, H - 20, 'FASE: AMAZONAS', {
       fontSize: '14px',
       fill: '#90EE90'
     }).setOrigin(0.5).setDepth(100);
 
     // ── Colisões ─────────────────────────────────────────────────────────
-
-    this.physics.add.overlap(
-      this._tyrannus.sprite,
-      this._harpias.getGroup(),
-      this._hitByHarpia,
-      null,
-      this
-    );
 
     this.physics.add.overlap(
       this._tyrannus.sprite,
@@ -116,9 +101,6 @@ class GameScene extends Phaser.Scene {
     // Atualiza o Tyrannus a cada frame
     this._tyrannus.update(delta);
 
-    // Atualiza as harpias
-    this._harpias.update(delta, this.scale.height);
-
     // Atualiza os carcarás
     this._carcaras.update(delta, this.scale.height);
 
@@ -142,30 +124,6 @@ class GameScene extends Phaser.Scene {
     } else {
       this._magnetText.setText(`🧲 Ímã: OFF`);
       this._magnetText.setFill('#fff');
-    }
-  }
-
-  // ── Colisão com harpia ───────────────────────────────────────────────────
-
-  _hitByHarpia(tyrannus, harpia) {
-    harpia.destroy(); // Remove a harpia
-    
-    // Se o escudo está ativo, não causa dano
-    if (this._tyrannus.shieldActive) {
-      return;
-    }
-
-    this._lives--;
-    this._lifeText.setText(`❤️ Vidas: ${this._lives}`);
-
-    // Flash no Tyrannus quando bate
-    this._tyrannus.sprite.setTint(0xff0000);
-    this.time.delayedCall(100, () => {
-      this._tyrannus.sprite.clearTint();
-    });
-
-    if (this._lives <= 0) {
-      this._gameOver();
     }
   }
 
@@ -226,7 +184,6 @@ class GameScene extends Phaser.Scene {
   _gameOver() {
     this._tyrannus.alive = false;
     this._tyrannus.sprite.setVelocity(0, 0);
-    this._harpias.stop();
     this._carcaras.stop();
     this._libelulas.stop();
     this._imans.stop();
