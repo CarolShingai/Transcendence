@@ -1,6 +1,7 @@
 package com.transcendence.demo.service
 
 import com.transcendence.demo.DTO.Request.RegisterRequestDTO
+import com.transcendence.demo.DTO.Request.ProfileUpdateRequestDTO
 import com.transcendence.demo.DTO.Request.TwoFactorDisableRequestDTO
 import com.transcendence.demo.DTO.Request.TwoFactorSetupConfirmRequestDTO
 import com.transcendence.demo.DTO.Response.LoginResponseDTO
@@ -22,6 +23,11 @@ class UserService(
     private val jwtTokenGenerator: JwtTokenGenerator,
     private val twoFactorService: TwoFactorService
 ) {
+
+    companion object {
+        private const val MIN_PROFILE_PIC_INDEX = 0
+        private const val MAX_PROFILE_PIC_INDEX = 15
+    }
 
     private val passwordEncoder = BCryptPasswordEncoder()
 
@@ -61,9 +67,51 @@ class UserService(
             email = request.email,
             username = request.nickname,
             passwordHash = encryptedPassword,
-        
+            profilePic = 0
         )
         return userRepository.save(user)
+    }
+
+    fun updateProfile(email: String, request: ProfileUpdateRequestDTO): UserResponseDTO {
+        val user = userRepository.findByEmail(email)
+            ?: throw NoSuchElementException("User not found")
+
+        request.name?.let { value ->
+            val normalizedName = value.trim()
+            if (normalizedName.isBlank()) {
+                throw IllegalArgumentException("Name cannot be blank")
+            }
+            user.name = normalizedName
+        }
+
+        request.nickname?.let { value ->
+            val normalizedNickname = value.trim()
+            if (normalizedNickname.isBlank()) {
+                throw IllegalArgumentException("Nickname cannot be blank")
+            }
+
+            val nicknameOwner = userRepository.findByNickname(normalizedNickname)
+            if (nicknameOwner != null && nicknameOwner.id != user.id) {
+                throw IllegalArgumentException("Nickname already exists")
+            }
+
+            val usernameOwner = userRepository.findByUsername(normalizedNickname)
+            if (usernameOwner != null && usernameOwner.id != user.id) {
+                throw IllegalArgumentException("Username already exists")
+            }
+
+            user.nickname = normalizedNickname
+            user.username = normalizedNickname
+        }
+
+        request.profilePic?.let { value ->
+            if (value !in MIN_PROFILE_PIC_INDEX..MAX_PROFILE_PIC_INDEX) {
+                throw IllegalArgumentException("Profile picture must be between $MIN_PROFILE_PIC_INDEX and $MAX_PROFILE_PIC_INDEX")
+            }
+            user.profilePic = value
+        }
+
+        return userRepository.save(user).toUserResponseDto()
     }
 
     fun loginUser(email: String, password: String): LoginResponseDTO {
@@ -78,12 +126,7 @@ class UserService(
                     message = "2FA required",
                     twoFactorToken = tempToken,
                     requiresTwoFactor = true,
-                    user = UserResponseDTO(
-                        id = user.id,
-                        nickname = user.nickname,
-                        name = user.name,
-                        email = user.email
-                    )
+                    user = user.toUserResponseDto()
                 )
             } else {
                 val token = jwtTokenGenerator.generateToken(user.id!!, user.email)
@@ -91,12 +134,7 @@ class UserService(
                     success = true,
                     message = "Login successful",
                     token = token,
-                    user = UserResponseDTO(
-                        id = user.id,
-                        nickname = user.nickname,
-                        name = user.name,
-                        email = user.email
-                    )
+                    user = user.toUserResponseDto()
                 )
             }
         } else {
@@ -124,12 +162,7 @@ class UserService(
             success = true,
             message = "Login successful",
             token = finalToken,
-            user = UserResponseDTO(
-                id = user.id,
-                nickname = user.nickname,
-                name = user.name,
-                email = user.email
-            )
+            user = user.toUserResponseDto()
         )
     }
 
@@ -248,23 +281,13 @@ class UserService(
             success = true,
             message = "Google login successful",
             token = token,
-            user = UserResponseDTO(
-                id = user.id,
-                nickname = user.nickname,
-                name = user.name,
-                email = user.email
-            )
+            user = user.toUserResponseDto()
         )
     }
 
     fun getUserProfileByEmail(email: String): UserResponseDTO? {
         val user = userRepository.findByEmail(email) ?: return null
-        return UserResponseDTO(
-            id = user.id,
-            nickname = user.nickname,
-            name = user.name,
-            email = user.email
-        )
+        return user.toUserResponseDto()
     }
 
     private fun createGoogleUser(email: String, name: String?): User {
@@ -310,5 +333,15 @@ class UserService(
      */
     private fun isValidEmail(email: String): Boolean {
         return email.contains("@") && email.contains(".")
+    }
+
+    private fun User.toUserResponseDto(): UserResponseDTO {
+        return UserResponseDTO(
+            id = id,
+            nickname = nickname,
+            name = name,
+            email = email,
+            profilePic = profilePic
+        )
     }
 }

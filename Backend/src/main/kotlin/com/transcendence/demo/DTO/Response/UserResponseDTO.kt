@@ -4,5 +4,6 @@ data class UserResponseDTO(
     val id: Long? = null,
     val nickname: String = "",
     val name: String = "",
-    val email: String = ""
+    val email: String = "",
+    val profilePic: Int = 0
 )
