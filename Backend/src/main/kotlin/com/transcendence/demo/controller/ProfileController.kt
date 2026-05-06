@@ -19,7 +19,7 @@ class ProfileController(
     private val userService: UserService
 ) {
     @Operation(
-        summary = "Atualiza o perfil do usuario autenticado",
+        summary = "Atualiza o perfil do usuário autenticado",
         security = [SecurityRequirement(name = "bearerAuth")]
     )
     @PatchMapping("/me")
