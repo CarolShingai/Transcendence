@@ -11,7 +11,7 @@ const AVATAR_OPTIONS = avatarContext
     return moduleValue?.default || moduleValue;
   });
 
-function ProfileCard({ initials, profileForm, error, onProfileChange, onProfileSave }) {
+function ProfileCard({ initials, profileForm, error, onProfileChange, onProfileSave, isLoading = false }) {
   return (
     <section className="card profile-card" aria-label="Profile screen">
       <div className="profile-headline">
@@ -96,7 +96,20 @@ function ProfileCard({ initials, profileForm, error, onProfileChange, onProfileS
               value={profileForm.bio}
               onChange={onProfileChange}
               rows="4"
+              disabled={isLoading}
             />
+
+            <div className="checkbox-container">
+              <input
+                id="profile-2fa"
+                name="twoFactorEnabled"
+                type="checkbox"
+                checked={profileForm.twoFactorEnabled || false}
+                onChange={onProfileChange}
+                disabled={isLoading}
+              />
+              <label htmlFor="profile-2fa">Ativar autenticação de dois fatores (2FA)</label>
+            </div>
 
             {error && <p className="error">{error}</p>}
           </Form>

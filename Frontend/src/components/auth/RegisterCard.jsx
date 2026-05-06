@@ -11,7 +11,7 @@ const AVATAR_OPTIONS = avatarContext
     return moduleValue?.default || moduleValue;
   });
 
-function RegisterCard({ initials, registerForm, error, onRegisterChange, onRegisterSave }) {
+function RegisterCard({ initials, registerForm, error, onRegisterChange, onRegisterSave, isLoading = false }) {
   return (
     <section className="card profile-card" aria-label="Cadastro de conta">
       <div className="profile-headline">
@@ -51,6 +51,7 @@ function RegisterCard({ initials, registerForm, error, onRegisterChange, onRegis
                   role="radio"
                   aria-checked={isSelected}
                   aria-label={`Avatar ${index + 1}`}
+                  disabled={isLoading}
                 >
                   <img src={avatarSrc} alt="" aria-hidden="true" />
                 </button>
@@ -68,6 +69,7 @@ function RegisterCard({ initials, registerForm, error, onRegisterChange, onRegis
               type="text"
               value={registerForm.name}
               onChange={onRegisterChange}
+              disabled={isLoading}
             />
 
             <label htmlFor="register-nickname">Codinome</label>
@@ -77,6 +79,7 @@ function RegisterCard({ initials, registerForm, error, onRegisterChange, onRegis
               type="text"
               value={registerForm.nickname}
               onChange={onRegisterChange}
+              disabled={isLoading}
             />
 
             <label htmlFor="register-email">E-mail</label>
@@ -87,6 +90,19 @@ function RegisterCard({ initials, registerForm, error, onRegisterChange, onRegis
               value={registerForm.email}
               onChange={onRegisterChange}
               autoComplete="email"
+              disabled={isLoading}
+            />
+
+            <label htmlFor="register-password">Senha</label>
+            <input
+              id="register-password"
+              name="password"
+              type="password"
+              placeholder="Mínimo 6 caracteres"
+              value={registerForm.password || ''}
+              onChange={onRegisterChange}
+              autoComplete="new-password"
+              disabled={isLoading}
             />
 
             <label htmlFor="register-bio">Rota pessoal</label>
@@ -96,7 +112,20 @@ function RegisterCard({ initials, registerForm, error, onRegisterChange, onRegis
               value={registerForm.bio}
               onChange={onRegisterChange}
               rows="4"
+              disabled={isLoading}
             />
+
+            <div className="checkbox-container">
+              <input
+                id="register-2fa"
+                name="twoFactorEnabled"
+                type="checkbox"
+                checked={registerForm.twoFactorEnabled || false}
+                onChange={onRegisterChange}
+                disabled={isLoading}
+              />
+              <label htmlFor="register-2fa">Ativar autenticação de dois fatores (2FA)</label>
+            </div>
 
             {error && <p className="error">{error}</p>}
           </Form>
@@ -104,8 +133,8 @@ function RegisterCard({ initials, registerForm, error, onRegisterChange, onRegis
       </div>
 
       <div className="actions-row profile-save-row">
-        <button type="submit" form="register-form" className="primary-button">
-          Cadastrar
+        <button type="submit" form="register-form" className="primary-button" disabled={isLoading}>
+          {isLoading ? 'Cadastrando...' : 'Cadastrar'}
         </button>
       </div>
     </section>

@@ -24,14 +24,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 @EnableWebSecurity
 class SecurityConfig(
 	private val jwtAuthenticationFilter: JwtAuthenticationFilter,
-	private val clientRegistrationRepository: ClientRegistrationRepository,
-	private val oAuth2AuthenticationFailureHandler: OAuth2AuthenticationFailureHandler,
-	private val cookieOAuth2AuthorizationRequestRepository: CookieOAuth2AuthorizationRequestRepository,
+	private val clientRegistrationRepository: ClientRegistrationRepository?,
+	private val oAuth2AuthenticationFailureHandler: OAuth2AuthenticationFailureHandler?,
+	private val cookieOAuth2AuthorizationRequestRepository: CookieOAuth2AuthorizationRequestRepository?,
 	@Value("\${app.cors.allowed-origins:http://localhost:3000}")
 	private val corsAllowedOrigins: String
 ) {
 
 	private val publicPaths = arrayOf(
+		"/",
+		"/health",
 		"/oauth2/authorization/google",
 		"/login/oauth2/code/google",
 		"/auth/oauth2/authorize/google",
@@ -47,7 +49,7 @@ class SecurityConfig(
 
 	@Bean
 	fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
-		val authorizationRequestResolver = googleAuthorizationRequestResolver()
+		val authorizationRequestResolver = if (clientRegistrationRepository != null) googleAuthorizationRequestResolver() else null
 
 		http
 			.csrf { it.disable() }
@@ -63,16 +65,23 @@ class SecurityConfig(
 					.requestMatchers(*publicPaths).permitAll()
 					.anyRequest().authenticated()
 			}
-			.oauth2Login { oauth ->
-				oauth.authorizationEndpoint { authorization ->
-					authorization.authorizationRequestResolver(authorizationRequestResolver)
-					authorization.authorizationRequestRepository(cookieOAuth2AuthorizationRequestRepository)
+
+		// Only configure OAuth2 if it's enabled (clientRegistrationRepository is available)
+		if (clientRegistrationRepository != null && oAuth2AuthenticationFailureHandler != null) {
+			http.oauth2Login { oauth ->
+				if (authorizationRequestResolver != null && cookieOAuth2AuthorizationRequestRepository != null) {
+					oauth.authorizationEndpoint { authorization ->
+						authorization.authorizationRequestResolver(authorizationRequestResolver)
+						authorization.authorizationRequestRepository(cookieOAuth2AuthorizationRequestRepository)
+					}
 				}
 				// Redireciona para endpoints REST existentes para evitar 404/loop no callback OAuth2.
 				oauth.defaultSuccessUrl("/auth/oauth2/authorize/google/success", true)
 				oauth.failureHandler(oAuth2AuthenticationFailureHandler)
 			}
-			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
+		}
+
+		http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
 
 		return http.build()
 	}
@@ -94,7 +103,9 @@ class SecurityConfig(
 	}
 
 	@Bean
-	fun googleAuthorizationRequestResolver(): OAuth2AuthorizationRequestResolver {
+	fun googleAuthorizationRequestResolver(): OAuth2AuthorizationRequestResolver? {
+		if (clientRegistrationRepository == null) return null
+
 		val defaultResolver = DefaultOAuth2AuthorizationRequestResolver(
 			clientRegistrationRepository,
 			"/oauth2/authorization"

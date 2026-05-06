@@ -34,7 +34,7 @@ services:
       SSL_KEYSTORE_PASSWORD: ${SSL_KEYSTORE_PASSWORD:-changeit}
       SSL_KEYSTORE_TYPE: ${SSL_KEYSTORE_TYPE:-PKCS12}
       SSL_KEY_ALIAS: ${SSL_KEY_ALIAS_DEV:-transcendence-dev}
-      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS_DEV:-http://localhost:3000}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS_DEV:-http://localhost:3000,https://localhost:3000}
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/transcendence_db
       SPRING_DATASOURCE_USERNAME: transcendence_user
       SPRING_DATASOURCE_PASSWORD: transcendence_pass
@@ -60,7 +60,8 @@ services:
       context: ./Frontend
       dockerfile: Dockerfile.dev
     working_dir: /app
-    command: sh -c "npm install && npm start"
+    command: >
+      sh -c "mkdir -p /app/certs && if [ ! -f /app/certs/key-dev.pem ] || [ ! -f /app/certs/cert-dev.pem ]; then openssl req -x509 -nodes -newkey rsa:2048 -keyout /app/certs/key-dev.pem -out /app/certs/cert-dev.pem -days 825 -subj '/CN=localhost/O=Transcendence/OU=Dev/L=Local/ST=Local/C=BR' -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1' -batch; fi && npm install && HTTPS=true SSL_CRT_FILE=/app/certs/cert-dev.pem SSL_KEY_FILE=/app/certs/key-dev.pem npm start"
     ports:
       - "3000:3000"
     environment:
@@ -68,6 +69,7 @@ services:
       CHOKIDAR_USEPOLLING: "true"
     volumes:
       - ./Frontend:/app
+      - frontend_certs_dev:/app/certs
       - frontend_node_modules_dev:/app/node_modules
     depends_on:
       - backend
@@ -83,6 +85,8 @@ volumes:
   mysql_data_dev:
     driver: local
   gradle_cache_dev:
+    driver: local
+  frontend_certs_dev:
     driver: local
   frontend_node_modules_dev:
     driver: local

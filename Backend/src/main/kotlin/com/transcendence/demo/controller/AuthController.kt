@@ -6,6 +6,7 @@ import com.transcendence.demo.DTO.Request.TwoFactorDisableRequestDTO
 import com.transcendence.demo.DTO.Request.TwoFactorLoginRequestDTO
 import com.transcendence.demo.DTO.Request.TwoFactorSetupConfirmRequestDTO
 import com.transcendence.demo.DTO.Response.LoginResponseDTO
+import com.transcendence.demo.DTO.Response.RegisterResponseDTO
 import com.transcendence.demo.DTO.Response.TwoFactorDisableResponseDTO
 import com.transcendence.demo.DTO.Response.TwoFactorEnableResponseDTO
 import com.transcendence.demo.DTO.Response.TwoFactorSetupResponseDTO
@@ -35,13 +36,24 @@ class AuthController(
     private val jwtTokenGenerator: JwtTokenGenerator
 ) {
     @PostMapping("/register")
-    fun registerUser(@RequestBody request: RegisterRequestDTO): ResponseEntity<String> {
+    fun registerUser(@RequestBody request: RegisterRequestDTO): ResponseEntity<RegisterResponseDTO> {
         val (success, message) = userService.registerUser(request)
         return if (success) {
-            userService.createUser(request)
-            ResponseEntity.status(HttpStatus.CREATED).body(message)
+            val user = userService.createUser(request)
+            ResponseEntity.status(HttpStatus.CREATED).body(
+                RegisterResponseDTO(
+                    success = true,
+                    message = message,
+                    userId = user.id
+                )
+            )
         } else {
-            ResponseEntity.badRequest().body(message)
+            ResponseEntity.badRequest().body(
+                RegisterResponseDTO(
+                    success = false,
+                    message = message
+                )
+            )
         }
     }
 

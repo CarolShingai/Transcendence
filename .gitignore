@@ -29,6 +29,8 @@ Frontend/package-lock.json
 Frontend/dist/
 Frontend/build/
 Frontend/.angular/
+Frontend/*.pem
+Frontend/certs/
 
 # Frontend - IDE
 Frontend/.vscode/
