@@ -81,6 +81,7 @@ function App() {
     nickname: '',
     email: '',
     password: '',
+    profilePic: 0,
     bio: 'Player ready to start the journey.',
     avatarUrl: ''
   };
@@ -185,6 +186,15 @@ function App() {
     setRegisterForm((previous) => ({ ...previous, [name]: value }));
   };
 
+  const handleRegisterAvatarSelect = (avatarPayload) => {
+    const { avatarUrl = '', profilePic = 0 } = avatarPayload || {};
+    setRegisterForm((previous) => ({
+      ...previous,
+      avatarUrl,
+      profilePic
+    }));
+  };
+
   const handleProfileChange = (event) => {
     const { name, value } = event.target;
     setProfileForm((previous) => ({ ...previous, [name]: value }));
@@ -256,7 +266,8 @@ function App() {
         name: registerForm.name,
         nickname: registerForm.nickname,
         email: registerForm.email,
-        password: registerForm.password
+        password: registerForm.password,
+        profilePic: Number(registerForm.profilePic) || 0
       })
       .then(() => {
         // on success redirect to login and prefill email
@@ -381,6 +392,7 @@ function App() {
                 registerForm={registerForm}
                 error={error}
                 onRegisterChange={handleRegisterChange}
+                onRegisterAvatarSelect={handleRegisterAvatarSelect}
                 onRegisterSave={handleRegisterSave}
                 loading={loading}
               />

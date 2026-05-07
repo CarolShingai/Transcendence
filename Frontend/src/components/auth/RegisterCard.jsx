@@ -11,7 +11,15 @@ const AVATAR_OPTIONS = avatarContext
     return moduleValue?.default || moduleValue;
   });
 
-function RegisterCard({ initials, registerForm, error, onRegisterChange, onRegisterSave, loading }) {
+function RegisterCard({
+  initials,
+  registerForm,
+  error,
+  onRegisterChange,
+  onRegisterAvatarSelect,
+  onRegisterSave,
+  loading
+}) {
   return (
     <section className="card profile-card" aria-label="Cadastro de conta">
       <div className="profile-headline">
@@ -34,6 +42,7 @@ function RegisterCard({ initials, registerForm, error, onRegisterChange, onRegis
           <div className="avatar-options" role="radiogroup" aria-label="Selecao de avatar">
             {AVATAR_OPTIONS.map((avatarSrc, index) => {
               const isSelected = registerForm.avatarUrl === avatarSrc;
+              const profilePic = index + 1;
 
               return (
                 <button
@@ -41,11 +50,9 @@ function RegisterCard({ initials, registerForm, error, onRegisterChange, onRegis
                   type="button"
                   className={`avatar-option ${isSelected ? 'selected' : ''}`}
                   onClick={() =>
-                    onRegisterChange({
-                      target: {
-                        name: 'avatarUrl',
-                        value: avatarSrc
-                      }
+                    onRegisterAvatarSelect({
+                      avatarUrl: avatarSrc,
+                      profilePic
                     })
                   }
                   role="radio"
