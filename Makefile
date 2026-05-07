@@ -37,3 +37,6 @@ restart: down start
 # Sobe apenas o servico de banco MySQL.
 db:
 	$(COMPOSE) up -d mysql
+
+prune:
+	docker system prune -a --volumes -f
