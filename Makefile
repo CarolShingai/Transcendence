@@ -1,7 +1,7 @@
 COMPOSE_FILE := docker-compose.dev.yml
 COMPOSE := docker compose -f $(COMPOSE_FILE)
 
-.PHONY: back front start down logs ps restart db
+.PHONY: back front start down logs ps restart db reset-db reset-db-dev reset-db-prod
 
 # Build apenas a imagem do backend.
 back:
@@ -22,6 +22,10 @@ up:
 # Para e remove os containers da stack de desenvolvimento.
 down:
 	$(COMPOSE) down
+
+# Para derrubar e remover volumes da stack de desenvolvimento (reset do DB dev).
+reset-db-dev:
+	$(COMPOSE) down -v --remove-orphans
 
 # Acompanha os logs de todos os servicos da stack.
 logs:
