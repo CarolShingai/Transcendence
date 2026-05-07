@@ -67,7 +67,7 @@ class UserService(
             email = request.email,
             username = request.nickname,
             passwordHash = encryptedPassword,
-            profilePic = request.profilePic.coerceIn(0, 15)
+            profilePic = request.profilePic.coerceIn(MIN_PROFILE_PIC_INDEX, MAX_PROFILE_PIC_INDEX)
         )
         return userRepository.save(user)
     }
