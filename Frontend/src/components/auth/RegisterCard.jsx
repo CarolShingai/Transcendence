@@ -89,6 +89,16 @@ function RegisterCard({ initials, registerForm, error, onRegisterChange, onRegis
               autoComplete="email"
             />
 
+            <label htmlFor="register-password">Senha</label>
+            <input
+              id="register-password"
+              name="password"
+              type="password"
+              value={registerForm.password}
+              onChange={onRegisterChange}
+              autoComplete="new-password"
+            />
+
             <label htmlFor="register-bio">Rota pessoal</label>
             <textarea
               id="register-bio"

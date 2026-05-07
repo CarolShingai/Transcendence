@@ -12,6 +12,15 @@ import HomeCard from './components/home/HomeCard';
 import GameCard from './components/game/GameCard';
 import api from './services/api';
 
+const avatarContext = require.context('./assets/profile', false, /\.(png|jpe?g|webp)$/);
+const avatarOptions = avatarContext
+  .keys()
+  .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+  .map((key) => {
+    const moduleValue = avatarContext(key);
+    return moduleValue?.default || moduleValue;
+  });
+
 function App() {
   const resolveAvatarUrl = (avatarValue) => {
     if (typeof avatarValue === 'string') return avatarValue;
@@ -22,6 +31,40 @@ function App() {
     return '';
   };
 
+  const resolveAvatarFromProfilePic = (profilePic) => {
+    const numericPic = Number(profilePic);
+    if (!Number.isInteger(numericPic) || numericPic < 1 || numericPic > avatarOptions.length) {
+      return '';
+    }
+
+    return avatarOptions[numericPic - 1] || '';
+  };
+
+  const normalizeBackendUser = (payload, fallbackProfile = null) => {
+    const user = payload?.user ?? payload ?? null;
+    if (!user) return null;
+
+    const avatarUrl = resolveAvatarUrl(user.avatarUrl) || resolveAvatarFromProfilePic(user.profilePic) || fallbackProfile?.avatarUrl || '';
+
+    return {
+      ...fallbackProfile,
+      ...user,
+      avatarUrl
+    };
+  };
+
+  const profileFromUser = (user, fallbackProfile = null) => ({
+    name: user?.name || '',
+    nickname: user?.nickname || '',
+    email: user?.email || '',
+    bio: user?.bio || fallbackProfile?.bio || 'Player ready to start the journey.',
+    avatarUrl:
+      resolveAvatarUrl(user?.avatarUrl) ||
+      resolveAvatarFromProfilePic(user?.profilePic) ||
+      fallbackProfile?.avatarUrl ||
+      ''
+  });
+
   const [view, setView] = useState('login');
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
@@ -30,6 +73,14 @@ function App() {
     name: '',
     nickname: '',
     email: '',
+    bio: 'Player ready to start the journey.',
+    avatarUrl: ''
+  };
+  const emptyRegisterForm = {
+    name: '',
+    nickname: '',
+    email: '',
+    password: '',
     bio: 'Player ready to start the journey.',
     avatarUrl: ''
   };
@@ -60,7 +111,7 @@ function App() {
     };
   });
 
-  const [registerForm, setRegisterForm] = useState(emptyProfileForm);
+  const [registerForm, setRegisterForm] = useState(emptyRegisterForm);
 
   const isAuthenticated = Boolean(profile);
 
@@ -81,36 +132,52 @@ function App() {
     setLoginForm((previous) => ({ ...previous, [name]: value }));
   };
 
-  useEffect(() => {
+  const syncProfileFromToken = async (targetView = 'home') => {
     const token = localStorage.getItem('transcendence_token');
-    if (!token) return;
+    if (!token) {
+      setProfile(null);
+      setProfileForm(emptyProfileForm);
+      setView('login');
+      return null;
+    }
 
     setLoading(true);
-    api
-      .me(token)
-      .then((user) => {
-        const resolved = {
-          ...user,
-          avatarUrl: resolveAvatarUrl(user?.avatarUrl)
-        };
-        setProfile(resolved);
-        setProfileForm({
-          name: resolved.name,
-          nickname: resolved.nickname,
-          email: resolved.email,
-          bio: resolved.bio,
-          avatarUrl: resolveAvatarUrl(resolved.avatarUrl)
-        });
-        setView('home');
-        try {
-          localStorage.setItem('transcendence_profile', JSON.stringify(resolved));
-        } catch {}
-      })
-      .catch((err) => {
-        setError(err?.message || 'Failed to restore session');
-        localStorage.removeItem('transcendence_token');
-      })
-      .finally(() => setLoading(false));
+    setError('');
+
+    try {
+      const user = await api.me(token);
+      const resolved = normalizeBackendUser(user, profile);
+
+      if (!resolved) {
+        throw new Error('User not found');
+      }
+
+      setProfile(resolved);
+      setProfileForm(profileFromUser(resolved, profile));
+      setView(targetView);
+
+      try {
+        localStorage.setItem('transcendence_profile', JSON.stringify(resolved));
+      } catch {}
+
+      return resolved;
+    } catch (err) {
+      setError(err?.message || 'Failed to restore session');
+      localStorage.removeItem('transcendence_token');
+      try {
+        localStorage.removeItem('transcendence_profile');
+      } catch {}
+      setProfile(null);
+      setProfileForm(emptyProfileForm);
+      setView('login');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    syncProfileFromToken('home');
   }, []);
 
   const handleRegisterChange = (event) => {
@@ -138,22 +205,10 @@ function App() {
         const token = resp?.token || resp?.accessToken || resp?.jwt || resp;
         if (!token) throw new Error('No token returned from server');
         localStorage.setItem('transcendence_token', token);
-        return api.me(token).then((user) => ({ token, user }));
+        return syncProfileFromToken('home');
       })
-      .then(({ user }) => {
-        const resolved = { ...user, avatarUrl: resolveAvatarUrl(user?.avatarUrl) };
-        setProfile(resolved);
-        setProfileForm({
-          name: resolved.name,
-          nickname: resolved.nickname,
-          email: resolved.email,
-          bio: resolved.bio,
-          avatarUrl: resolveAvatarUrl(resolved.avatarUrl)
-        });
-        try {
-          localStorage.setItem('transcendence_profile', JSON.stringify(resolved));
-        } catch {}
-        setView('home');
+      .then((resolved) => {
+        if (!resolved) return;
         setLoginForm({ email: '', password: '' });
       })
       .catch((err) => setError(err?.message || 'Login failed'))
@@ -190,8 +245,8 @@ function App() {
   const handleRegisterSave = (event) => {
     event.preventDefault();
 
-    if (!registerForm.name || !registerForm.nickname || !registerForm.email) {
-      setError('Name, nickname and email are required.');
+    if (!registerForm.name || !registerForm.nickname || !registerForm.email || !registerForm.password) {
+      setError('Name, nickname, email and password are required.');
       return;
     }
     setError('');
@@ -201,13 +256,12 @@ function App() {
         name: registerForm.name,
         nickname: registerForm.nickname,
         email: registerForm.email,
-        bio: registerForm.bio,
-        avatarUrl: registerForm.avatarUrl
+        password: registerForm.password
       })
       .then(() => {
         // on success redirect to login and prefill email
         setLoginForm((prev) => ({ ...prev, email: registerForm.email }));
-        setRegisterForm(emptyProfileForm);
+        setRegisterForm(emptyRegisterForm);
         setView('login');
       })
       .catch((err) => setError(err?.message || 'Registration failed'))
@@ -216,7 +270,7 @@ function App() {
 
   const handleRegisterExit = () => {
     setError('');
-    setRegisterForm(emptyProfileForm);
+    setRegisterForm(emptyRegisterForm);
     setView('login');
   };
 
@@ -270,7 +324,7 @@ function App() {
 
   const goToProfile = () => {
     if (!isAuthenticated) return;
-    setView('profile');
+    syncProfileFromToken('profile');
   };
 
   const goToHome = () => {
