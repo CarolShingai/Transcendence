@@ -424,12 +424,14 @@ function App() {
   const isError4xxView = view === 'error4xx';
   const isError5xxView = view === 'error5xx';
   const isErrorView = isError4xxView || isError5xxView;
+  const isProfileView = isAuthenticated && !isHomeView && !isGameView && !isErrorView;
+  const bannerMessage = isLoginView || isRegisterView || isProfileView ? '' : error;
   const gameEndpoint = process.env.REACT_APP_GAME_ENDPOINT || '/game';
 
   return (
     <div className="App">
       <div className="game-shell">
-        <StatusBanner message={error} onClose={() => setError('')} />
+        <StatusBanner message={bannerMessage} onClose={() => setError('')} />
         <LoadingOverlay show={loading} />
         <section className="game-stage" aria-label="Area principal do jogo">
           {isLoginView ? (
