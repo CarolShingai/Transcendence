@@ -1,7 +1,7 @@
 import React from 'react';
 import Form from '../form/Form';
 
-function LoginCard({ loginForm, error, onLoginChange, onLogin, onGoogleLogin, onCreateAccount }) {
+function LoginCard({ loginForm, error, onLoginChange, onLogin, onGoogleLogin, onCreateAccount, loading }) {
   return (
     <section className="card" aria-label="Login screen">
       <Form id="login-form" onSubmit={onLogin}>
@@ -30,11 +30,11 @@ function LoginCard({ loginForm, error, onLoginChange, onLogin, onGoogleLogin, on
         {error && <p className="error">{error}</p>}
       </Form>
 
-      <button type="submit" form="login-form" className="primary-button form-submit">
-        Acessar
+      <button type="submit" form="login-form" className="primary-button form-submit" disabled={loading}>
+        {loading ? 'Acessando...' : 'Acessar'}
       </button>
 
-      <button type="button" className="google-button" onClick={onGoogleLogin}>
+      <button type="button" className="google-button" onClick={onGoogleLogin} disabled={loading}>
         <span className="google-icon" aria-hidden="true">G</span>
         Continuar com Google
       </button>

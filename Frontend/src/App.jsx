@@ -1,17 +1,49 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import './App.css';
 import LoginHeader from './components/layout/LoginHeader';
 import HomeHeader from './components/layout/HomeHeader';
 import EditHeader from './components/layout/EditHeader';
 import RegisterHeader from './components/layout/RegisterHeader';
 import AppFooter from './components/layout/AppFooter';
+import Error4xx from './components/layout/Error4xx';
+import Error5xx from './components/layout/Error5xx';
+import StatusBanner from './components/elements/StatusBanner';
+import LoadingOverlay from './components/elements/LoadingOverlay';
 import LoginCard from './components/auth/LoginCard';
 import RegisterCard from './components/auth/RegisterCard';
 import ProfileCard from './components/profile/ProfileCard';
 import HomeCard from './components/home/HomeCard';
 import GameCard from './components/game/GameCard';
+import api from './services/api';
+
+const avatarContext = require.context('./assets/profile', false, /\.(png|jpe?g|webp)$/);
+const avatarOptions = avatarContext
+  .keys()
+  .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+  .map((key) => {
+    const moduleValue = avatarContext(key);
+    return moduleValue?.default || moduleValue;
+  });
 
 function App() {
+  const pathToErrorView = (pathname) => {
+    const normalized = `/${String(pathname || '')
+      .replace(/^\/+/, '')
+      .replace(/\/+$/, '')
+      .replace(/\/+/g, '/')}`;
+
+    if (normalized === '/4xx') return 'error4xx';
+    if (normalized === '/5xx') return 'error5xx';
+    return null;
+  };
+
+  const navigateToPath = (path, nextView) => {
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, '', path);
+    }
+    setView(nextView);
+  };
+
   const resolveAvatarUrl = (avatarValue) => {
     if (typeof avatarValue === 'string') return avatarValue;
     if (avatarValue && typeof avatarValue === 'object' && typeof avatarValue.default === 'string') {
@@ -21,44 +53,67 @@ function App() {
     return '';
   };
 
+  const resolveAvatarFromProfilePic = (profilePic) => {
+    const numericPic = Number(profilePic);
+    if (!Number.isInteger(numericPic) || numericPic < 1 || numericPic > avatarOptions.length) {
+      return '';
+    }
+
+    return avatarOptions[numericPic - 1] || '';
+  };
+
+  const normalizeBackendUser = (payload, fallbackProfile = null) => {
+    const user = payload?.user ?? payload ?? null;
+    if (!user) return null;
+
+    const avatarUrl = resolveAvatarUrl(user.avatarUrl) || resolveAvatarFromProfilePic(user.profilePic) || fallbackProfile?.avatarUrl || '';
+
+    return {
+      ...fallbackProfile,
+      ...user,
+      avatarUrl
+    };
+  };
+
+  const profileFromUser = (user, fallbackProfile = null) => ({
+    name: user?.name || '',
+    nickname: user?.nickname || '',
+    email: user?.email || '',
+    bio: user?.bio || fallbackProfile?.bio || 'Player ready to start the journey.',
+    avatarUrl:
+      resolveAvatarUrl(user?.avatarUrl) ||
+      resolveAvatarFromProfilePic(user?.profilePic) ||
+      fallbackProfile?.avatarUrl ||
+      '',
+    profilePic: Number(user?.profilePic) || fallbackProfile?.profilePic || 0
+  });
+
   const [view, setView] = useState('login');
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const emptyProfileForm = {
     name: '',
     nickname: '',
     email: '',
     bio: 'Player ready to start the journey.',
+    avatarUrl: '',
+    profilePic: 0
+  };
+  const emptyRegisterForm = {
+    name: '',
+    nickname: '',
+    email: '',
+    password: '',
+    profilePic: 0,
+    bio: 'Player ready to start the journey.',
     avatarUrl: ''
   };
-  const [profile, setProfile] = useState(() => {
-    const storedProfile = localStorage.getItem('transcendence_profile');
-    if (!storedProfile) return null;
+  const [profile, setProfile] = useState(null);
 
-    try {
-      const parsedProfile = JSON.parse(storedProfile);
-      return {
-        ...parsedProfile,
-        avatarUrl: resolveAvatarUrl(parsedProfile?.avatarUrl)
-      };
-    } catch {
-      return null;
-    }
-  });
+  const [profileForm, setProfileForm] = useState(emptyProfileForm);
 
-  const [profileForm, setProfileForm] = useState(() => {
-    if (!profile) return emptyProfileForm;
-
-    return {
-      name: profile.name,
-      nickname: profile.nickname,
-      email: profile.email,
-      bio: profile.bio,
-      avatarUrl: resolveAvatarUrl(profile.avatarUrl)
-    };
-  });
-
-  const [registerForm, setRegisterForm] = useState(emptyProfileForm);
+  const [registerForm, setRegisterForm] = useState(emptyRegisterForm);
 
   const isAuthenticated = Boolean(profile);
 
@@ -79,9 +134,84 @@ function App() {
     setLoginForm((previous) => ({ ...previous, [name]: value }));
   };
 
+  const syncProfileFromToken = async (targetView = 'home') => {
+    const token = localStorage.getItem('transcendence_token');
+    if (!token) {
+      setProfile(null);
+      setProfileForm(emptyProfileForm);
+      setView('login');
+      return null;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const user = await api.me(token);
+      const resolved = normalizeBackendUser(user, null);
+
+      if (!resolved) {
+        throw new Error('User not found');
+      }
+
+      setProfile(resolved);
+      setProfileForm(profileFromUser(resolved, null));
+      setView(targetView);
+
+      try {
+        localStorage.setItem('transcendence_profile', JSON.stringify(resolved));
+      } catch {}
+
+      return resolved;
+    } catch (err) {
+      setError(err?.message || 'Failed to restore session');
+      localStorage.removeItem('transcendence_token');
+      try {
+        localStorage.removeItem('transcendence_profile');
+      } catch {}
+      setProfile(null);
+      setProfileForm(emptyProfileForm);
+      setView('login');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const routeView = pathToErrorView(window.location.pathname);
+    if (routeView) {
+      setView(routeView);
+      return;
+    }
+
+    syncProfileFromToken('home');
+  }, []);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const routeView = pathToErrorView(window.location.pathname);
+      if (routeView) {
+        setView(routeView);
+      }
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
   const handleRegisterChange = (event) => {
     const { name, value } = event.target;
     setRegisterForm((previous) => ({ ...previous, [name]: value }));
+  };
+
+  const handleRegisterAvatarSelect = (avatarPayload) => {
+    const { avatarUrl = '', profilePic = 0 } = avatarPayload || {};
+    setRegisterForm((previous) => ({
+      ...previous,
+      avatarUrl,
+      profilePic
+    }));
   };
 
   const handleProfileChange = (event) => {
@@ -89,34 +219,39 @@ function App() {
     setProfileForm((previous) => ({ ...previous, [name]: value }));
   };
 
+  const handleProfileAvatarSelect = (payload) => {
+    const { avatarUrl = '', profilePic = 0 } = payload || {};
+    setProfileForm((previous) => ({ ...previous, avatarUrl, profilePic }));
+  };
+
   const handleLogin = (event) => {
     event.preventDefault();
     setError('');
-
     if (!loginForm.email || !loginForm.password) {
       setError('Please fill in email and password.');
       return;
     }
 
-    const generatedName = loginForm.email.split('@')[0] || 'player';
-    const nextProfile = {
-      name: generatedName,
-      nickname: generatedName,
-      email: loginForm.email,
-      bio: 'Player ready to start the journey.',
-      avatarUrl: ''
-    };
-
-    setProfile(nextProfile);
-    setProfileForm(nextProfile);
-    localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
-    setView('home');
-    setLoginForm({ email: '', password: '' });
+    setLoading(true);
+    api
+      .login(loginForm.email, loginForm.password)
+      .then((resp) => {
+        const token = resp?.token || resp?.accessToken || resp?.jwt || resp;
+        if (!token) throw new Error('No token returned from server');
+        localStorage.setItem('transcendence_token', token);
+        return syncProfileFromToken('home');
+      })
+      .then((resolved) => {
+        if (!resolved) return;
+        setLoginForm({ email: '', password: '' });
+      })
+      .catch((err) => setError(err?.message || 'Login failed'))
+      .finally(() => setLoading(false));
   };
 
   const handleGoogleLogin = () => {
     setError('');
-
+    // Google login flow not implemented: keep simulated fallback
     const nextProfile = {
       name: 'google player',
       nickname: 'google player',
@@ -144,28 +279,33 @@ function App() {
   const handleRegisterSave = (event) => {
     event.preventDefault();
 
-    if (!registerForm.name || !registerForm.nickname || !registerForm.email) {
-      setError('Name, nickname and email are required.');
+    if (!registerForm.name || !registerForm.nickname || !registerForm.email || !registerForm.password) {
+      setError('Name, nickname, email and password are required.');
       return;
     }
-
     setError('');
-    const nextProfile = {
-      ...registerForm,
-      avatarUrl: resolveAvatarUrl(registerForm.avatarUrl)
-    };
-
-    setProfile(nextProfile);
-    setProfileForm(nextProfile);
-    localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
-    setView('home');
-    setLoginForm({ email: '', password: '' });
-    setRegisterForm(emptyProfileForm);
+    setLoading(true);
+    api
+      .register({
+        name: registerForm.name,
+        nickname: registerForm.nickname,
+        email: registerForm.email,
+        password: registerForm.password,
+        profilePic: Number(registerForm.profilePic) || 0
+      })
+      .then(() => {
+        // on success redirect to login and prefill email
+        setLoginForm((prev) => ({ ...prev, email: registerForm.email }));
+        setRegisterForm(emptyRegisterForm);
+        setView('login');
+      })
+      .catch((err) => setError(err?.message || 'Registration failed'))
+      .finally(() => setLoading(false));
   };
 
   const handleRegisterExit = () => {
     setError('');
-    setRegisterForm(emptyProfileForm);
+    setRegisterForm(emptyRegisterForm);
     setView('login');
   };
 
@@ -190,25 +330,80 @@ function App() {
     }
 
     setError('');
-    const nextProfile = {
-      ...profileForm,
-      avatarUrl: resolveAvatarUrl(profileForm.avatarUrl)
+    setLoading(true);
+
+    const token = localStorage.getItem('transcendence_token');
+    const payload = {
+      name: profileForm.name,
+      nickname: profileForm.nickname,
+      profilePic: Number(profileForm.profilePic) || 0
     };
-    setProfile(nextProfile);
-    localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
-    setView('home');
+
+    api
+      .updateProfile(token, payload)
+      .then((resp) => {
+        const user = resp?.user ?? resp;
+        const resolved = normalizeBackendUser(user, profileForm);
+        setProfile(resolved);
+        setProfileForm(profileFromUser(resolved, profileForm));
+        try {
+          localStorage.setItem('transcendence_profile', JSON.stringify(resolved));
+        } catch {}
+        setView('home');
+      })
+      .catch((err) => setError(err?.message || 'Failed to save profile'))
+      .finally(() => setLoading(false));
   };
 
-  const handleLogout = () => {
-    setProfile(null);
-    setProfileForm(emptyProfileForm);
-    localStorage.removeItem('transcendence_profile');
-    setView('login');
+  const handleLogout = async () => {
+    setError('');
+    setLoading(true);
+
+    const token = localStorage.getItem('transcendence_token');
+
+    try {
+      if (token) {
+        await api.logout(token);
+      }
+    } catch (err) {
+      setError(err?.message || 'Logout failed');
+    } finally {
+      localStorage.removeItem('transcendence_token');
+      try {
+        localStorage.removeItem('transcendence_profile');
+      } catch {}
+      setProfile(null);
+      setProfileForm(emptyProfileForm);
+      setLoginForm({ email: '', password: '' });
+      setView('login');
+      setLoading(false);
+    }
   };
+
+  const showHttpError = (status, message = '') => {
+    if (status >= 500) {
+      setError(message || 'Erro interno do servidor');
+      navigateToPath('/5xx', 'error5xx');
+    } else if (status === 404) {
+      setError(message || 'Recurso não encontrado');
+      navigateToPath('/4xx', 'error4xx');
+    } else if (status >= 400) {
+      setError(message || 'Falha na requisição');
+    }
+  };
+
+  useEffect(() => {
+    // register API-level HTTP error handler so api can auto-trigger our error views
+    if (api && typeof api.setHttpErrorHandler === 'function') {
+      api.setHttpErrorHandler(showHttpError);
+      return () => api.setHttpErrorHandler(null);
+    }
+    return undefined;
+  }, [showHttpError]);
 
   const goToProfile = () => {
     if (!isAuthenticated) return;
-    setView('profile');
+    syncProfileFromToken('profile');
   };
 
   const goToHome = () => {
@@ -226,11 +421,18 @@ function App() {
   const isRegisterView = !isAuthenticated && view === 'register';
   const isHomeView = isAuthenticated && view === 'home';
   const isGameView = isAuthenticated && view === 'game';
+  const isError4xxView = view === 'error4xx';
+  const isError5xxView = view === 'error5xx';
+  const isErrorView = isError4xxView || isError5xxView;
+  const isProfileView = isAuthenticated && !isHomeView && !isGameView && !isErrorView;
+  const bannerMessage = isLoginView || isRegisterView || isProfileView ? '' : error;
   const gameEndpoint = process.env.REACT_APP_GAME_ENDPOINT || '/game';
 
   return (
     <div className="App">
       <div className="game-shell">
+        <StatusBanner message={bannerMessage} onClose={() => setError('')} />
+        <LoadingOverlay show={loading} />
         <section className="game-stage" aria-label="Area principal do jogo">
           {isLoginView ? (
             <LoginHeader />
@@ -244,7 +446,7 @@ function App() {
               onGoToProfile={goToProfile}
               onLogout={handleLogout}
             />
-          ) : isGameView ? null : (
+          ) : isGameView || isErrorView ? null : (
             <EditHeader onGoToHome={goToHome} onLogout={handleLogout} />
           )}
 
@@ -257,6 +459,7 @@ function App() {
                 onLogin={handleLogin}
                 onGoogleLogin={handleGoogleLogin}
                 onCreateAccount={handleGoToRegister}
+                loading={loading}
               />
             ) : isRegisterView ? (
               <RegisterCard
@@ -264,24 +467,31 @@ function App() {
                 registerForm={registerForm}
                 error={error}
                 onRegisterChange={handleRegisterChange}
+                onRegisterAvatarSelect={handleRegisterAvatarSelect}
                 onRegisterSave={handleRegisterSave}
+                loading={loading}
               />
             ) : isHomeView ? (
               <HomeCard onPlayGame={handleGoToGameWithOrigin} />
             ) : isGameView ? (
               <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
+            ) : isError4xxView ? (
+              <Error4xx code={404} />
+            ) : isError5xxView ? (
+              <Error5xx code={500} />
             ) : (
               <ProfileCard
-                initials={initials}
-                profileForm={profileForm}
-                error={error}
-                onProfileChange={handleProfileChange}
-                onProfileSave={handleProfileSave}
-              />
+                  initials={initials}
+                  profileForm={profileForm}
+                  error={error}
+                  onProfileChange={handleProfileChange}
+                  onProfileSave={handleProfileSave}
+                  onProfileAvatarSelect={handleProfileAvatarSelect}
+                />
             )}
           </main>
 
-          {!isGameView && <AppFooter />}
+          {!isGameView && !isErrorView && <AppFooter />}
         </section>
       </div>
     </div>
