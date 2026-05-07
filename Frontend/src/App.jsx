@@ -85,32 +85,9 @@ function App() {
     bio: 'Player ready to start the journey.',
     avatarUrl: ''
   };
-  const [profile, setProfile] = useState(() => {
-    const storedProfile = localStorage.getItem('transcendence_profile');
-    if (!storedProfile) return null;
+  const [profile, setProfile] = useState(null);
 
-    try {
-      const parsedProfile = JSON.parse(storedProfile);
-      return {
-        ...parsedProfile,
-        avatarUrl: resolveAvatarUrl(parsedProfile?.avatarUrl)
-      };
-    } catch {
-      return null;
-    }
-  });
-
-  const [profileForm, setProfileForm] = useState(() => {
-    if (!profile) return emptyProfileForm;
-
-    return {
-      name: profile.name,
-      nickname: profile.nickname,
-      email: profile.email,
-      bio: profile.bio,
-      avatarUrl: resolveAvatarUrl(profile.avatarUrl)
-    };
-  });
+  const [profileForm, setProfileForm] = useState(emptyProfileForm);
 
   const [registerForm, setRegisterForm] = useState(emptyRegisterForm);
 
@@ -147,14 +124,14 @@ function App() {
 
     try {
       const user = await api.me(token);
-      const resolved = normalizeBackendUser(user, profile);
+      const resolved = normalizeBackendUser(user, null);
 
       if (!resolved) {
         throw new Error('User not found');
       }
 
       setProfile(resolved);
-      setProfileForm(profileFromUser(resolved, profile));
+      setProfileForm(profileFromUser(resolved, null));
       setView(targetView);
 
       try {
@@ -317,20 +294,29 @@ function App() {
     setView('home');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    setError('');
     setLoading(true);
+
     const token = localStorage.getItem('transcendence_token');
-    if (token) {
-      api.logout(token).catch(() => {});
-    }
-    localStorage.removeItem('transcendence_token');
+
     try {
-      localStorage.removeItem('transcendence_profile');
-    } catch {}
-    setProfile(null);
-    setProfileForm(emptyProfileForm);
-    setView('login');
-    setLoading(false);
+      if (token) {
+        await api.logout(token);
+      }
+    } catch (err) {
+      setError(err?.message || 'Logout failed');
+    } finally {
+      localStorage.removeItem('transcendence_token');
+      try {
+        localStorage.removeItem('transcendence_profile');
+      } catch {}
+      setProfile(null);
+      setProfileForm(emptyProfileForm);
+      setLoginForm({ email: '', password: '' });
+      setView('login');
+      setLoading(false);
+    }
   };
 
   const goToProfile = () => {
