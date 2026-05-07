@@ -11,7 +11,7 @@ const AVATAR_OPTIONS = avatarContext
     return moduleValue?.default || moduleValue;
   });
 
-function ProfileCard({ initials, profileForm, error, onProfileChange, onProfileSave }) {
+function ProfileCard({ initials, profileForm, error, onProfileChange, onProfileSave, onProfileAvatarSelect }) {
   return (
     <section className="card profile-card" aria-label="Profile screen">
       <div className="profile-headline">
@@ -34,6 +34,7 @@ function ProfileCard({ initials, profileForm, error, onProfileChange, onProfileS
           <div className="avatar-options" role="radiogroup" aria-label="Selecao de avatar">
             {AVATAR_OPTIONS.map((avatarSrc, index) => {
               const isSelected = profileForm.avatarUrl === avatarSrc;
+              const profilePic = index + 1;
 
               return (
                 <button
@@ -41,12 +42,9 @@ function ProfileCard({ initials, profileForm, error, onProfileChange, onProfileS
                   type="button"
                   className={`avatar-option ${isSelected ? 'selected' : ''}`}
                   onClick={() =>
-                    onProfileChange({
-                      target: {
-                        name: 'avatarUrl',
-                        value: avatarSrc
-                      }
-                    })
+                    onProfileAvatarSelect
+                      ? onProfileAvatarSelect({ avatarUrl: avatarSrc, profilePic })
+                      : onProfileChange({ target: { name: 'avatarUrl', value: avatarSrc } })
                   }
                   role="radio"
                   aria-checked={isSelected}

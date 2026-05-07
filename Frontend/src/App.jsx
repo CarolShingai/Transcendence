@@ -5,6 +5,8 @@ import HomeHeader from './components/layout/HomeHeader';
 import EditHeader from './components/layout/EditHeader';
 import RegisterHeader from './components/layout/RegisterHeader';
 import AppFooter from './components/layout/AppFooter';
+import Error4xx from './components/layout/Error4xx';
+import Error5xx from './components/layout/Error5xx';
 import StatusBanner from './components/elements/StatusBanner';
 import LoadingOverlay from './components/elements/LoadingOverlay';
 import LoginCard from './components/auth/LoginCard';
@@ -64,7 +66,8 @@ function App() {
       resolveAvatarUrl(user?.avatarUrl) ||
       resolveAvatarFromProfilePic(user?.profilePic) ||
       fallbackProfile?.avatarUrl ||
-      ''
+      '',
+    profilePic: Number(user?.profilePic) || fallbackProfile?.profilePic || 0
   });
 
   const [view, setView] = useState('login');
@@ -76,7 +79,8 @@ function App() {
     nickname: '',
     email: '',
     bio: 'Player ready to start the journey.',
-    avatarUrl: ''
+    avatarUrl: '',
+    profilePic: 0
   };
   const emptyRegisterForm = {
     name: '',
@@ -160,6 +164,7 @@ function App() {
     syncProfileFromToken('home');
   }, []);
 
+
   const handleRegisterChange = (event) => {
     const { name, value } = event.target;
     setRegisterForm((previous) => ({ ...previous, [name]: value }));
@@ -177,6 +182,11 @@ function App() {
   const handleProfileChange = (event) => {
     const { name, value } = event.target;
     setProfileForm((previous) => ({ ...previous, [name]: value }));
+  };
+
+  const handleProfileAvatarSelect = (payload) => {
+    const { avatarUrl = '', profilePic = 0 } = payload || {};
+    setProfileForm((previous) => ({ ...previous, avatarUrl, profilePic }));
   };
 
   const handleLogin = (event) => {
@@ -285,15 +295,29 @@ function App() {
     }
 
     setError('');
-    const nextProfile = {
-      ...profileForm,
-      avatarUrl: resolveAvatarUrl(profileForm.avatarUrl)
+    setLoading(true);
+
+    const token = localStorage.getItem('transcendence_token');
+    const payload = {
+      name: profileForm.name,
+      nickname: profileForm.nickname,
+      profilePic: Number(profileForm.profilePic) || 0
     };
-    setProfile(nextProfile);
-    try {
-      localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
-    } catch {}
-    setView('home');
+
+    api
+      .updateProfile(token, payload)
+      .then((resp) => {
+        const user = resp?.user ?? resp;
+        const resolved = normalizeBackendUser(user, profileForm);
+        setProfile(resolved);
+        setProfileForm(profileFromUser(resolved, profileForm));
+        try {
+          localStorage.setItem('transcendence_profile', JSON.stringify(resolved));
+        } catch {}
+        setView('home');
+      })
+      .catch((err) => setError(err?.message || 'Failed to save profile'))
+      .finally(() => setLoading(false));
   };
 
   const handleLogout = async () => {
@@ -320,6 +344,25 @@ function App() {
       setLoading(false);
     }
   };
+
+  const showHttpError = (status, message = '') => {
+    if (status >= 500) {
+      setError(message || 'Erro interno do servidor');
+      setView('error5xx');
+    } else if (status >= 400) {
+      setError(message || 'Recurso não encontrado');
+      setView('error4xx');
+    }
+  };
+
+  useEffect(() => {
+    // register API-level HTTP error handler so api can auto-trigger our error views
+    if (api && typeof api.setHttpErrorHandler === 'function') {
+      api.setHttpErrorHandler(showHttpError);
+      return () => api.setHttpErrorHandler(null);
+    }
+    return undefined;
+  }, [showHttpError]);
 
   const goToProfile = () => {
     if (!isAuthenticated) return;
@@ -348,6 +391,13 @@ function App() {
       <div className="game-shell">
         <StatusBanner message={error} onClose={() => setError('')} />
         <LoadingOverlay show={loading} />
+        {process.env.NODE_ENV !== 'production' && (
+          <div style={{ position: 'fixed', right: 12, top: 72, zIndex: 2200, display: 'flex', gap: 8 }}>
+            <button type="button" onClick={() => setView('error4xx')} className="text-button">Mostrar 4xx</button>
+            <button type="button" onClick={() => setView('error5xx')} className="text-button">Mostrar 5xx</button>
+          </div>
+        )}
+
         <section className="game-stage" aria-label="Area principal do jogo">
           {isLoginView ? (
             <LoginHeader />
@@ -392,16 +442,23 @@ function App() {
               <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
             ) : (
               <ProfileCard
-                initials={initials}
-                profileForm={profileForm}
-                error={error}
-                onProfileChange={handleProfileChange}
-                onProfileSave={handleProfileSave}
-              />
+                  initials={initials}
+                  profileForm={profileForm}
+                  error={error}
+                  onProfileChange={handleProfileChange}
+                  onProfileSave={handleProfileSave}
+                  onProfileAvatarSelect={handleProfileAvatarSelect}
+                />
             )}
           </main>
 
-          {!isGameView && <AppFooter />}
+          {view === 'error4xx' ? (
+            <Error4xx code={404} message={error} onHome={() => syncProfileFromToken('home')} />
+          ) : view === 'error5xx' ? (
+            <Error5xx code={500} message={error} onRetry={() => window.location.reload()} onHome={() => syncProfileFromToken('home')} />
+          ) : (
+            !isGameView && <AppFooter />
+          )}
         </section>
       </div>
     </div>

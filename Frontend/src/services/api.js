@@ -1,5 +1,7 @@
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
+let httpErrorHandler = null;
+
 async function handleResponse(res) {
   const contentType = res.headers.get('content-type') || '';
   const isJson = contentType.includes('application/json');
@@ -32,13 +34,22 @@ async function handleResponse(res) {
     }
   }
 
+  let message = '';
+
   if (isJson) {
     const err = await res.json().catch(() => null);
-    const message = err?.message || err?.error || err?.detail || res.statusText || 'Request failed';
-    throw new Error(message);
+    message = err?.message || err?.error || err?.detail || res.statusText || 'Request failed';
+  } else {
+    message = await extractMessage();
   }
 
-  throw new Error(await extractMessage());
+  if (typeof httpErrorHandler === 'function') {
+    try {
+      httpErrorHandler(res.status, message);
+    } catch (e) {}
+  }
+
+  throw new Error(message);
 }
 
 function authHeader(token) {
@@ -100,4 +111,22 @@ export async function me(token) {
   }
 }
 
-export default { login, register, logout, me };
+export function setHttpErrorHandler(fn) {
+  httpErrorHandler = typeof fn === 'function' ? fn : null;
+}
+
+export async function updateProfile(token, data) {
+  try {
+    const res = await fetch(`${API_BASE}/profile/me`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) },
+      body: JSON.stringify(data)
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during profile update');
+  }
+}
+
+export default { login, register, logout, me, setHttpErrorHandler, updateProfile };
