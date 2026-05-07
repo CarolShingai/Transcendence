@@ -35,7 +35,7 @@ function StatusBanner({ message, type = 'error', onClose }) {
     <div style={styles.container} role="alert" aria-live="assertive">
       <div style={styles.message}>{message}</div>
       {onClose && (
-        <button aria-label="Fechar" style={styles.close} onClick={onClose}>
+        <button type="button" aria-label="Fechar" style={styles.close} onClick={onClose}>
           ×
         </button>
       )}
