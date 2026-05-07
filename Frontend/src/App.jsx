@@ -384,9 +384,11 @@ function App() {
     if (status >= 500) {
       setError(message || 'Erro interno do servidor');
       navigateToPath('/5xx', 'error5xx');
-    } else if (status >= 400) {
+    } else if (status === 404) {
       setError(message || 'Recurso não encontrado');
       navigateToPath('/4xx', 'error4xx');
+    } else if (status >= 400) {
+      setError(message || 'Falha na requisição');
     }
   };
 
