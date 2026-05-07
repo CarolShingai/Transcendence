@@ -17,7 +17,7 @@ class MenuScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#1a3a2a');
 
     // Título
-    this.add.text(W / 2, 80, 'TYRANNUS SAVANA', {
+    this.add.text(W / 2, 80, 'Aves Migratórias', {
       fontSize: '48px',
       fill: '#90EE90',
       fontStyle: 'bold'
@@ -28,64 +28,64 @@ class MenuScene extends Phaser.Scene {
       fill: '#fff'
     }).setOrigin(0.5);
 
-    // Botão Fase 1 (GameScene)
-    const btn1 = this.add.rectangle(W / 2 - 150, 300, 200, 60, 0x419169)
+    // Botão Fase 1 (AmazonasScene)
+    const btn1 = this.add.rectangle(W / 2 - 150, 300, 200, 60, 0x2a5a3a)
       .setInteractive()
       .on('pointerover', () => {
-        btn1.setFillStyle(0x52a876);
+        btn1.setFillStyle(0x3a7a4a);
         textBtn1.setFill('#ffff00');
       })
       .on('pointerout', () => {
-        btn1.setFillStyle(0x419169);
+        btn1.setFillStyle(0x2a5a3a);
         textBtn1.setFill('#fff');
-      })
-      .on('pointerdown', () => {
-        this.scene.start('GameScene');
-      });
-
-    const textBtn1 = this.add.text(W / 2 - 150, 300, 'FASE 1:\nSAVANA', {
-      fontSize: '20px',
-      fill: '#fff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    // Botão Fase 2 (AmazonasScene)
-    const btn2 = this.add.rectangle(W / 2 + 150, 300, 200, 60, 0x2a5a3a)
-      .setInteractive()
-      .on('pointerover', () => {
-        btn2.setFillStyle(0x3a7a4a);
-        textBtn2.setFill('#ffff00');
-      })
-      .on('pointerout', () => {
-        btn2.setFillStyle(0x2a5a3a);
-        textBtn2.setFill('#fff');
       })
       .on('pointerdown', () => {
         this.scene.start('AmazonasScene');
       });
 
-    const textBtn2 = this.add.text(W / 2 + 150, 300, 'FASE 2:\nAMAZONAS', {
+    const textBtn1 = this.add.text(W / 2 - 150, 300, 'FASE 1:\nAMAZONAS', {
       fontSize: '20px',
       fill: '#fff',
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    // Botão Fase 3 (CerradoScene)
-    const btn3 = this.add.rectangle(W / 2, 380, 200, 60, 0xc9a961)
+    // Botão Fase 2 (CerradoScene)
+    const btn2 = this.add.rectangle(W / 2 + 150, 300, 200, 60, 0xc9a961)
       .setInteractive()
       .on('pointerover', () => {
-        btn3.setFillStyle(0xd9b971);
-        textBtn3.setFill('#000');
+        btn2.setFillStyle(0xd9b971);
+        textBtn2.setFill('#000');
       })
       .on('pointerout', () => {
-        btn3.setFillStyle(0xc9a961);
-        textBtn3.setFill('#fff');
+        btn2.setFillStyle(0xc9a961);
+        textBtn2.setFill('#fff');
       })
       .on('pointerdown', () => {
         this.scene.start('CerradoScene');
       });
 
-    const textBtn3 = this.add.text(W / 2, 380, 'FASE 3:\nCERRADO', {
+    const textBtn2 = this.add.text(W / 2 + 150, 300, 'FASE 2:\nCERRADO', {
+      fontSize: '20px',
+      fill: '#fff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    // Botão Fase 3 (GameScene - Mata Atlântica)
+    const btn3 = this.add.rectangle(W / 2, 380, 200, 60, 0x419169)
+      .setInteractive()
+      .on('pointerover', () => {
+        btn3.setFillStyle(0x52a876);
+        textBtn3.setFill('#ffff00');
+      })
+      .on('pointerout', () => {
+        btn3.setFillStyle(0x419169);
+        textBtn3.setFill('#fff');
+      })
+      .on('pointerdown', () => {
+        this.scene.start('GameScene');
+      });
+
+    const textBtn3 = this.add.text(W / 2, 380, 'FASE 3:\nMATA ATLÂNTICA', {
       fontSize: '20px',
       fill: '#fff',
       fontStyle: 'bold'
