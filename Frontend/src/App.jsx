@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import './App.css';
 import LoginHeader from './components/layout/LoginHeader';
 import HomeHeader from './components/layout/HomeHeader';
@@ -10,6 +10,7 @@ import RegisterCard from './components/auth/RegisterCard';
 import ProfileCard from './components/profile/ProfileCard';
 import HomeCard from './components/home/HomeCard';
 import GameCard from './components/game/GameCard';
+import api from './services/api';
 
 function App() {
   const resolveAvatarUrl = (avatarValue) => {
@@ -24,6 +25,7 @@ function App() {
   const [view, setView] = useState('login');
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const emptyProfileForm = {
     name: '',
     nickname: '',
@@ -79,6 +81,38 @@ function App() {
     setLoginForm((previous) => ({ ...previous, [name]: value }));
   };
 
+  useEffect(() => {
+    const token = localStorage.getItem('transcendence_token');
+    if (!token) return;
+
+    setLoading(true);
+    api
+      .me(token)
+      .then((user) => {
+        const resolved = {
+          ...user,
+          avatarUrl: resolveAvatarUrl(user?.avatarUrl)
+        };
+        setProfile(resolved);
+        setProfileForm({
+          name: resolved.name,
+          nickname: resolved.nickname,
+          email: resolved.email,
+          bio: resolved.bio,
+          avatarUrl: resolveAvatarUrl(resolved.avatarUrl)
+        });
+        setView('home');
+        try {
+          localStorage.setItem('transcendence_profile', JSON.stringify(resolved));
+        } catch {}
+      })
+      .catch((err) => {
+        setError(err?.message || 'Failed to restore session');
+        localStorage.removeItem('transcendence_token');
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
   const handleRegisterChange = (event) => {
     const { name, value } = event.target;
     setRegisterForm((previous) => ({ ...previous, [name]: value }));
@@ -92,31 +126,43 @@ function App() {
   const handleLogin = (event) => {
     event.preventDefault();
     setError('');
-
     if (!loginForm.email || !loginForm.password) {
       setError('Please fill in email and password.');
       return;
     }
 
-    const generatedName = loginForm.email.split('@')[0] || 'player';
-    const nextProfile = {
-      name: generatedName,
-      nickname: generatedName,
-      email: loginForm.email,
-      bio: 'Player ready to start the journey.',
-      avatarUrl: ''
-    };
-
-    setProfile(nextProfile);
-    setProfileForm(nextProfile);
-    localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
-    setView('home');
-    setLoginForm({ email: '', password: '' });
+    setLoading(true);
+    api
+      .login(loginForm.email, loginForm.password)
+      .then((resp) => {
+        const token = resp?.token || resp?.accessToken || resp?.jwt || resp;
+        if (!token) throw new Error('No token returned from server');
+        localStorage.setItem('transcendence_token', token);
+        return api.me(token).then((user) => ({ token, user }));
+      })
+      .then(({ user }) => {
+        const resolved = { ...user, avatarUrl: resolveAvatarUrl(user?.avatarUrl) };
+        setProfile(resolved);
+        setProfileForm({
+          name: resolved.name,
+          nickname: resolved.nickname,
+          email: resolved.email,
+          bio: resolved.bio,
+          avatarUrl: resolveAvatarUrl(resolved.avatarUrl)
+        });
+        try {
+          localStorage.setItem('transcendence_profile', JSON.stringify(resolved));
+        } catch {}
+        setView('home');
+        setLoginForm({ email: '', password: '' });
+      })
+      .catch((err) => setError(err?.message || 'Login failed'))
+      .finally(() => setLoading(false));
   };
 
   const handleGoogleLogin = () => {
     setError('');
-
+    // Google login flow not implemented: keep simulated fallback
     const nextProfile = {
       name: 'google player',
       nickname: 'google player',
@@ -148,19 +194,24 @@ function App() {
       setError('Name, nickname and email are required.');
       return;
     }
-
     setError('');
-    const nextProfile = {
-      ...registerForm,
-      avatarUrl: resolveAvatarUrl(registerForm.avatarUrl)
-    };
-
-    setProfile(nextProfile);
-    setProfileForm(nextProfile);
-    localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
-    setView('home');
-    setLoginForm({ email: '', password: '' });
-    setRegisterForm(emptyProfileForm);
+    setLoading(true);
+    api
+      .register({
+        name: registerForm.name,
+        nickname: registerForm.nickname,
+        email: registerForm.email,
+        bio: registerForm.bio,
+        avatarUrl: registerForm.avatarUrl
+      })
+      .then(() => {
+        // on success redirect to login and prefill email
+        setLoginForm((prev) => ({ ...prev, email: registerForm.email }));
+        setRegisterForm(emptyProfileForm);
+        setView('login');
+      })
+      .catch((err) => setError(err?.message || 'Registration failed'))
+      .finally(() => setLoading(false));
   };
 
   const handleRegisterExit = () => {
@@ -195,15 +246,26 @@ function App() {
       avatarUrl: resolveAvatarUrl(profileForm.avatarUrl)
     };
     setProfile(nextProfile);
-    localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
+    try {
+      localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
+    } catch {}
     setView('home');
   };
 
   const handleLogout = () => {
+    setLoading(true);
+    const token = localStorage.getItem('transcendence_token');
+    if (token) {
+      api.logout(token).catch(() => {});
+    }
+    localStorage.removeItem('transcendence_token');
+    try {
+      localStorage.removeItem('transcendence_profile');
+    } catch {}
     setProfile(null);
     setProfileForm(emptyProfileForm);
-    localStorage.removeItem('transcendence_profile');
     setView('login');
+    setLoading(false);
   };
 
   const goToProfile = () => {
@@ -257,6 +319,7 @@ function App() {
                 onLogin={handleLogin}
                 onGoogleLogin={handleGoogleLogin}
                 onCreateAccount={handleGoToRegister}
+                loading={loading}
               />
             ) : isRegisterView ? (
               <RegisterCard
@@ -265,6 +328,7 @@ function App() {
                 error={error}
                 onRegisterChange={handleRegisterChange}
                 onRegisterSave={handleRegisterSave}
+                loading={loading}
               />
             ) : isHomeView ? (
               <HomeCard onPlayGame={handleGoToGameWithOrigin} />

@@ -11,7 +11,7 @@ const AVATAR_OPTIONS = avatarContext
     return moduleValue?.default || moduleValue;
   });
 
-function RegisterCard({ initials, registerForm, error, onRegisterChange, onRegisterSave }) {
+function RegisterCard({ initials, registerForm, error, onRegisterChange, onRegisterSave, loading }) {
   return (
     <section className="card profile-card" aria-label="Cadastro de conta">
       <div className="profile-headline">
@@ -104,8 +104,8 @@ function RegisterCard({ initials, registerForm, error, onRegisterChange, onRegis
       </div>
 
       <div className="actions-row profile-save-row">
-        <button type="submit" form="register-form" className="primary-button">
-          Cadastrar
+        <button type="submit" form="register-form" className="primary-button" disabled={loading}>
+          {loading ? 'Cadastrando...' : 'Cadastrar'}
         </button>
       </div>
     </section>
