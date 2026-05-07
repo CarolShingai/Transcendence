@@ -391,13 +391,6 @@ function App() {
       <div className="game-shell">
         <StatusBanner message={error} onClose={() => setError('')} />
         <LoadingOverlay show={loading} />
-        {process.env.NODE_ENV !== 'production' && (
-          <div style={{ position: 'fixed', right: 12, top: 72, zIndex: 2200, display: 'flex', gap: 8 }}>
-            <button type="button" onClick={() => setView('error4xx')} className="text-button">Mostrar 4xx</button>
-            <button type="button" onClick={() => setView('error5xx')} className="text-button">Mostrar 5xx</button>
-          </div>
-        )}
-
         <section className="game-stage" aria-label="Area principal do jogo">
           {isLoginView ? (
             <LoginHeader />
