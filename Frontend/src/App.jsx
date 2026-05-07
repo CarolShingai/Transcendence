@@ -5,6 +5,8 @@ import HomeHeader from './components/layout/HomeHeader';
 import EditHeader from './components/layout/EditHeader';
 import RegisterHeader from './components/layout/RegisterHeader';
 import AppFooter from './components/layout/AppFooter';
+import StatusBanner from './components/elements/StatusBanner';
+import LoadingOverlay from './components/elements/LoadingOverlay';
 import LoginCard from './components/auth/LoginCard';
 import RegisterCard from './components/auth/RegisterCard';
 import ProfileCard from './components/profile/ProfileCard';
@@ -344,6 +346,8 @@ function App() {
   return (
     <div className="App">
       <div className="game-shell">
+        <StatusBanner message={error} onClose={() => setError('')} />
+        <LoadingOverlay show={loading} />
         <section className="game-stage" aria-label="Area principal do jogo">
           {isLoginView ? (
             <LoginHeader />
