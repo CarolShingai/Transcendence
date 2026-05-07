@@ -26,6 +26,24 @@ const avatarOptions = avatarContext
   });
 
 function App() {
+  const pathToErrorView = (pathname) => {
+    const normalized = `/${String(pathname || '')
+      .replace(/^\/+/, '')
+      .replace(/\/+$/, '')
+      .replace(/\/+/g, '/')}`;
+
+    if (normalized === '/4xx') return 'error4xx';
+    if (normalized === '/5xx') return 'error5xx';
+    return null;
+  };
+
+  const navigateToPath = (path, nextView) => {
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, '', path);
+    }
+    setView(nextView);
+  };
+
   const resolveAvatarUrl = (avatarValue) => {
     if (typeof avatarValue === 'string') return avatarValue;
     if (avatarValue && typeof avatarValue === 'object' && typeof avatarValue.default === 'string') {
@@ -161,9 +179,26 @@ function App() {
   };
 
   useEffect(() => {
+    const routeView = pathToErrorView(window.location.pathname);
+    if (routeView) {
+      setView(routeView);
+      return;
+    }
+
     syncProfileFromToken('home');
   }, []);
 
+  useEffect(() => {
+    const onPopState = () => {
+      const routeView = pathToErrorView(window.location.pathname);
+      if (routeView) {
+        setView(routeView);
+      }
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   const handleRegisterChange = (event) => {
     const { name, value } = event.target;
@@ -348,10 +383,10 @@ function App() {
   const showHttpError = (status, message = '') => {
     if (status >= 500) {
       setError(message || 'Erro interno do servidor');
-      setView('error5xx');
+      navigateToPath('/5xx', 'error5xx');
     } else if (status >= 400) {
       setError(message || 'Recurso não encontrado');
-      setView('error4xx');
+      navigateToPath('/4xx', 'error4xx');
     }
   };
 
@@ -384,6 +419,9 @@ function App() {
   const isRegisterView = !isAuthenticated && view === 'register';
   const isHomeView = isAuthenticated && view === 'home';
   const isGameView = isAuthenticated && view === 'game';
+  const isError4xxView = view === 'error4xx';
+  const isError5xxView = view === 'error5xx';
+  const isErrorView = isError4xxView || isError5xxView;
   const gameEndpoint = process.env.REACT_APP_GAME_ENDPOINT || '/game';
 
   return (
@@ -404,7 +442,7 @@ function App() {
               onGoToProfile={goToProfile}
               onLogout={handleLogout}
             />
-          ) : isGameView ? null : (
+          ) : isGameView || isErrorView ? null : (
             <EditHeader onGoToHome={goToHome} onLogout={handleLogout} />
           )}
 
@@ -433,6 +471,10 @@ function App() {
               <HomeCard onPlayGame={handleGoToGameWithOrigin} />
             ) : isGameView ? (
               <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
+            ) : isError4xxView ? (
+              <Error4xx code={404} />
+            ) : isError5xxView ? (
+              <Error5xx code={500} />
             ) : (
               <ProfileCard
                   initials={initials}
@@ -445,13 +487,7 @@ function App() {
             )}
           </main>
 
-          {view === 'error4xx' ? (
-            <Error4xx code={404} message={error} onHome={() => syncProfileFromToken('home')} />
-          ) : view === 'error5xx' ? (
-            <Error5xx code={500} message={error} onRetry={() => window.location.reload()} onHome={() => syncProfileFromToken('home')} />
-          ) : (
-            !isGameView && <AppFooter />
-          )}
+          {!isGameView && !isErrorView && <AppFooter />}
         </section>
       </div>
     </div>
