@@ -73,8 +73,8 @@ class FriendshipService(
     @Transactional(readOnly = true)
     fun listFriends(requesterEmail: String): List<FriendDTO> {
         val user = findAuthenticatedUser(requesterEmail)
-        return friendshipRepository.findAcceptedFriendshipsByUserId(user.id!!)
-            .map { friendship -> friendshipMapper.toFriendDTO(friendship.otherUser(user.id!!)) }
+        return friendshipRepository.findFriends(user.id!!)
+            .map(friendshipMapper::toFriendDTO)
     }
 
     private fun findAuthenticatedUser(email: String): User {
@@ -113,14 +113,4 @@ class FriendshipService(
         }
     }
 
-    private fun Friendship.otherUser(currentUserId: Long): User {
-        val requester = requester ?: throw IllegalArgumentException("Friend request is malformed")
-        val receiver = receiver ?: throw IllegalArgumentException("Friend request is malformed")
-
-        return when {
-            requester.id == currentUserId -> receiver
-            receiver.id == currentUserId -> requester
-            else -> throw IllegalArgumentException("Friend request is malformed")
-        }
-    }
 }
