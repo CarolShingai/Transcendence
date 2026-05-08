@@ -230,6 +230,24 @@ function App() {
       return;
     }
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const oauthToken = urlParams.get('token');
+    const oauthError = urlParams.get('oauthError');
+
+    if (oauthToken) {
+      localStorage.setItem('transcendence_token', oauthToken);
+      window.history.replaceState({}, '', window.location.pathname);
+      syncProfileFromToken('home');
+      return;
+    }
+
+    if (oauthError) {
+      setError(decodeURIComponent(oauthError));
+      window.history.replaceState({}, '', window.location.pathname);
+      setView('login');
+      return;
+    }
+
     syncProfileFromToken('home');
   }, [syncProfileFromToken]);
 
@@ -296,20 +314,7 @@ function App() {
 
   const handleGoogleLogin = () => {
     setError('');
-    // Google login flow not implemented: keep simulated fallback
-    const nextProfile = {
-      name: 'google player',
-      nickname: 'google player',
-      email: 'google.player@gmail.com',
-      bio: 'Player ready to start the journey.',
-      avatarUrl: ''
-    };
-
-    setProfile(nextProfile);
-    setProfileForm(nextProfile);
-    localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
-    setView('home');
-    setLoginForm({ email: '', password: '' });
+    window.location.href = api.getGoogleOAuthUrl();
   };
 
   const handleGoToRegister = () => {

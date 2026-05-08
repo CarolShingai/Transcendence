@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
@@ -34,6 +35,9 @@ class AuthController(
     private val userService: UserService,
     private val jwtTokenGenerator: JwtTokenGenerator
 ) {
+
+    @Value("\${app.frontend.base-url:http://localhost:3000}")
+    private lateinit var frontendBaseUrl: String
     @PostMapping("/register")
     fun registerUser(@RequestBody request: RegisterRequestDTO): ResponseEntity<String> {
         val (success, message) = userService.registerUser(request)
@@ -181,44 +185,55 @@ class AuthController(
     }
 
     @GetMapping("/oauth2/authorize/google/success")
-    fun oauthGoogleSuccess(authentication: Authentication?): ResponseEntity<LoginResponseDTO> {
+    fun oauthGoogleSuccess(
+        authentication: Authentication?,
+        response: HttpServletResponse
+    ) {
         if (authentication == null || !authentication.isAuthenticated) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(LoginResponseDTO(success = false, message = "OAuth2 authentication not found"))
+            response.sendRedirect("$frontendBaseUrl/?oauthError=oauth2_authentication_not_found")
+            return
         }
 
         val oauthAuthentication = authentication as? OAuth2AuthenticationToken
-            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(LoginResponseDTO(success = false, message = "Invalid OAuth2 authentication type"))
+        if (oauthAuthentication == null) {
+            response.sendRedirect("$frontendBaseUrl/?oauthError=invalid_oauth2_type")
+            return
+        }
 
         if (oauthAuthentication.authorizedClientRegistrationId != "google") {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(LoginResponseDTO(success = false, message = "Invalid OAuth2 provider"))
+            response.sendRedirect("$frontendBaseUrl/?oauthError=invalid_provider")
+            return
         }
 
         val principal = oauthAuthentication.principal as? OAuth2User
-            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(LoginResponseDTO(success = false, message = "OAuth2 principal not found"))
+        if (principal == null) {
+            response.sendRedirect("$frontendBaseUrl/?oauthError=principal_not_found")
+            return
+        }
 
         val email = principal.getAttribute<String>("email")
         val name = principal.getAttribute<String>("name")
         val emailVerified = parseEmailVerified(principal.getAttribute<Any>("email_verified"))
 
         if (!emailVerified) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(LoginResponseDTO(success = false, message = "Google account email is not verified"))
+            response.sendRedirect("$frontendBaseUrl/?oauthError=email_not_verified")
+            return
         }
 
         if (email.isNullOrBlank()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(LoginResponseDTO(success = false, message = "Google account email not found"))
+            response.sendRedirect("$frontendBaseUrl/?oauthError=email_not_found")
+            return
         }
 
-        val response = userService.loginOrCreateGoogleUser(email, name)
-        return if (response.success) {
-            ResponseEntity.ok(response)
+        val loginResponse = userService.loginOrCreateGoogleUser(email, name)
+        if (loginResponse.success && loginResponse.token != null) {
+            response.sendRedirect("$frontendBaseUrl/?token=${loginResponse.token}")
         } else {
-            ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response)
+            val encodedMessage = java.net.URLEncoder.encode(
+                loginResponse.message,
+                java.nio.charset.StandardCharsets.UTF_8
+            )
+            response.sendRedirect("$frontendBaseUrl/?oauthError=$encodedMessage")
         }
     }
 

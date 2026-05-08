@@ -127,6 +127,10 @@ export function setHttpErrorHandler(fn) {
   httpErrorHandler = typeof fn === 'function' ? fn : null;
 }
 
+export function getGoogleOAuthUrl() {
+  return `${API_BASE}/auth/oauth2/authorize/google`;
+}
+
 export async function updateProfile(token, data) {
   try {
     const res = await fetch(`${API_BASE}/profile/me`, {
@@ -235,7 +239,8 @@ const api = {
   searchUsers,
   sendFriendRequest,
   acceptFriendRequest,
-  rejectFriendRequest
+  rejectFriendRequest,
+  getGoogleOAuthUrl
 };
 
 export default api;
