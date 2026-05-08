@@ -1,8 +1,8 @@
-// Cena Amazonas: seu Tyrannus se movendo e desviando de carcarás e libelulas (sem harpias).
+// Cena Mataatlântica: seu Tyrannus se movendo e desviando de carcarás e libelulas (sem harpias).
 
-class AmazonasScene extends Phaser.Scene {
+class MataatlanticaScene extends Phaser.Scene {
 
-  constructor() { super('AmazonasScene'); }
+  constructor() { super('MataatlanticaScene'); }
 
   // ── Ciclo de vida ─────────────────────────────────────────────────────────
 
@@ -17,16 +17,16 @@ class AmazonasScene extends Phaser.Scene {
     // Carrega a imagem da libelula (power-up de escudo)
     this.load.image('libelula', 'assets/images/libelula.png');
 
-    // Carrega a imagem de fundo da Amazônia
-    this.load.image('amazonia_bg', 'assets/images/amazonia.png');
+    // Carrega a imagem de fundo da Mataatlântica
+    this.load.image('mataatlantica_bg', 'assets/images/mataatlantica.png');
   }
 
   create() {
     const W = this.scale.width;
     const H = this.scale.height;
 
-    // Cria o fundo da Amazônia
-    this.add.image(W / 2, H / 2, 'amazonia_bg').setDisplaySize(W, H).setDepth(0);
+    // Cria o fundo da Mataatlântica
+    this.add.image(W / 2, H / 2, 'mataatlantica_bg').setDisplaySize(W, H).setDepth(0);
 
     // Cria o Tyrannus no centro da tela
     this._tyrannus = new Tyrannus(this, W / 2, H / 2);
@@ -67,9 +67,9 @@ class AmazonasScene extends Phaser.Scene {
     }).setDepth(100);
 
     // Texto do nome da fase
-    this.add.text(W / 2, H - 20, 'FASE: AMAZONAS', {
+    this.add.text(W / 2, H - 20, 'FASE: MATAATLÂNTICA', {
       fontSize: '14px',
-      fill: '#90EE90'
+      fill: '#FFD700'
     }).setOrigin(0.5).setDepth(100);
 
     // ── Colisões ─────────────────────────────────────────────────────────

@@ -70,7 +70,7 @@ class MenuScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    // Botão Fase 3 (GameScene - Mata Atlântica)
+    // Botão Fase 3 (MataatlanticaScene)
     const btn3 = this.add.rectangle(W / 2, 380, 200, 60, 0x419169)
       .setInteractive()
       .on('pointerover', () => {
@@ -82,7 +82,7 @@ class MenuScene extends Phaser.Scene {
         textBtn3.setFill('#fff');
       })
       .on('pointerdown', () => {
-        this.scene.start('GameScene');
+        this.scene.start('MataatlanticaScene');
       });
 
     const textBtn3 = this.add.text(W / 2, 380, 'FASE 3:\nMATA ATLÂNTICA', {

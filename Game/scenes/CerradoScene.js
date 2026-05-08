@@ -16,11 +16,17 @@ class CerradoScene extends Phaser.Scene {
     
     // Carrega a imagem da libelula (power-up de escudo)
     this.load.image('libelula', 'assets/images/libelula.png');
+
+    // Carrega a imagem de fundo do Cerrado
+    this.load.image('cerrado_bg', 'assets/images/cerrado.png');
   }
 
   create() {
     const W = this.scale.width;
     const H = this.scale.height;
+
+    // Cria o fundo do Cerrado
+    this.add.image(W / 2, H / 2, 'cerrado_bg').setDisplaySize(W, H).setDepth(0);
 
     // Cria o Tyrannus no centro da tela
     this._tyrannus = new Tyrannus(this, W / 2, H / 2);
@@ -39,9 +45,6 @@ class CerradoScene extends Phaser.Scene {
 
     // Ativa o personagem (permite movimento)
     this._tyrannus.activate();
-
-    // Fundo simples com cor diferente para Cerrado
-    this.cameras.main.setBackgroundColor('#c9a961');
 
     // ── HUD ──────────────────────────────────────────────────────────────
 

@@ -16,7 +16,7 @@ const GAME_CONFIG = {
       debug: false,  // mude para true para ver hitboxes
     },
   },
-  scene: [MenuScene, GameScene, AmazonasScene, CerradoScene],  // Menu como primeira cena
+  scene: [MenuScene, GameScene, AmazonasScene, CerradoScene, MataatlanticaScene],  // Menu como primeira cena
 };
 
 new Phaser.Game(GAME_CONFIG);
