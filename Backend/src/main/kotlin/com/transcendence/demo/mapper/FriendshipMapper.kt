@@ -27,7 +27,8 @@ class FriendshipMapper {
         return FriendDTO(
             id = requireNotNull(user.id) { "User id is required" },
             name = user.name,
-            nickname = user.nickname
+            nickname = user.nickname,
+            status = user.status
         )
     }
 }

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import LoginHeader from './components/layout/LoginHeader';
 import HomeHeader from './components/layout/HomeHeader';
@@ -15,6 +15,7 @@ import ProfileCard from './components/profile/ProfileCard';
 import HomeCard from './components/home/HomeCard';
 import GameCard from './components/game/GameCard';
 import api from './services/api';
+import createWebSocketClient from './services/ws';
 
 const avatarContext = require.context('./assets/profile', false, /\.(png|jpe?g|webp)$/);
 const avatarOptions = avatarContext
@@ -124,6 +125,8 @@ function App() {
   const [profile, setProfile] = useState(null);
   const [friends, setFriends] = useState([]);
   const [invites, setInvites] = useState([]);
+  // websocket connection status is handled internally; no global badge shown
+  const wsClientRef = useRef(null);
 
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
 
@@ -174,6 +177,35 @@ function App() {
     return { friends: nextFriends, invites: nextInvites };
   }, []);
 
+  const handleWsEvent = useCallback((evt) => {
+    if (!evt || typeof evt.type !== 'string') return;
+
+    const type = evt.type;
+
+    // Backend sends: { type: 'presence', event: 'online'|'offline'|'connected', userId, onlineUsers, ... }
+    if (type === 'presence') {
+      const event = String(evt.event || '').toLowerCase();
+
+      // Bulk sync: onlineUsers list
+      if (Array.isArray(evt.onlineUsers) && evt.onlineUsers.length > 0) {
+        const online = evt.onlineUsers.map((u) => String(u.id));
+        setFriends((prev) => prev.map((f) => ({ ...f, status: online.includes(String(f.id)) ? 'online' : 'offline' })));
+        return;
+      }
+
+      // Single user presence change
+      const userId = Number(evt.userId);
+      if (Number.isFinite(userId)) {
+        const status = event === 'online' || event === 'connected' ? 'online' : 'offline';
+        setFriends((prev) => prev.map((f) => (Number(f.id) === userId ? { ...f, status } : f)));
+      }
+
+      return;
+    }
+
+    // Other event types can be handled here
+  }, []);
+
   const syncProfileFromToken = useCallback(async (targetView = 'home') => {
     const token = localStorage.getItem('transcendence_token');
     if (!token) {
@@ -201,6 +233,29 @@ function App() {
       setView(targetView);
       await refreshFriendshipData(token);
 
+      // initialize websocket client for presence updates
+      try {
+        if (wsClientRef.current) {
+          try { wsClientRef.current.close(); } catch {}
+          wsClientRef.current = null;
+        }
+
+        wsClientRef.current = createWebSocketClient({
+          token,
+          onEvent: (evt) => handleWsEvent(evt),
+          onStatus: (s) => {
+            // resync friends on successful reconnect
+            if (s === 'connected') {
+              void refreshFriendshipData(token);
+            }
+          }
+        });
+      } catch (e) {
+        // non-fatal
+        // eslint-disable-next-line no-console
+        console.error('ws init failed', e);
+      }
+
       try {
         localStorage.setItem('transcendence_profile', JSON.stringify(resolved));
       } catch {}
@@ -221,7 +276,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [refreshFriendshipData, emptyProfileForm, normalizeBackendUser, profileFromUser]);
+  }, [refreshFriendshipData, emptyProfileForm, normalizeBackendUser, profileFromUser, handleWsEvent]);
 
   useEffect(() => {
     const routeView = pathToErrorView(window.location.pathname);
@@ -242,7 +297,16 @@ function App() {
     };
 
     window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      // cleanup websocket on unmount
+      try {
+        if (wsClientRef.current) {
+          wsClientRef.current.close();
+          wsClientRef.current = null;
+        }
+      } catch (e) {}
+    };
   }, []);
 
   const handleRegisterChange = (event) => {
@@ -417,6 +481,15 @@ function App() {
       setProfileForm(emptyProfileForm);
       setFriends([]);
       setInvites([]);
+      // close websocket if any
+      try {
+        if (wsClientRef.current) {
+          wsClientRef.current.close();
+          wsClientRef.current = null;
+        }
+      } catch (e) {
+        // ignore
+      }
       setLoginForm({ email: '', password: '' });
       setView('login');
       setLoading(false);
