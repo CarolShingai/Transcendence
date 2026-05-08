@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import './App.css';
 import LoginHeader from './components/layout/LoginHeader';
 import HomeHeader from './components/layout/HomeHeader';
@@ -37,32 +37,32 @@ function App() {
     return null;
   };
 
-  const navigateToPath = (path, nextView) => {
+  const navigateToPath = useCallback((path, nextView) => {
     if (window.location.pathname !== path) {
       window.history.pushState({}, '', path);
     }
     setView(nextView);
-  };
+  }, []);
 
-  const resolveAvatarUrl = (avatarValue) => {
+  const resolveAvatarUrl = useCallback((avatarValue) => {
     if (typeof avatarValue === 'string') return avatarValue;
     if (avatarValue && typeof avatarValue === 'object' && typeof avatarValue.default === 'string') {
       return avatarValue.default;
     }
 
     return '';
-  };
+  }, []);
 
-  const resolveAvatarFromProfilePic = (profilePic) => {
+  const resolveAvatarFromProfilePic = useCallback((profilePic) => {
     const numericPic = Number(profilePic);
     if (!Number.isInteger(numericPic) || numericPic < 1 || numericPic > avatarOptions.length) {
       return '';
     }
 
     return avatarOptions[numericPic - 1] || '';
-  };
+  }, []);
 
-  const normalizeBackendUser = (payload, fallbackProfile = null) => {
+  const normalizeBackendUser = useCallback((payload, fallbackProfile = null) => {
     const user = payload?.user ?? payload ?? null;
     if (!user) return null;
 
@@ -73,9 +73,9 @@ function App() {
       ...user,
       avatarUrl
     };
-  };
+  }, [resolveAvatarFromProfilePic, resolveAvatarUrl]);
 
-  const profileFromUser = (user, fallbackProfile = null) => ({
+  const profileFromUser = useCallback((user, fallbackProfile = null) => ({
     name: user?.name || '',
     nickname: user?.nickname || '',
     email: user?.email || '',
@@ -86,7 +86,7 @@ function App() {
       fallbackProfile?.avatarUrl ||
       '',
     profilePic: Number(user?.profilePic) || fallbackProfile?.profilePic || 0
-  });
+  }), [resolveAvatarFromProfilePic, resolveAvatarUrl]);
 
   const normalizeFriendshipRequest = (request) => ({
     id: request?.id,
@@ -103,15 +103,16 @@ function App() {
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const emptyProfileForm = {
+  const emptyProfileForm = useMemo(() => ({
     name: '',
     nickname: '',
     email: '',
     bio: 'Player ready to start the journey.',
     avatarUrl: '',
     profilePic: 0
-  };
-  const emptyRegisterForm = {
+  }), []);
+
+  const emptyRegisterForm = useMemo(() => ({
     name: '',
     nickname: '',
     email: '',
@@ -119,7 +120,7 @@ function App() {
     profilePic: 0,
     bio: 'Player ready to start the journey.',
     avatarUrl: ''
-  };
+  }), []);
   const [profile, setProfile] = useState(null);
   const [friends, setFriends] = useState([]);
   const [invites, setInvites] = useState([]);
@@ -147,7 +148,7 @@ function App() {
     setLoginForm((previous) => ({ ...previous, [name]: value }));
   };
 
-  const refreshFriendshipData = async (token = localStorage.getItem('transcendence_token')) => {
+  const refreshFriendshipData = useCallback(async (token = localStorage.getItem('transcendence_token')) => {
     if (!token) {
       setFriends([]);
       setInvites([]);
@@ -171,9 +172,9 @@ function App() {
     setInvites(nextInvites);
 
     return { friends: nextFriends, invites: nextInvites };
-  };
+  }, []);
 
-  const syncProfileFromToken = async (targetView = 'home') => {
+  const syncProfileFromToken = useCallback(async (targetView = 'home') => {
     const token = localStorage.getItem('transcendence_token');
     if (!token) {
       setProfile(null);
@@ -220,7 +221,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [refreshFriendshipData, emptyProfileForm, normalizeBackendUser, profileFromUser]);
 
   useEffect(() => {
     const routeView = pathToErrorView(window.location.pathname);
@@ -230,7 +231,7 @@ function App() {
     }
 
     syncProfileFromToken('home');
-  }, []);
+  }, [syncProfileFromToken]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -353,10 +354,6 @@ function App() {
     setView('login');
   };
 
-  const handleGoToGame = () => {
-    if (!isAuthenticated) return;
-    setView('game');
-  };
   const [gameOrigin, setGameOrigin] = useState(null);
 
   const handleGoToGameWithOrigin = (origin) => {
@@ -426,7 +423,7 @@ function App() {
     }
   };
 
-  const showHttpError = (status, message = '') => {
+  const showHttpError = useCallback((status, message = '') => {
     if (status >= 500) {
       setError(message || 'Erro interno do servidor');
       navigateToPath('/5xx', 'error5xx');
@@ -436,7 +433,7 @@ function App() {
     } else if (status >= 400) {
       setError(message || 'Falha na requisição');
     }
-  };
+  }, [navigateToPath]);
 
   useEffect(() => {
     // register API-level HTTP error handler so api can auto-trigger our error views
@@ -514,7 +511,7 @@ function App() {
     setView('home');
   };
 
-  const goToLogin = () => setView('login');
+  
   const isLoginView = !isAuthenticated && view === 'login';
   const isRegisterView = !isAuthenticated && view === 'register';
   const isHomeView = isAuthenticated && view === 'home';

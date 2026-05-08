@@ -117,6 +117,7 @@ function HomeFriendsCard({
           onSendInvite={handleSendInvite}
           sentInviteIds={sentInviteIds}
           onSearchUsers={onSearchUsers}
+          friendIds={friends.map((f) => f.id)}
         />
       );
     }

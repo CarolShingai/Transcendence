@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
-function FriendsSearch({ onSendInvite, onSearchUsers, sentInviteIds = [], minLength = 3, debounceMs = 1000 }) {
+function FriendsSearch({ onSendInvite, onSearchUsers, sentInviteIds = [], friendIds = [], minLength = 3, debounceMs = 1000 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showNoResults, setShowNoResults] = useState(false);
   const [pendingInviteIds, setPendingInviteIds] = useState([]);
+  const friendIdSet = useMemo(() => new Set((friendIds || []).map((id) => String(id))), [friendIds]);
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -96,7 +97,9 @@ function FriendsSearch({ onSendInvite, onSearchUsers, sentInviteIds = [], minLen
         {loading && <div className="friends-search-loading">Carregando...</div>}
 
         {!loading && results.length > 0 && results.map((user) => {
+          const userIdStr = String(user.id);
           const alreadySent = sentInviteIds.includes(user.id) || pendingInviteIds.includes(user.id);
+          const isFriend = friendIdSet.has(userIdStr);
 
           return (
             <article key={user.id} className="friend-item friend-search-item">
@@ -109,9 +112,9 @@ function FriendsSearch({ onSendInvite, onSearchUsers, sentInviteIds = [], minLen
                 type="button"
                 className="friend-action-button friend-send-button"
                 onClick={() => handleSendInvite(user)}
-                disabled={alreadySent}
+                disabled={alreadySent || isFriend}
               >
-                {alreadySent ? 'Convite enviado' : 'Enviar convite'}
+                {isFriend ? 'Amigo' : alreadySent ? 'Convite enviado' : 'Enviar convite'}
               </button>
             </article>
           );
