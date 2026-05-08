@@ -88,6 +88,17 @@ function App() {
     profilePic: Number(user?.profilePic) || fallbackProfile?.profilePic || 0
   });
 
+  const normalizeFriendshipRequest = (request) => ({
+    id: request?.id,
+    requestId: request?.id,
+    requesterId: request?.requesterId,
+    receiverId: request?.receiverId,
+    name: request?.requesterName || 'Convite pendente',
+    nickname: request?.requesterName || '',
+    status: request?.status || 'PENDING',
+    createdAt: request?.createdAt
+  });
+
   const [view, setView] = useState('login');
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
@@ -110,6 +121,8 @@ function App() {
     avatarUrl: ''
   };
   const [profile, setProfile] = useState(null);
+  const [friends, setFriends] = useState([]);
+  const [invites, setInvites] = useState([]);
 
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
 
@@ -134,11 +147,39 @@ function App() {
     setLoginForm((previous) => ({ ...previous, [name]: value }));
   };
 
+  const refreshFriendshipData = async (token = localStorage.getItem('transcendence_token')) => {
+    if (!token) {
+      setFriends([]);
+      setInvites([]);
+      return { friends: [], invites: [] };
+    }
+
+    const [friendsResult, invitesResult] = await Promise.allSettled([
+      api.listFriends(token),
+      api.listPendingRequests(token)
+    ]);
+
+    const nextFriends = friendsResult.status === 'fulfilled' && Array.isArray(friendsResult.value)
+      ? friendsResult.value
+      : [];
+
+    const nextInvites = invitesResult.status === 'fulfilled' && Array.isArray(invitesResult.value)
+      ? invitesResult.value.map(normalizeFriendshipRequest)
+      : [];
+
+    setFriends(nextFriends);
+    setInvites(nextInvites);
+
+    return { friends: nextFriends, invites: nextInvites };
+  };
+
   const syncProfileFromToken = async (targetView = 'home') => {
     const token = localStorage.getItem('transcendence_token');
     if (!token) {
       setProfile(null);
       setProfileForm(emptyProfileForm);
+      setFriends([]);
+      setInvites([]);
       setView('login');
       return null;
     }
@@ -157,6 +198,7 @@ function App() {
       setProfile(resolved);
       setProfileForm(profileFromUser(resolved, null));
       setView(targetView);
+      await refreshFriendshipData(token);
 
       try {
         localStorage.setItem('transcendence_profile', JSON.stringify(resolved));
@@ -171,6 +213,8 @@ function App() {
       } catch {}
       setProfile(null);
       setProfileForm(emptyProfileForm);
+      setFriends([]);
+      setInvites([]);
       setView('login');
       return null;
     } finally {
@@ -374,6 +418,8 @@ function App() {
       } catch {}
       setProfile(null);
       setProfileForm(emptyProfileForm);
+      setFriends([]);
+      setInvites([]);
       setLoginForm({ email: '', password: '' });
       setView('login');
       setLoading(false);
@@ -409,6 +455,58 @@ function App() {
   const goToHome = () => {
     if (!isAuthenticated) return;
     setView('home');
+  };
+
+  const handleSendFriendRequest = async (user) => {
+    const token = localStorage.getItem('transcendence_token');
+    const receiverId = Number(user?.id);
+
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    if (!Number.isFinite(receiverId)) {
+      throw new Error('Invalid friend selection');
+    }
+
+    const response = await api.sendFriendRequest(token, receiverId);
+    await refreshFriendshipData(token);
+    return response;
+  };
+
+  const handleAcceptFriendRequest = async (requestId) => {
+    const token = localStorage.getItem('transcendence_token');
+
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    const response = await api.acceptFriendRequest(token, requestId);
+    await refreshFriendshipData(token);
+    return response;
+  };
+
+  const handleRejectFriendRequest = async (requestId) => {
+    const token = localStorage.getItem('transcendence_token');
+
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    const response = await api.rejectFriendRequest(token, requestId);
+    await refreshFriendshipData(token);
+    return response;
+  };
+
+  const handleSearchUsers = async (query) => {
+    const token = localStorage.getItem('transcendence_token');
+
+    if (!token) {
+      return [];
+    }
+
+    const users = await api.searchUsers(token, query);
+    return Array.isArray(users) ? users : [];
   };
 
   const handleExitGame = () => {
@@ -472,7 +570,15 @@ function App() {
                 loading={loading}
               />
             ) : isHomeView ? (
-              <HomeCard onPlayGame={handleGoToGameWithOrigin} />
+              <HomeCard
+                onPlayGame={handleGoToGameWithOrigin}
+                friends={friends}
+                invites={invites}
+                onSendInvite={handleSendFriendRequest}
+                onAcceptInvite={handleAcceptFriendRequest}
+                onRejectInvite={handleRejectFriendRequest}
+                onSearchUsers={handleSearchUsers}
+              />
             ) : isGameView ? (
               <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
             ) : isError4xxView ? (

@@ -56,6 +56,18 @@ function authHeader(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function unwrapList(data, key) {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (data && Array.isArray(data[key])) {
+    return data[key];
+  }
+
+  return [];
+}
+
 export async function login(email, password) {
   try {
     const res = await fetch(`${API_BASE}/auth/login`, {
@@ -129,4 +141,101 @@ export async function updateProfile(token, data) {
   }
 }
 
-export default { login, register, logout, me, setHttpErrorHandler, updateProfile };
+export async function listFriends(token) {
+  try {
+    const res = await fetch(`${API_BASE}/friends`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    const data = await handleResponse(res);
+    return unwrapList(data, 'friends');
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during friends lookup');
+  }
+}
+
+export async function listPendingRequests(token) {
+  try {
+    const res = await fetch(`${API_BASE}/friends/requests`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    const data = await handleResponse(res);
+    return unwrapList(data, 'requests');
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during pending requests lookup');
+  }
+}
+
+export async function searchUsers(token, query) {
+  try {
+    const res = await fetch(`${API_BASE}/users/search?q=${encodeURIComponent(query)}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    const data = await handleResponse(res);
+    return unwrapList(data, 'users');
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during users search');
+  }
+}
+
+export async function sendFriendRequest(token, receiverId) {
+  try {
+    const res = await fetch(`${API_BASE}/friends/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) },
+      body: JSON.stringify({ receiverId })
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during friend request');
+  }
+}
+
+export async function acceptFriendRequest(token, requestId) {
+  try {
+    const res = await fetch(`${API_BASE}/friends/${requestId}/accept`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during friend acceptance');
+  }
+}
+
+export async function rejectFriendRequest(token, requestId) {
+  try {
+    const res = await fetch(`${API_BASE}/friends/${requestId}/reject`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during friend rejection');
+  }
+}
+
+const api = {
+  login,
+  register,
+  logout,
+  me,
+  setHttpErrorHandler,
+  updateProfile,
+  listFriends,
+  listPendingRequests,
+  searchUsers,
+  sendFriendRequest,
+  acceptFriendRequest,
+  rejectFriendRequest
+};
+
+export default api;

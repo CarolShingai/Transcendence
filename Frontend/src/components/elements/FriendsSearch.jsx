@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
-function FriendsSearch({ onSendInvite, sentInviteIds = [], minLength = 3, debounceMs = 1000 }) {
+function FriendsSearch({ onSendInvite, onSearchUsers, sentInviteIds = [], minLength = 3, debounceMs = 1000 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showNoResults, setShowNoResults] = useState(false);
+  const [pendingInviteIds, setPendingInviteIds] = useState([]);
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -19,29 +20,57 @@ function FriendsSearch({ onSendInvite, sentInviteIds = [], minLength = 3, deboun
     setLoading(true);
     setShowNoResults(false);
 
+    let cancelled = false;
     const t = setTimeout(() => {
-      // TODO: Colocar o endpoint aqui!
-      const url = `/api/users/search?q=${encodeURIComponent(trimmed)}`;
+      const executeSearch = async () => {
+        if (typeof onSearchUsers !== 'function') {
+          if (!cancelled) {
+            setResults([]);
+            setShowNoResults(false);
+            setLoading(false);
+          }
+          return;
+        }
 
-      fetch(url)
-        .then((res) => {
-          if (!res.ok) throw new Error('Network response was not ok');
-          return res.json();
-        })
-        .then((data) => {
+        try {
+          const data = await onSearchUsers(trimmed);
           const list = Array.isArray(data) ? data : [];
+          if (cancelled) return;
           setResults(list);
           setShowNoResults(list.length === 0);
-        })
-        .catch(() => {
+        } catch {
+          if (cancelled) return;
           setResults([]);
           setShowNoResults(true);
-        })
-        .finally(() => setLoading(false));
+        } finally {
+          if (!cancelled) {
+            setLoading(false);
+          }
+        }
+      };
+
+      void executeSearch();
     }, debounceMs);
 
-    return () => clearTimeout(t);
-  }, [query, minLength, debounceMs]);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [query, minLength, debounceMs, onSearchUsers]);
+
+  const handleSendInvite = async (user) => {
+    if (typeof onSendInvite !== 'function') {
+      return null;
+    }
+
+    setPendingInviteIds((previous) => [...previous, user.id]);
+
+    try {
+      return await onSendInvite(user);
+    } finally {
+      setPendingInviteIds((previous) => previous.filter((id) => id !== user.id));
+    }
+  };
 
   return (
     <>
@@ -67,7 +96,7 @@ function FriendsSearch({ onSendInvite, sentInviteIds = [], minLength = 3, deboun
         {loading && <div className="friends-search-loading">Carregando...</div>}
 
         {!loading && results.length > 0 && results.map((user) => {
-          const alreadySent = sentInviteIds.includes(user.id);
+          const alreadySent = sentInviteIds.includes(user.id) || pendingInviteIds.includes(user.id);
 
           return (
             <article key={user.id} className="friend-item friend-search-item">
@@ -79,7 +108,7 @@ function FriendsSearch({ onSendInvite, sentInviteIds = [], minLength = 3, deboun
               <button
                 type="button"
                 className="friend-action-button friend-send-button"
-                onClick={() => onSendInvite && onSendInvite(user)}
+                onClick={() => handleSendInvite(user)}
                 disabled={alreadySent}
               >
                 {alreadySent ? 'Convite enviado' : 'Enviar convite'}
