@@ -9,6 +9,7 @@ import org.springframework.security.core.Authentication
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -31,7 +32,28 @@ class UsersController(
         return ResponseEntity.ok(mapOf("success" to true, "users" to users))
     }
 
-    private fun resolveEmail(authentication: Authentication): String? {
+    @Operation(
+        summary = "Busca usuários por nome ou nickname",
+        security = [SecurityRequirement(name = "bearerAuth")]
+    )
+    @GetMapping("/search")
+    fun searchUsers(
+        @RequestParam("q") query: String,
+        authentication: Authentication?
+    ): ResponseEntity<Any> {
+        val email = resolveEmail(authentication)
+            ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(mapOf("success" to false, "message" to "Unauthorized"))
+
+        val users = userService.searchUsers(email, query)
+        return ResponseEntity.ok(mapOf("success" to true, "users" to users))
+    }
+
+    private fun resolveEmail(authentication: Authentication?): String? {
+        if (authentication == null || !authentication.isAuthenticated) {
+            return null
+        }
+
         return when (val principal = authentication.principal) {
             is OAuth2User -> principal.getAttribute<String>("email")
             is String -> principal

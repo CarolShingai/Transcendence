@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import './App.css';
 import LoginHeader from './components/layout/LoginHeader';
 import HomeHeader from './components/layout/HomeHeader';
@@ -37,32 +37,32 @@ function App() {
     return null;
   };
 
-  const navigateToPath = (path, nextView) => {
+  const navigateToPath = useCallback((path, nextView) => {
     if (window.location.pathname !== path) {
       window.history.pushState({}, '', path);
     }
     setView(nextView);
-  };
+  }, []);
 
-  const resolveAvatarUrl = (avatarValue) => {
+  const resolveAvatarUrl = useCallback((avatarValue) => {
     if (typeof avatarValue === 'string') return avatarValue;
     if (avatarValue && typeof avatarValue === 'object' && typeof avatarValue.default === 'string') {
       return avatarValue.default;
     }
 
     return '';
-  };
+  }, []);
 
-  const resolveAvatarFromProfilePic = (profilePic) => {
+  const resolveAvatarFromProfilePic = useCallback((profilePic) => {
     const numericPic = Number(profilePic);
     if (!Number.isInteger(numericPic) || numericPic < 1 || numericPic > avatarOptions.length) {
       return '';
     }
 
     return avatarOptions[numericPic - 1] || '';
-  };
+  }, []);
 
-  const normalizeBackendUser = (payload, fallbackProfile = null) => {
+  const normalizeBackendUser = useCallback((payload, fallbackProfile = null) => {
     const user = payload?.user ?? payload ?? null;
     if (!user) return null;
 
@@ -73,9 +73,9 @@ function App() {
       ...user,
       avatarUrl
     };
-  };
+  }, [resolveAvatarFromProfilePic, resolveAvatarUrl]);
 
-  const profileFromUser = (user, fallbackProfile = null) => ({
+  const profileFromUser = useCallback((user, fallbackProfile = null) => ({
     name: user?.name || '',
     nickname: user?.nickname || '',
     email: user?.email || '',
@@ -86,21 +86,33 @@ function App() {
       fallbackProfile?.avatarUrl ||
       '',
     profilePic: Number(user?.profilePic) || fallbackProfile?.profilePic || 0
+  }), [resolveAvatarFromProfilePic, resolveAvatarUrl]);
+
+  const normalizeFriendshipRequest = (request) => ({
+    id: request?.id,
+    requestId: request?.id,
+    requesterId: request?.requesterId,
+    receiverId: request?.receiverId,
+    name: request?.requesterName || 'Convite pendente',
+    nickname: request?.requesterName || '',
+    status: request?.status || 'PENDING',
+    createdAt: request?.createdAt
   });
 
   const [view, setView] = useState('login');
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const emptyProfileForm = {
+  const emptyProfileForm = useMemo(() => ({
     name: '',
     nickname: '',
     email: '',
     bio: 'Player ready to start the journey.',
     avatarUrl: '',
     profilePic: 0
-  };
-  const emptyRegisterForm = {
+  }), []);
+
+  const emptyRegisterForm = useMemo(() => ({
     name: '',
     nickname: '',
     email: '',
@@ -108,8 +120,10 @@ function App() {
     profilePic: 0,
     bio: 'Player ready to start the journey.',
     avatarUrl: ''
-  };
+  }), []);
   const [profile, setProfile] = useState(null);
+  const [friends, setFriends] = useState([]);
+  const [invites, setInvites] = useState([]);
 
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
 
@@ -134,11 +148,39 @@ function App() {
     setLoginForm((previous) => ({ ...previous, [name]: value }));
   };
 
-  const syncProfileFromToken = async (targetView = 'home') => {
+  const refreshFriendshipData = useCallback(async (token = localStorage.getItem('transcendence_token')) => {
+    if (!token) {
+      setFriends([]);
+      setInvites([]);
+      return { friends: [], invites: [] };
+    }
+
+    const [friendsResult, invitesResult] = await Promise.allSettled([
+      api.listFriends(token),
+      api.listPendingRequests(token)
+    ]);
+
+    const nextFriends = friendsResult.status === 'fulfilled' && Array.isArray(friendsResult.value)
+      ? friendsResult.value
+      : [];
+
+    const nextInvites = invitesResult.status === 'fulfilled' && Array.isArray(invitesResult.value)
+      ? invitesResult.value.map(normalizeFriendshipRequest)
+      : [];
+
+    setFriends(nextFriends);
+    setInvites(nextInvites);
+
+    return { friends: nextFriends, invites: nextInvites };
+  }, []);
+
+  const syncProfileFromToken = useCallback(async (targetView = 'home') => {
     const token = localStorage.getItem('transcendence_token');
     if (!token) {
       setProfile(null);
       setProfileForm(emptyProfileForm);
+      setFriends([]);
+      setInvites([]);
       setView('login');
       return null;
     }
@@ -157,6 +199,7 @@ function App() {
       setProfile(resolved);
       setProfileForm(profileFromUser(resolved, null));
       setView(targetView);
+      await refreshFriendshipData(token);
 
       try {
         localStorage.setItem('transcendence_profile', JSON.stringify(resolved));
@@ -171,12 +214,14 @@ function App() {
       } catch {}
       setProfile(null);
       setProfileForm(emptyProfileForm);
+      setFriends([]);
+      setInvites([]);
       setView('login');
       return null;
     } finally {
       setLoading(false);
     }
-  };
+  }, [refreshFriendshipData, emptyProfileForm, normalizeBackendUser, profileFromUser]);
 
   useEffect(() => {
     const routeView = pathToErrorView(window.location.pathname);
@@ -186,7 +231,7 @@ function App() {
     }
 
     syncProfileFromToken('home');
-  }, []);
+  }, [syncProfileFromToken]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -309,10 +354,6 @@ function App() {
     setView('login');
   };
 
-  const handleGoToGame = () => {
-    if (!isAuthenticated) return;
-    setView('game');
-  };
   const [gameOrigin, setGameOrigin] = useState(null);
 
   const handleGoToGameWithOrigin = (origin) => {
@@ -374,13 +415,15 @@ function App() {
       } catch {}
       setProfile(null);
       setProfileForm(emptyProfileForm);
+      setFriends([]);
+      setInvites([]);
       setLoginForm({ email: '', password: '' });
       setView('login');
       setLoading(false);
     }
   };
 
-  const showHttpError = (status, message = '') => {
+  const showHttpError = useCallback((status, message = '') => {
     if (status >= 500) {
       setError(message || 'Erro interno do servidor');
       navigateToPath('/5xx', 'error5xx');
@@ -390,7 +433,7 @@ function App() {
     } else if (status >= 400) {
       setError(message || 'Falha na requisição');
     }
-  };
+  }, [navigateToPath]);
 
   useEffect(() => {
     // register API-level HTTP error handler so api can auto-trigger our error views
@@ -411,12 +454,64 @@ function App() {
     setView('home');
   };
 
+  const handleSendFriendRequest = async (user) => {
+    const token = localStorage.getItem('transcendence_token');
+    const receiverId = Number(user?.id);
+
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    if (!Number.isFinite(receiverId)) {
+      throw new Error('Invalid friend selection');
+    }
+
+    const response = await api.sendFriendRequest(token, receiverId);
+    await refreshFriendshipData(token);
+    return response;
+  };
+
+  const handleAcceptFriendRequest = async (requestId) => {
+    const token = localStorage.getItem('transcendence_token');
+
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    const response = await api.acceptFriendRequest(token, requestId);
+    await refreshFriendshipData(token);
+    return response;
+  };
+
+  const handleRejectFriendRequest = async (requestId) => {
+    const token = localStorage.getItem('transcendence_token');
+
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    const response = await api.rejectFriendRequest(token, requestId);
+    await refreshFriendshipData(token);
+    return response;
+  };
+
+  const handleSearchUsers = async (query) => {
+    const token = localStorage.getItem('transcendence_token');
+
+    if (!token) {
+      return [];
+    }
+
+    const users = await api.searchUsers(token, query);
+    return Array.isArray(users) ? users : [];
+  };
+
   const handleExitGame = () => {
     if (!isAuthenticated) return;
     setView('home');
   };
 
-  const goToLogin = () => setView('login');
+  
   const isLoginView = !isAuthenticated && view === 'login';
   const isRegisterView = !isAuthenticated && view === 'register';
   const isHomeView = isAuthenticated && view === 'home';
@@ -472,7 +567,15 @@ function App() {
                 loading={loading}
               />
             ) : isHomeView ? (
-              <HomeCard onPlayGame={handleGoToGameWithOrigin} />
+              <HomeCard
+                onPlayGame={handleGoToGameWithOrigin}
+                friends={friends}
+                invites={invites}
+                onSendInvite={handleSendFriendRequest}
+                onAcceptInvite={handleAcceptFriendRequest}
+                onRejectInvite={handleRejectFriendRequest}
+                onSearchUsers={handleSearchUsers}
+              />
             ) : isGameView ? (
               <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
             ) : isError4xxView ? (

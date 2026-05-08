@@ -14,6 +14,7 @@ import com.transcendence.demo.providers.JwtTokenGenerator
 import com.transcendence.demo.repository.UserRepository
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -296,6 +297,26 @@ class UserService(
     fun listAllUsers(): List<UserResponseDTO> {
         return userRepository.findAll()
             .map { it.toUserResponseDto() }
+    }
+
+    @Transactional(readOnly = true)
+    fun searchUsers(requesterEmail: String, query: String): List<UserResponseDTO> {
+        val requester = userRepository.findByEmail(requesterEmail)
+            ?: throw NoSuchElementException("User not found")
+
+        val normalizedQuery = query.trim()
+        if (normalizedQuery.isBlank()) {
+            return emptyList()
+        }
+
+        return userRepository.findByNameContainingIgnoreCaseOrNicknameContainingIgnoreCase(
+            normalizedQuery,
+            normalizedQuery
+        )
+            .asSequence()
+            .filter { it.id != requester.id }
+            .map { it.toUserResponseDto() }
+            .toList()
     }
     private fun createGoogleUser(email: String, name: String?): User {
         val displayName = if (name.isNullOrBlank()) email.substringBefore("@") else name
