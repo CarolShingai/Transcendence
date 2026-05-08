@@ -290,6 +290,13 @@ class UserService(
         return user.toUserResponseDto()
     }
 
+    /**
+     * Retorna todos os usuários como DTOs — usado pelo endpoint protegido de listagem.
+     */
+    fun listAllUsers(): List<UserResponseDTO> {
+        return userRepository.findAll()
+            .map { it.toUserResponseDto() }
+    }
     private fun createGoogleUser(email: String, name: String?): User {
         val displayName = if (name.isNullOrBlank()) email.substringBefore("@") else name
         val baseNickname = email.substringBefore("@").ifBlank { "user" }
