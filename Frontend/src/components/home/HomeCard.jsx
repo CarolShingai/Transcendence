@@ -12,6 +12,7 @@ function HomeCard({
   friends,
   invites,
   people,
+  currentUserId,
   onPlayGame,
   onOpenProfile,
   onSendInvite,
@@ -73,6 +74,7 @@ function HomeCard({
           friends={friends}
           invites={invites}
           people={people}
+          currentUserId={currentUserId}
           onOpenProfile={onOpenProfile}
           onSendInvite={onSendInvite}
           onAcceptInvite={onAcceptInvite}

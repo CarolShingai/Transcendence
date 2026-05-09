@@ -106,16 +106,25 @@ function App() {
     id: friend?.id,
     name: friend?.name || '',
     nickname: friend?.nickname || '',
-    status: friend?.status || 'Offline'
+    status: friend?.status || 'Offline',
+    profilePic: Number(friend?.profilePic) || 0,
+    avatarUrl: resolveAvatarFromProfilePic(friend?.profilePic) || friend?.avatarUrl || ''
   });
 
   const normalizeInvite = (invite) => ({
     id: invite?.id,
     requesterId: invite?.requesterId ?? invite?.requester?.id ?? invite?.senderId ?? invite?.sender?.id ?? null,
     requesterName: invite?.requesterName ?? invite?.requester?.name ?? invite?.senderName ?? invite?.sender?.name ?? '',
+    requesterNickname: invite?.requesterNickname ?? invite?.requester?.nickname ?? invite?.senderNickname ?? invite?.sender?.nickname ?? '',
+    requesterProfilePic: Number(invite?.requesterProfilePic ?? invite?.requester?.profilePic ?? invite?.senderProfilePic ?? invite?.sender?.profilePic) || 0,
+    requesterAvatarUrl: resolveAvatarFromProfilePic(invite?.requesterProfilePic ?? invite?.requester?.profilePic ?? invite?.senderProfilePic ?? invite?.sender?.profilePic) || invite?.requester?.avatarUrl || invite?.sender?.avatarUrl || '',
     receiverId: invite?.receiverId ?? invite?.receiver?.id ?? null,
     receiverName: invite?.receiverName ?? invite?.receiver?.name ?? '',
+    receiverNickname: invite?.receiverNickname ?? invite?.receiver?.nickname ?? '',
+    receiverProfilePic: Number(invite?.receiverProfilePic ?? invite?.receiver?.profilePic) || 0,
+    receiverAvatarUrl: resolveAvatarFromProfilePic(invite?.receiverProfilePic ?? invite?.receiver?.profilePic) || invite?.receiver?.avatarUrl || '',
     status: invite?.status || 'PENDING',
+    direction: invite?.direction || null,
     createdAt: invite?.createdAt || null
   });
 
@@ -123,6 +132,8 @@ function App() {
     id: person?.id,
     name: person?.name || '',
     nickname: person?.nickname || '',
+    profilePic: Number(person?.profilePic) || 0,
+    avatarUrl: resolveAvatarFromProfilePic(person?.profilePic) || person?.avatarUrl || '',
     status: person?.status || 'online'
   });
 
@@ -133,8 +144,9 @@ function App() {
     return ids;
   };
 
-  const filterAvailablePeople = (peopleList, friendsList, invitesList) => {
+  const filterAvailablePeople = (peopleList, friendsList, invitesList, currentUserId = null) => {
     const blockedIds = new Set([
+      ...(currentUserId !== null && currentUserId !== undefined ? [String(currentUserId)] : []),
       ...(friendsList || []).map((friend) => String(friend?.id)),
       ...(invitesList || []).flatMap((invite) => extractParticipantIds(invite))
     ]);
@@ -224,12 +236,12 @@ function App() {
 
       const peopleResponse = await api.getPeople(token);
       const normalizedPeople = Array.isArray(peopleResponse) ? peopleResponse.map(normalizePerson) : [];
-      setPeopleList(filterAvailablePeople(normalizedPeople, normalizedFriends, combinedInvites));
+      setPeopleList(filterAvailablePeople(normalizedPeople, normalizedFriends, combinedInvites, profile?.id));
 
       return {
         friends: normalizedFriends,
         invites: combinedInvites,
-        people: filterAvailablePeople(normalizedPeople, normalizedFriends, combinedInvites)
+        people: filterAvailablePeople(normalizedPeople, normalizedFriends, combinedInvites, profile?.id)
       };
     } catch (err) {
       setError(err?.message || 'Failed to load friends data');
@@ -507,6 +519,7 @@ function App() {
       optimisticInvite,
     ];
     setOptimisticInvites(nextOptimisticInvites);
+    await refreshFriendshipData(token, nextOptimisticInvites);
     return response;
   };
 
@@ -696,6 +709,7 @@ function App() {
                 friends={friendsList}
                 invites={invitesList}
                 people={peopleList}
+                currentUserId={profile?.id}
                 onSendInvite={handleSendFriendRequest}
                 onAcceptInvite={handleAcceptFriendRequest}
                 onRejectInvite={handleRejectFriendRequest}

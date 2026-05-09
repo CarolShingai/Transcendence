@@ -38,7 +38,7 @@ class FriendshipService(
             status = FriendshipStatus.PENDING
         )
 
-        return friendshipMapper.toDTO(friendshipRepository.save(friendship))
+        return friendshipMapper.toDTO(friendshipRepository.save(friendship), requester.id)
     }
 
     fun acceptFriendRequest(requesterEmail: String, requestId: Long): FriendshipResponseDTO {
@@ -49,7 +49,7 @@ class FriendshipService(
         ensureRequestIsPending(friendship)
 
         friendship.status = FriendshipStatus.ACCEPTED
-        return friendshipMapper.toDTO(friendshipRepository.save(friendship))
+        return friendshipMapper.toDTO(friendshipRepository.save(friendship), receiver.id)
     }
 
     fun rejectFriendRequest(requesterEmail: String, requestId: Long): FriendshipResponseDTO {
@@ -60,14 +60,14 @@ class FriendshipService(
         ensureRequestIsPending(friendship)
 
         friendship.status = FriendshipStatus.REJECTED
-        return friendshipMapper.toDTO(friendshipRepository.save(friendship))
+        return friendshipMapper.toDTO(friendshipRepository.save(friendship), receiver.id)
     }
 
     @Transactional(readOnly = true)
     fun listPendingRequests(requesterEmail: String): List<FriendshipResponseDTO> {
-        val receiver = findAuthenticatedUser(requesterEmail)
-        return friendshipRepository.findByReceiverIdAndStatus(receiver.id!!, FriendshipStatus.PENDING)
-            .map(friendshipMapper::toDTO)
+        val user = findAuthenticatedUser(requesterEmail)
+        return friendshipRepository.findPendingFriendshipsByUserId(user.id!!)
+            .map { friendshipMapper.toDTO(it, user.id) }
     }
 
     @Transactional(readOnly = true)
@@ -75,6 +75,7 @@ class FriendshipService(
         val user = findAuthenticatedUser(requesterEmail)
         return friendshipRepository.findFriends(user.id!!)
             .map(friendshipMapper::toFriendDTO)
+            .sortedWith(compareBy({ it.nickname.lowercase() }, { it.name.lowercase() }))
     }
 
     private fun findAuthenticatedUser(email: String): User {

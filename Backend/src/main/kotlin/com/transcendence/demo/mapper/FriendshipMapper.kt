@@ -8,17 +8,29 @@ import org.springframework.stereotype.Component
 
 @Component
 class FriendshipMapper {
-    fun toDTO(friendship: Friendship): FriendshipResponseDTO {
+    fun toDTO(friendship: Friendship, currentUserId: Long? = null): FriendshipResponseDTO {
         val requester = requireNotNull(friendship.requester) { "Friendship requester is required" }
         val receiver = requireNotNull(friendship.receiver) { "Friendship receiver is required" }
+
+        val direction = when (currentUserId) {
+            null -> null
+            requester.id -> "sent"
+            receiver.id -> "received"
+            else -> null
+        }
 
         return FriendshipResponseDTO(
             id = requireNotNull(friendship.id) { "Friendship id is required" },
             requesterId = requireNotNull(requester.id) { "Requester id is required" },
             requesterName = requester.name,
+            requesterNickname = requester.nickname,
+            requesterProfilePic = requester.profilePic,
             receiverId = requireNotNull(receiver.id) { "Receiver id is required" },
             receiverName = receiver.name,
+            receiverNickname = receiver.nickname,
+            receiverProfilePic = receiver.profilePic,
             status = friendship.status.name,
+            direction = direction,
             createdAt = friendship.createdAt
         )
     }
@@ -27,7 +39,9 @@ class FriendshipMapper {
         return FriendDTO(
             id = requireNotNull(user.id) { "User id is required" },
             name = user.name,
-            nickname = user.nickname
+            nickname = user.nickname,
+            status = user.status.ifBlank { "offline" },
+            profilePic = user.profilePic
         )
     }
 }

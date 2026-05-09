@@ -290,6 +290,15 @@ class UserService(
         return user.toUserResponseDto()
     }
 
+    fun listUsers(): List<UserResponseDTO> {
+        return userRepository.findAll()
+            .asSequence()
+            .filter { it.active }
+            .map { it.toUserResponseDto() }
+            .sortedWith(compareBy({ it.nickname.lowercase() }, { it.name.lowercase() }))
+            .toList()
+    }
+
     private fun createGoogleUser(email: String, name: String?): User {
         val displayName = if (name.isNullOrBlank()) email.substringBefore("@") else name
         val baseNickname = email.substringBefore("@").ifBlank { "user" }
