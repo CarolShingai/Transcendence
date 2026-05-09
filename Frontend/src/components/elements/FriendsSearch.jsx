@@ -9,13 +9,54 @@ function FriendsSearch({ onSendInvite, onSearchUsers, sentInviteIds = [], friend
   const friendIdSet = useMemo(() => new Set((friendIds || []).map((id) => String(id))), [friendIds]);
 
   useEffect(() => {
-    const trimmed = query.trim();
+    setLocalSentIds(new Set((sentInviteIds || []).map((id) => String(id))));
+  }, [sentInviteIds]);
 
-    if (trimmed.length < minLength) {
-      setResults([]);
-      setShowNoResults(false);
-      setLoading(false);
-      return undefined;
+  const friendIdSet = useMemo(() => new Set((friendIds || []).map((id) => String(id))), [friendIds]);
+  const inviteIdSet = useMemo(() => new Set((inviteIds || []).map((id) => String(id))), [inviteIds]);
+  const currentUserIdStr = currentUserId === null || currentUserId === undefined ? null : String(currentUserId);
+
+  const visiblePeople = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const source = Array.isArray(people) ? people : [];
+    const shouldFilterByText = q.length > 0; // always filter locally as user types
+
+    return source.filter((person) => {
+      const idStr = String(person?.id);
+      if (currentUserIdStr && idStr === currentUserIdStr) return false;
+      if (friendIdSet.has(idStr)) return false;
+      if (inviteIdSet.has(idStr)) return false;
+      if (localSentIds.has(idStr)) return false;
+      if (!shouldFilterByText) return true;
+
+      const haystack = [person?.name, person?.nickname, person?.email]
+        .map((value) => String(value || '').toLowerCase())
+        .join(' ');
+
+      return haystack.includes(q);
+    });
+  }, [people, query, minLength, friendIdSet, inviteIdSet, localSentIds]);
+
+  // Debounce remote search: call parent-provided `onRemoteSearch` after user stops typing
+  useEffect(() => {
+    const trimmed = query.trim();
+    const timer = setTimeout(() => {
+      if (typeof onRemoteSearch === 'function') {
+        if (trimmed.length >= minLength) {
+          onRemoteSearch(trimmed);
+        } else {
+          // signal empty query (optional)
+          onRemoteSearch('');
+        }
+      }
+    }, debounceMs);
+
+    return () => clearTimeout(timer);
+  }, [query, debounceMs, minLength, onRemoteSearch]);
+
+  const handleSendInvite = async (user) => {
+    if (typeof onSendInvite !== 'function') {
+      return null;
     }
 
     setLoading(true);
@@ -84,7 +125,7 @@ function FriendsSearch({ onSendInvite, onSearchUsers, sentInviteIds = [], friend
         aria-label="Pesquisar amigos"
       />
 
-      {query.trim() !== '' && showNoResults && (
+      {query.trim() !== '' && visiblePeople.length === 0 && (
         <div
           className="friends-search-no-results"
           style={{ color: '#d9534f', fontSize: '0.85rem', marginTop: '8px' }}
