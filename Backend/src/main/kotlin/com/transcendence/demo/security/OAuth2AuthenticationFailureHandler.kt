@@ -7,12 +7,16 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException
 import org.springframework.security.web.RedirectStrategy
 import org.springframework.security.web.authentication.AuthenticationFailureHandler
 import org.springframework.security.web.DefaultRedirectStrategy
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 @Component
 class OAuth2AuthenticationFailureHandler : AuthenticationFailureHandler {
+
+	@Value("\${app.frontend.base-url:http://localhost:3000}")
+	private lateinit var frontendBaseUrl: String
 
 	private val redirectStrategy: RedirectStrategy = DefaultRedirectStrategy()
 
@@ -28,10 +32,10 @@ class OAuth2AuthenticationFailureHandler : AuthenticationFailureHandler {
 			?: "OAuth2 authentication failed"
 
 		val targetUrl = buildString {
-			append("/auth/oauth2/authorize/google/failure")
-			append("?error=")
+			append(frontendBaseUrl)
+			append("/?oauthError=")
 			append(urlEncode(errorCode))
-			append("&error_description=")
+			append("&oauthErrorDescription=")
 			append(urlEncode(description))
 		}
 

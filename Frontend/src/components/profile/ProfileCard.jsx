@@ -11,7 +11,21 @@ const AVATAR_OPTIONS = avatarContext
     return moduleValue?.default || moduleValue;
   });
 
-function ProfileCard({ initials, profileForm, error, onProfileChange, onProfileSave, onProfileAvatarSelect }) {
+function ProfileCard({
+  initials,
+  profileForm,
+  error,
+  onProfileChange,
+  onProfileSave,
+  onProfileAvatarSelect,
+  twoFactorSetup,
+  twoFactorCode,
+  twoFactorMessage,
+  onTwoFactorCodeChange,
+  onTwoFactorSetup,
+  onTwoFactorEnable,
+  loading
+}) {
   return (
     <section className="card profile-card" aria-label="Profile screen">
       <div className="profile-headline">
@@ -95,6 +109,48 @@ function ProfileCard({ initials, profileForm, error, onProfileChange, onProfileS
               onChange={onProfileChange}
               rows="4"
             />
+
+            <div className="two-factor-panel">
+              <h3>Autenticacao de dois fatores</h3>
+              {profileForm.twoFactorEnabled ? (
+                <p className="success-message">2FA ativado. O login por senha vai pedir o codigo do app autenticador.</p>
+              ) : (
+                <>
+                  <p className="support-text">Ative o 2FA para proteger sua conta com um app autenticador.</p>
+                  <button type="button" className="secondary-button" onClick={onTwoFactorSetup} disabled={loading}>
+                    Ativar autenticacao de dois fatores
+                  </button>
+                </>
+              )}
+
+              {!profileForm.twoFactorEnabled && twoFactorSetup && (
+                <div className="two-factor-setup">
+                  <img
+                    className="two-factor-qr"
+                    src={`data:image/png;base64,${twoFactorSetup.qrCodeUrl}`}
+                    alt="QR Code para autenticacao de dois fatores"
+                  />
+                  <p className="support-text">Escaneie o QR Code ou insira este codigo manualmente:</p>
+                  <code className="two-factor-secret">{twoFactorSetup.tempSecret}</code>
+                  <label htmlFor="two-factor-code">Codigo do app autenticador</label>
+                  <input
+                    id="two-factor-code"
+                    name="twoFactorCode"
+                    type="text"
+                    inputMode="numeric"
+                    value={twoFactorCode}
+                    onChange={onTwoFactorCodeChange}
+                    placeholder="123456"
+                    autoComplete="one-time-code"
+                  />
+                  <button type="button" className="primary-button" onClick={onTwoFactorEnable} disabled={loading}>
+                    Confirmar 2FA
+                  </button>
+                </div>
+              )}
+
+              {twoFactorMessage && <p className="status-message">{twoFactorMessage}</p>}
+            </div>
 
             {error && <p className="error">{error}</p>}
           </Form>

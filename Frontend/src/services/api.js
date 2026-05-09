@@ -1,5 +1,4 @@
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8082';
-const REQUEST_TIMEOUT_MS = 5000;
+const API_BASE = process.env.REACT_APP_API_URL || 'https://localhost:8082';
 
 let httpErrorHandler = null;
 
@@ -57,10 +56,19 @@ function authHeader(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function request(path, { token, method = 'GET', body, authenticated = true, headers = {} } = {}) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+function unwrapList(data, key) {
+  if (Array.isArray(data)) {
+    return data;
+  }
 
+  if (data && Array.isArray(data[key])) {
+    return data[key];
+  }
+
+  return [];
+}
+
+export async function login(email, password) {
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       method,
@@ -103,6 +111,20 @@ export async function login(email, password) {
   }
 }
 
+export async function verifyTwoFactor(twoFactorToken, code) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/verify-2fa`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ twoFactorToken, code })
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during 2FA verification');
+  }
+}
+
 export async function register(data) {
   try {
     return request('/auth/register', {
@@ -136,6 +158,10 @@ export function setHttpErrorHandler(fn) {
   httpErrorHandler = typeof fn === 'function' ? fn : null;
 }
 
+export function getGoogleOAuthUrl() {
+  return `${API_BASE}/auth/oauth2/authorize/google`;
+}
+
 export async function updateProfile(token, data) {
   try {
     return request('/profile/me', {
@@ -148,43 +174,84 @@ export async function updateProfile(token, data) {
   }
 }
 
-export async function getFriends(token) {
+export async function setupTwoFactor(token) {
   try {
-    const data = await request('/friends', { method: 'GET', token });
+    const res = await fetch(`${API_BASE}/auth/2fa/setup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during 2FA setup');
+  }
+}
+
+export async function enableTwoFactor(token, code) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/2fa/enable`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) },
+      body: JSON.stringify({ code })
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during 2FA activation');
+  }
+}
+
+export async function listFriends(token) {
+  try {
+    const res = await fetch(`${API_BASE}/friends`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    const data = await handleResponse(res);
     return unwrapList(data, 'friends');
   } catch (error) {
-    return [];
+    throw new Error(error?.message || 'Network error during friends lookup');
   }
 }
 
-export async function getInvites(token) {
+export async function listPendingRequests(token) {
   try {
-    const data = await request('/friends/requests', { method: 'GET', token });
+    const res = await fetch(`${API_BASE}/friends/requests`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    const data = await handleResponse(res);
     return unwrapList(data, 'requests');
   } catch (error) {
-    return [];
+    throw new Error(error?.message || 'Network error during pending requests lookup');
   }
 }
 
-export async function getPeople(token) {
+export async function searchUsers(token, query) {
   try {
-    const data = await request('/users', {
+    const res = await fetch(`${API_BASE}/users/search?q=${encodeURIComponent(query)}`, {
       method: 'GET',
-      token,
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
     });
+
+    const data = await handleResponse(res);
     return unwrapList(data, 'users');
   } catch (error) {
-    return [];
+    throw new Error(error?.message || 'Network error during users search');
   }
 }
 
 export async function sendFriendRequest(token, receiverId) {
   try {
-    return request('/friends/request', {
+    const res = await fetch(`${API_BASE}/friends/request`, {
       method: 'POST',
-      token,
-      body: { receiverId },
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) },
+      body: JSON.stringify({ receiverId })
     });
+
+    return handleResponse(res);
   } catch (error) {
     throw new Error(error?.message || 'Network error during friend request');
   }
@@ -192,10 +259,12 @@ export async function sendFriendRequest(token, receiverId) {
 
 export async function acceptFriendRequest(token, requestId) {
   try {
-    return request(`/friends/${requestId}/accept`, {
+    const res = await fetch(`${API_BASE}/friends/${requestId}/accept`, {
       method: 'PATCH',
-      token,
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
     });
+
+    return handleResponse(res);
   } catch (error) {
     throw new Error(error?.message || 'Network error during friend acceptance');
   }
@@ -203,60 +272,34 @@ export async function acceptFriendRequest(token, requestId) {
 
 export async function rejectFriendRequest(token, requestId) {
   try {
-    return request(`/friends/${requestId}/reject`, {
+    const res = await fetch(`${API_BASE}/friends/${requestId}/reject`, {
       method: 'PATCH',
-      token,
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
     });
+
+    return handleResponse(res);
   } catch (error) {
     throw new Error(error?.message || 'Network error during friend rejection');
   }
 }
 
-// Backward-compatible aliases.
-export async function listFriends(token) {
-  return getFriends(token);
-}
-
-export async function listPendingRequests(token) {
-  return getInvites(token);
-}
-
-export async function searchUsers(token, query) {
-  // Search-by-name endpoint is not required for the friends area anymore.
-  // Keep this alias to avoid breaking older call sites.
-  try {
-    const people = await getPeople(token);
-    const normalizedQuery = String(query || '').trim().toLowerCase();
-    if (!normalizedQuery) return people;
-
-    return people.filter((person) => {
-      const haystack = [person.name, person.nickname, person.email]
-        .map((value) => String(value || '').toLowerCase())
-        .join(' ');
-
-      return haystack.includes(normalizedQuery);
-    });
-  } catch {
-    return [];
-  }
-}
-
 const api = {
   login,
+  verifyTwoFactor,
   register,
   logout,
   me,
   setHttpErrorHandler,
   updateProfile,
-  getFriends,
-  getInvites,
-  getPeople,
-  sendFriendRequest,
-  acceptFriendRequest,
-  rejectFriendRequest,
+  setupTwoFactor,
+  enableTwoFactor,
   listFriends,
   listPendingRequests,
   searchUsers,
+  sendFriendRequest,
+  acceptFriendRequest,
+  rejectFriendRequest,
+  getGoogleOAuthUrl
 };
 
 export default api;

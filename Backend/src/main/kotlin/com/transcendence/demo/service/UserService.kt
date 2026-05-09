@@ -14,6 +14,7 @@ import com.transcendence.demo.providers.JwtTokenGenerator
 import com.transcendence.demo.repository.UserRepository
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -175,8 +176,8 @@ class UserService(
         }
 
         val tempSecret = twoFactorService.generateTempSecret()
-    user.twoFactorSecretEncrypted = tempSecret
-    user.twoFactorConfirmedAt = null
+        user.twoFactorSecretEncrypted = tempSecret
+        user.twoFactorConfirmedAt = null
         userRepository.save(user)
 
         val qrCodeUrl = twoFactorService.generateQrCodeUrl(user.email, tempSecret)
@@ -189,10 +190,14 @@ class UserService(
 
     fun enableTwoFactor(userId: Long, request: TwoFactorSetupConfirmRequestDTO): TwoFactorEnableResponseDTO {
         val user = userRepository.findById(userId).orElse(null)
-            ?: return TwoFactorEnableResponseDTO(
-                success = false,
-                message = "User not found"
-            )
+        if (user == null) {
+            return TwoFactorEnableResponseDTO(
+                    success = false,
+                    message = "User not found"
+                )
+        }
+
+        val normalizedCode = request.code.trim()
 
         if (user.twoFactorEnabled) {
             return TwoFactorEnableResponseDTO(
@@ -202,12 +207,16 @@ class UserService(
         }
 
         val tempSecret = user.twoFactorSecretEncrypted
-            ?: return TwoFactorEnableResponseDTO(
-                success = false,
-                message = "2FA setup not initiated. Please call setup first."
-            )
+        if (tempSecret.isNullOrBlank()) {
+            return TwoFactorEnableResponseDTO(
+                    success = false,
+                    message = "2FA setup not initiated. Please call setup first."
+                )
+        }
 
-        if (!twoFactorService.verifyToken(request.code, tempSecret)) {
+        val tokenValid = twoFactorService.verifyToken(normalizedCode, tempSecret)
+
+        if (!tokenValid) {
             return TwoFactorEnableResponseDTO(
                 success = false,
                 message = "Invalid token"
@@ -290,15 +299,33 @@ class UserService(
         return user.toUserResponseDto()
     }
 
-    fun listUsers(): List<UserResponseDTO> {
+    /**
+     * Retorna todos os usuários como DTOs — usado pelo endpoint protegido de listagem.
+     */
+    fun listAllUsers(): List<UserResponseDTO> {
         return userRepository.findAll()
-            .asSequence()
-            .filter { it.active }
             .map { it.toUserResponseDto() }
-            .sortedWith(compareBy({ it.nickname.lowercase() }, { it.name.lowercase() }))
-            .toList()
     }
 
+    @Transactional(readOnly = true)
+    fun searchUsers(requesterEmail: String, query: String): List<UserResponseDTO> {
+        val requester = userRepository.findByEmail(requesterEmail)
+            ?: throw NoSuchElementException("User not found")
+
+        val normalizedQuery = query.trim()
+        if (normalizedQuery.isBlank()) {
+            return emptyList()
+        }
+
+        return userRepository.findByNameContainingIgnoreCaseOrNicknameContainingIgnoreCase(
+            normalizedQuery,
+            normalizedQuery
+        )
+            .asSequence()
+            .filter { it.id != requester.id }
+            .map { it.toUserResponseDto() }
+            .toList()
+    }
     private fun createGoogleUser(email: String, name: String?): User {
         val displayName = if (name.isNullOrBlank()) email.substringBefore("@") else name
         val baseNickname = email.substringBefore("@").ifBlank { "user" }
@@ -350,7 +377,8 @@ class UserService(
             nickname = nickname,
             name = name,
             email = email,
-            profilePic = profilePic
+            profilePic = profilePic,
+            twoFactorEnabled = twoFactorEnabled
         )
     }
 }
