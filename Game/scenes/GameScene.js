@@ -322,7 +322,7 @@ class GameScene extends Phaser.Scene {
     }
 
     // Retorna para o menu após 3 segundos
-    this.time.delayedCall(3000, () => {
+    this.time.delayedCall(2000, () => {
       this.scene.start('MenuScene');
     });
   }

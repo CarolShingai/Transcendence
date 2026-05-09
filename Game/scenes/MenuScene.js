@@ -96,5 +96,20 @@ class MenuScene extends Phaser.Scene {
       fontSize: '14px',
       fill: '#aaa'
     }).setOrigin(0.5);
+
+  // Botão de Configurações
+    const settingsBtn = this.add.text(W - 20, H - 20, '⚙️', {
+      fontSize: '28px'
+    })
+    .setOrigin(1, 1)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(100);
+
+    settingsBtn.on('pointerup', () => {
+      this.scene.start('SettingsScene'); // troque pelo nome da sua cena de configurações
+    });
+
+    settingsBtn.on('pointerover', () => settingsBtn.setAlpha(0.7));
+    settingsBtn.on('pointerout',  () => settingsBtn.setAlpha(1));
   }
 }

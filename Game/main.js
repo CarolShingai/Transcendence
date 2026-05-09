@@ -3,8 +3,8 @@
 
 const GAME_CONFIG = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
+  width: 900,
+  height: 700,
   parent: 'game-container',
   pixelArt: true,
   antialias: false,
@@ -16,7 +16,7 @@ const GAME_CONFIG = {
       debug: false,  // mude para true para ver hitboxes
     },
   },
-  scene: [MenuScene, GameScene, AmazonasScene, CerradoScene, MataatlanticaScene],  // Menu como primeira cena
+  scene: [MenuScene, SettingsScene, GameScene, AmazonasScene, CerradoScene, MataatlanticaScene],  // Menu como primeira cena
 };
 
 new Phaser.Game(GAME_CONFIG);

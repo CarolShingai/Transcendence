@@ -6,7 +6,7 @@ class FireGroup {
   constructor(scene) {
     this.scene = scene;
     this.group = scene.physics.add.group();
-    this.baseSpeed = OBSTACLES_CONFIG.baseSpeed;
+    this.baseSpeed = OBSTACLES_CONFIG.baseSpeed  - 43;
     this._spawnTimer = 0;
     this._spawnDelay = OBSTACLES_CONFIG.fireSpawnDelay || 8000; // Spawn a cada 8 segundos
     this._active = true;
