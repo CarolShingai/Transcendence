@@ -7,9 +7,11 @@ class MataatlanticaScene extends Phaser.Scene {
   // ── Ciclo de vida ─────────────────────────────────────────────────────────
 
   preload() {
-    // Carrega as imagens do Tyrannus
-    this.load.image('tyrannus', 'assets/images/tyrannus1.png');
-    this.load.image('tyrannus2', 'assets/images/tyrannus2.png');
+    // Carrega as imagens do Tyrannus para as duas variações de cor
+    this.load.image('tyrannus-green', 'assets/images/tyrannus1.png');
+    this.load.image('tyrannus2-green', 'assets/images/tyrannus2.png');
+    this.load.image('tyrannus-red', 'assets/images/tyrannus1-red.png');
+    this.load.image('tyrannus2-red', 'assets/images/tyrannus2-red.png');
     
     // Carrega a imagem da harpia
     this.load.image('harpia', 'assets/images/harpia.png');
@@ -43,8 +45,12 @@ class MataatlanticaScene extends Phaser.Scene {
 
     this._mapSpeed = 150; // Velocidade do mapa em pixels por segundo
 
+    const selectedSkin = localStorage.getItem('selectedTyrannus') || 'green';
+    const tyrannusTexture = selectedSkin === 'red' ? 'tyrannus-red' : 'tyrannus-green';
+    const tyrannusTexture2 = selectedSkin === 'red' ? 'tyrannus2-red' : 'tyrannus2-green';
+
     // Cria o Tyrannus no centro da tela
-    this._tyrannus = new Tyrannus(this, W / 2, H / 2);
+    this._tyrannus = new Tyrannus(this, W / 2, H / 2, tyrannusTexture, tyrannusTexture2);
     
     // Cria o grupo de harpias
     this._harpias = new HarpiaGroup(this);
