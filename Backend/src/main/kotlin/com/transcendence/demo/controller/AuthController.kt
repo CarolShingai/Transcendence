@@ -16,7 +16,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -36,8 +35,6 @@ class AuthController(
     private val userService: UserService,
     private val jwtTokenGenerator: JwtTokenGenerator
 ) {
-
-    private val logger = LoggerFactory.getLogger(AuthController::class.java)
 
     @Value("\${app.frontend.base-url:http://localhost:3000}")
     private lateinit var frontendBaseUrl: String
@@ -117,15 +114,7 @@ class AuthController(
         @RequestBody request: TwoFactorSetupConfirmRequestDTO,
         authentication: Authentication
     ): ResponseEntity<TwoFactorEnableResponseDTO> {
-        logger.info(
-            "2FA enable endpoint called. authenticated={} principalType={} codeLength={}",
-            authentication.isAuthenticated,
-            authentication.principal?.javaClass?.simpleName,
-            request.code.length
-        )
-
         if (authentication == null || !authentication.isAuthenticated) {
-            logger.warn("2FA enable unauthorized before principal resolution")
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(TwoFactorEnableResponseDTO(false, "Unauthorized"))
         }
@@ -137,27 +126,17 @@ class AuthController(
         }
 
         if (email.isNullOrBlank()) {
-            logger.warn("2FA enable unauthorized because email was not found in principal. principalType={}", authentication.principal?.javaClass?.name)
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(TwoFactorEnableResponseDTO(false, "Unauthorized"))
         }
 
-        logger.info("2FA enable principal resolved. email={}", maskEmail(email))
-
         val user = userService.getUserProfileByEmail(email)
         if (user == null) {
-            logger.warn("2FA enable user not found after principal resolution. email={}", maskEmail(email))
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(TwoFactorEnableResponseDTO(false, "User not found"))
         }
 
         val response = userService.enableTwoFactor(user.id!!, request)
-        logger.info(
-            "2FA enable service returned. userId={} success={} message={}",
-            user.id,
-            response.success,
-            response.message
-        )
         return if (response.success) {
             ResponseEntity.ok(response)
         } else {
@@ -342,11 +321,4 @@ class AuthController(
         }
     }
 
-    private fun maskEmail(email: String): String {
-        val parts = email.split("@", limit = 2)
-        if (parts.size != 2) return "***"
-        val local = parts[0]
-        val visibleLocal = local.take(2)
-        return "$visibleLocal***@${parts[1]}"
-    }
 }
