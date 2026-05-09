@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import './App.css';
 import LoginHeader from './components/layout/LoginHeader';
 import HomeHeader from './components/layout/HomeHeader';
+import EditHeader from './components/layout/EditHeader';
 import RegisterHeader from './components/layout/RegisterHeader';
 import AppFooter from './components/layout/AppFooter';
 import PublicProfileHeader from './components/layout/PublicProfileHeader';
@@ -11,6 +12,7 @@ import StatusBanner from './components/elements/StatusBanner';
 import LoadingOverlay from './components/elements/LoadingOverlay';
 import LoginCard from './components/auth/LoginCard';
 import RegisterCard from './components/auth/RegisterCard';
+import ProfileCard from './components/profile/ProfileCard';
 import PublicProfileCard from './components/profile/PublicProfileCard';
 import HomeCard from './components/home/HomeCard';
 import GameCard from './components/game/GameCard';
@@ -588,6 +590,13 @@ function App() {
     setView('profile');
   };
 
+  const goToEditProfile = () => {
+    if (!isAuthenticated) return;
+    setViewedProfile(null);
+    setError('');
+    setView('editProfile');
+  };
+
   const openPublicProfile = (publicProfile) => {
     setViewedProfile(publicProfile || null);
     setError('');
@@ -608,12 +617,13 @@ function App() {
   const isLoginView = !isAuthenticated && view === 'login';
   const isRegisterView = !isAuthenticated && view === 'register';
   const isHomeView = isAuthenticated && view === 'home';
+  const isEditProfileView = isAuthenticated && view === 'editProfile';
   const isGameView = isAuthenticated && view === 'game';
   const isProfileView = isAuthenticated && view === 'profile';
   const isError4xxView = view === 'error4xx';
   const isError5xxView = view === 'error5xx';
   const isErrorView = isError4xxView || isError5xxView;
-  const bannerMessage = isLoginView || isRegisterView || isProfileView ? '' : error;
+  const bannerMessage = isLoginView || isRegisterView || isProfileView || isEditProfileView ? '' : error;
   const gameEndpoint = process.env.REACT_APP_GAME_ENDPOINT || '/game';
   const publicSingleRecord = resolvePublicRecordValue(
     profile?.records?.single ?? profile?.singleRecord ?? profile?.singleScore ?? profile?.singleWins ?? 0,
@@ -640,8 +650,11 @@ function App() {
               profileImage={profile?.avatarUrl}
               welcomeName={profile?.nickname || profile?.name || 'Viajante'}
               onGoToProfile={goToProfile}
+              onGoToEditProfile={goToEditProfile}
               onLogout={handleLogout}
             />
+          ) : isEditProfileView ? (
+            <EditHeader onGoToHome={goToHome} onLogout={handleLogout} />
           ) : isProfileView ? (
             <PublicProfileHeader
               initials={initials}
@@ -655,7 +668,7 @@ function App() {
             />
           ) : null}
 
-          <main className={`App-main ${isGameView ? 'App-main-game' : ''} ${isProfileView ? 'App-main-profile' : ''}`}>
+          <main className={`App-main ${isGameView ? 'App-main-game' : ''} ${isProfileView ? 'App-main-profile' : ''} ${isEditProfileView ? 'App-main-profile' : ''}`}>
             {isLoginView ? (
               <LoginCard
                 loginForm={loginForm}
@@ -689,6 +702,15 @@ function App() {
                 currentIndex={homeCarouselIndex}
                 onChangeIndex={setHomeCarouselIndex}
               />
+            ) : isEditProfileView ? (
+              <ProfileCard
+                initials={initials}
+                profileForm={profileForm}
+                error={error}
+                onProfileChange={handleProfileChange}
+                onProfileSave={handleProfileSave}
+                onProfileAvatarSelect={handleProfileAvatarSelect}
+              />
             ) : isGameView ? (
               <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
             ) : isError4xxView ? (
@@ -700,7 +722,7 @@ function App() {
             ) : null}
           </main>
 
-          {!isGameView && !isErrorView && !isProfileView && <AppFooter />}
+          {!isGameView && !isErrorView && !isProfileView && !isEditProfileView && <AppFooter />}
         </section>
       </div>
     </div>
