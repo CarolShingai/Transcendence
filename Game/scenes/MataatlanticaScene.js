@@ -11,6 +11,9 @@ class MataatlanticaScene extends Phaser.Scene {
     this.load.image('tyrannus', 'assets/images/tyrannus1.png');
     this.load.image('tyrannus2', 'assets/images/tyrannus2.png');
     
+    // Carrega a imagem da harpia
+    this.load.image('harpia', 'assets/images/harpia.png');
+    
     // Carrega a imagem do carcará
     this.load.image('carcara', 'assets/images/carcara.png');
     
@@ -25,11 +28,27 @@ class MataatlanticaScene extends Phaser.Scene {
     const W = this.scale.width;
     const H = this.scale.height;
 
-    // Cria o fundo da Mataatlântica
-    this.add.image(W / 2, H / 2, 'mataatlantica_bg').setDisplaySize(W, H).setDepth(0);
+    // ── Sistema de mapa em movimento (scrolling) ──────────────────────────
+
+    // Cria dois fundos empilhados para criar efeito de loop infinito
+    this._bg1 = this.add.image(W / 2, 0, 'mataatlantica_bg')
+      .setDisplaySize(W, H)
+      .setOrigin(0.5, 0)
+      .setDepth(-1);
+
+    this._bg2 = this.add.image(W / 2, -H, 'mataatlantica_bg')
+      .setDisplaySize(W, H)
+      .setOrigin(0.5, 0)
+      .setDepth(-1);
+
+    this._mapSpeed = 150; // Velocidade do mapa em pixels por segundo
 
     // Cria o Tyrannus no centro da tela
     this._tyrannus = new Tyrannus(this, W / 2, H / 2);
+    
+    // Cria o grupo de harpias
+    this._harpias = new HarpiaGroup(this);
+    this._harpias.setTarget(this._tyrannus); // Harpias rastreiam o Tyrannus
     
     // Cria o grupo de carcarás
     this._carcaras = new CarcaraGroup(this);
@@ -76,6 +95,14 @@ class MataatlanticaScene extends Phaser.Scene {
 
     this.physics.add.overlap(
       this._tyrannus.sprite,
+      this._harpias.getGroup(),
+      this._hitByHarpia,
+      null,
+      this
+    );
+
+    this.physics.add.overlap(
+      this._tyrannus.sprite,
       this._carcaras.getGroup(),
       this._hitByCarcara,
       null,
@@ -101,8 +128,28 @@ class MataatlanticaScene extends Phaser.Scene {
   }
 
   update(_time, delta) {
+    // ── Atualização do mapa em movimento ──────────────────────────────────
+
+    const H = this.scale.height;
+    const mapDeltaY = (this._mapSpeed * delta) / 1000; // Converte delta de ms para s
+
+    // Move ambos os fundos para baixo
+    this._bg1.y += mapDeltaY;
+    this._bg2.y += mapDeltaY;
+
+    // Reseta a posição quando o fundo sair completamente da tela
+    if (this._bg1.y >= H) {
+      this._bg1.y = this._bg2.y - H;
+    }
+    if (this._bg2.y >= H) {
+      this._bg2.y = this._bg1.y - H;
+    }
+
     // Atualiza o Tyrannus a cada frame
     this._tyrannus.update(delta);
+
+    // Atualiza as harpias
+    this._harpias.update(delta, this.scale.height);
 
     // Atualiza os carcarás
     this._carcaras.update(delta, this.scale.height);
@@ -127,6 +174,30 @@ class MataatlanticaScene extends Phaser.Scene {
     } else {
       this._magnetText.setText(`🧲 Ímã: OFF`);
       this._magnetText.setFill('#fff');
+    }
+  }
+
+  // ── Colisão com harpia ───────────────────────────────────────────────────
+
+  _hitByHarpia(tyrannus, harpia) {
+    harpia.destroy(); // Remove a harpia
+    
+    // Se o escudo está ativo, não causa dano
+    if (this._tyrannus.shieldActive) {
+      return;
+    }
+
+    this._lives--;
+    this._lifeText.setText(`❤️ Vidas: ${this._lives}`);
+
+    // Flash no Tyrannus quando bate
+    this._tyrannus.sprite.setTint(0xff0000);
+    this.time.delayedCall(100, () => {
+      this._tyrannus.sprite.clearTint();
+    });
+
+    if (this._lives <= 0) {
+      this._gameOver();
     }
   }
 
@@ -185,8 +256,12 @@ class MataatlanticaScene extends Phaser.Scene {
   }
 
   _gameOver() {
+    // Para o movimento do mapa
+    this._mapSpeed = 0;
+
     this._tyrannus.alive = false;
     this._tyrannus.sprite.setVelocity(0, 0);
+    this._harpias.stop();
     this._carcaras.stop();
     this._libelulas.stop();
     this._imans.stop();

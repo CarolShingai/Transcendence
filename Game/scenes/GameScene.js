@@ -2,7 +2,47 @@
 
 class GameScene extends Phaser.Scene {
 
-  constructor() { super('GameScene'); }
+  // Fases disponíveis com nomes
+  static PHASES = {
+    savana: { name: 'SAVANA', id: 'savana' },
+    cerrado: { name: 'CERRADO', id: 'cerrado' },
+    mataatlantica: { name: 'MATA ATLÂNTICA', id: 'mataatlantica' },
+    amazonas: { name: 'AMAZONAS', id: 'amazonas' }
+  };
+
+  constructor() { 
+    super('GameScene');
+    this._currentPhase = GameScene.PHASES.savana; // Fase padrão
+  }
+
+  // ── Gerenciamento de dados de fase ────────────────────────────────────
+
+  static getPhaseData(phaseId) {
+    const key = `phase_${phaseId}`;
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : { maxKilometers: 0, attempts: 0 };
+  }
+
+  static savePhaseData(phaseId, maxKilometers, attempts) {
+    const key = `phase_${phaseId}`;
+    const data = { maxKilometers, attempts, lastUpdated: new Date().toISOString() };
+    localStorage.setItem(key, JSON.stringify(data));
+  }
+
+  static updatePhaseMaxKilometers(phaseId, kilometers) {
+    const data = GameScene.getPhaseData(phaseId);
+    const newMax = Math.max(data.maxKilometers, kilometers);
+    GameScene.savePhaseData(phaseId, newMax, data.attempts + 1);
+    return newMax;
+  }
+
+  static getAllPhasesData() {
+    const allData = {};
+    Object.values(GameScene.PHASES).forEach(phase => {
+      allData[phase.id] = GameScene.getPhaseData(phase.id);
+    });
+    return allData;
+  }
 
   // ── Ciclo de vida ─────────────────────────────────────────────────────────
 
@@ -70,11 +110,20 @@ class GameScene extends Phaser.Scene {
       fill: '#fff'
     }).setDepth(100);
 
+    // Carrega dados da fase atual
+    const phaseData = GameScene.getPhaseData(this._currentPhase.id);
+    
     // Texto do nome da fase
-    this.add.text(W / 2, H - 20, 'FASE: SAVANA', {
+    this.add.text(W / 2, H - 20, `FASE: ${this._currentPhase.name}`, {
       fontSize: '14px',
       fill: '#90EE90'
     }).setOrigin(0.5).setDepth(100);
+
+    // Texto da quilometragem máxima da fase
+    this._maxKilometerText = this.add.text(16, 50, `🏁 Melhor: ${phaseData.maxKilometers} km`, {
+      fontSize: '14px',
+      fill: '#ffcc00'
+    }).setDepth(100);
 
     // ── Colisões ─────────────────────────────────────────────────────────
 
@@ -231,6 +280,12 @@ class GameScene extends Phaser.Scene {
     this._libelulas.stop();
     this._imans.stop();
 
+    // Calcula quilômetros finais
+    const finalKilometers = Math.floor(this._score / 60);
+
+    // Atualiza e obtém a quilometragem máxima da fase
+    const maxKilometers = GameScene.updatePhaseMaxKilometers(this._currentPhase.id, finalKilometers);
+
     const gameOverText = this.add.text(
       this.scale.width / 2,
       this.scale.height / 2 - 50,
@@ -244,13 +299,27 @@ class GameScene extends Phaser.Scene {
 
     this.add.text(
       this.scale.width / 2,
-      this.scale.height / 2 + 50,
-      `Quilômetros: ${Math.floor(this._score / 60)}`,
+      this.scale.height / 2 + 30,
+      `Quilômetros: ${finalKilometers} km`,
       {
         fontSize: '32px',
         fill: '#fff'
       }
     ).setOrigin(0.5).setDepth(200);
+
+    // Mostra se bateu recorde
+    if (finalKilometers === maxKilometers && finalKilometers > 0) {
+      this.add.text(
+        this.scale.width / 2,
+        this.scale.height / 2 + 100,
+        '🏆 NOVO RECORDE! 🏆',
+        {
+          fontSize: '24px',
+          fill: '#ffcc00',
+          fontStyle: 'bold'
+        }
+      ).setOrigin(0.5).setDepth(200);
+    }
 
     // Retorna para o menu após 3 segundos
     this.time.delayedCall(3000, () => {

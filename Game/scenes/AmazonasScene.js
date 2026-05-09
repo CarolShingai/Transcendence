@@ -25,8 +25,20 @@ class AmazonasScene extends Phaser.Scene {
     const W = this.scale.width;
     const H = this.scale.height;
 
-    // Cria o fundo da Amazônia
-    this.add.image(W / 2, H / 2, 'amazonia_bg').setDisplaySize(W, H).setDepth(0);
+    // ── Sistema de mapa em movimento (scrolling) ──────────────────────────
+
+    // Cria dois fundos empilhados para criar efeito de loop infinito
+    this._bg1 = this.add.image(W / 2, 0, 'amazonia_bg')
+      .setDisplaySize(W, H)
+      .setOrigin(0.5, 0)
+      .setDepth(-1);
+
+    this._bg2 = this.add.image(W / 2, -H, 'amazonia_bg')
+      .setDisplaySize(W, H)
+      .setOrigin(0.5, 0)
+      .setDepth(-1);
+
+    this._mapSpeed = 150; // Velocidade do mapa em pixels por segundo
 
     // Cria o Tyrannus no centro da tela
     this._tyrannus = new Tyrannus(this, W / 2, H / 2);
@@ -101,6 +113,23 @@ class AmazonasScene extends Phaser.Scene {
   }
 
   update(_time, delta) {
+    // ── Atualização do mapa em movimento ──────────────────────────────────
+
+    const H = this.scale.height;
+    const mapDeltaY = (this._mapSpeed * delta) / 1000; // Converte delta de ms para s
+
+    // Move ambos os fundos para baixo
+    this._bg1.y += mapDeltaY;
+    this._bg2.y += mapDeltaY;
+
+    // Reseta a posição quando o fundo sair completamente da tela
+    if (this._bg1.y >= H) {
+      this._bg1.y = this._bg2.y - H;
+    }
+    if (this._bg2.y >= H) {
+      this._bg2.y = this._bg1.y - H;
+    }
+
     // Atualiza o Tyrannus a cada frame
     this._tyrannus.update(delta);
 
@@ -185,6 +214,9 @@ class AmazonasScene extends Phaser.Scene {
   }
 
   _gameOver() {
+    // Para o movimento do mapa
+    this._mapSpeed = 0;
+
     this._tyrannus.alive = false;
     this._tyrannus.sprite.setVelocity(0, 0);
     this._carcaras.stop();
