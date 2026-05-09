@@ -113,9 +113,12 @@ function App() {
     id: invite?.id,
     requesterId: invite?.requesterId ?? invite?.requester?.id ?? invite?.senderId ?? invite?.sender?.id ?? null,
     requesterName: invite?.requesterName ?? invite?.requester?.name ?? invite?.senderName ?? invite?.sender?.name ?? '',
+    requesterNickname: invite?.requesterNickname ?? invite?.requester?.nickname ?? invite?.senderNickname ?? invite?.sender?.nickname ?? '',
     receiverId: invite?.receiverId ?? invite?.receiver?.id ?? null,
     receiverName: invite?.receiverName ?? invite?.receiver?.name ?? '',
+    receiverNickname: invite?.receiverNickname ?? invite?.receiver?.nickname ?? '',
     status: invite?.status || 'PENDING',
+    direction: invite?.direction || null,
     createdAt: invite?.createdAt || null
   });
 
@@ -508,6 +511,7 @@ function App() {
       optimisticInvite,
     ];
     setOptimisticInvites(nextOptimisticInvites);
+    await refreshFriendshipData(token, nextOptimisticInvites);
     return response;
   };
 

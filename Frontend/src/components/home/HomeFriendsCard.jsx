@@ -89,9 +89,13 @@ function HomeFriendsCard({
   };
 
   const renderInviteItem = (invite) => {
+    const isSentInvite = invite.direction === 'sent';
     const displayName = invite.direction === 'sent'
       ? (invite.receiverName || invite.requesterName || 'Convite')
       : (invite.requesterName || invite.receiverName || 'Convite');
+    const displayNickname = isSentInvite
+      ? (invite.receiverNickname || invite.requesterNickname || '')
+      : (invite.requesterNickname || invite.receiverNickname || '');
 
     return (
       <article
@@ -113,39 +117,43 @@ function HomeFriendsCard({
         <div className="friend-info">
           <div className="friend-name">{displayName}</div>
           <div className="friend-nickname">
-            {invite.status || 'PENDING'}
+            {displayNickname ? `@${displayNickname}` : (isSentInvite ? 'Convite enviado' : 'Convite recebido')}
           </div>
         </div>
-        <div className="friend-invite-actions" aria-hidden="false">
-          <button
-            type="button"
-            className="friend-action-circle friend-accept-circle"
-            onClick={(event) => {
-              event.stopPropagation();
-              if (typeof onAcceptInvite === 'function') {
-                void onAcceptInvite(invite.id);
-              }
-            }}
-            aria-label={`Aceitar convite de ${displayName}`}
-            title="Aceitar"
-          >
-            ✓
-          </button>
-          <button
-            type="button"
-            className="friend-action-circle friend-reject-circle"
-            onClick={(event) => {
-              event.stopPropagation();
-              if (typeof onRejectInvite === 'function') {
-                void onRejectInvite(invite.id);
-              }
-            }}
-            aria-label={`Rejeitar convite de ${displayName}`}
-            title="Rejeitar"
-          >
-            ✕
-          </button>
-        </div>
+        {isSentInvite ? (
+          <div className="friend-status friend-status-pending">Pendente</div>
+        ) : (
+          <div className="friend-invite-actions" aria-hidden="false">
+            <button
+              type="button"
+              className="friend-action-circle friend-accept-circle"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (typeof onAcceptInvite === 'function') {
+                  void onAcceptInvite(invite.id);
+                }
+              }}
+              aria-label={`Aceitar convite de ${displayName}`}
+              title="Aceitar"
+            >
+              ✓
+            </button>
+            <button
+              type="button"
+              className="friend-action-circle friend-reject-circle"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (typeof onRejectInvite === 'function') {
+                  void onRejectInvite(invite.id);
+                }
+              }}
+              aria-label={`Rejeitar convite de ${displayName}`}
+              title="Rejeitar"
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </article>
     );
   };

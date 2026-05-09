@@ -1463,6 +1463,11 @@
   background: #e5e7eb;
 }
 
+.friend-status-pending {
+  color: #8a5a00;
+  background: #fff1cc;
+}
+
 .friend-action-button {
   justify-self: end;
   border: none;
