@@ -162,12 +162,11 @@ export async function getInvites(token) {
 
 export async function getPeople(token) {
   try {
-    const data = await request('/presence/online-users', {
+    const data = await request('/users', {
       method: 'GET',
-      authenticated: false,
       token,
     });
-    return unwrapList(data, 'onlineUsers');
+    return unwrapList(data, 'users');
   } catch (error) {
     return [];
   }

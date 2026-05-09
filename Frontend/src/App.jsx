@@ -133,8 +133,9 @@ function App() {
     return ids;
   };
 
-  const filterAvailablePeople = (peopleList, friendsList, invitesList) => {
+  const filterAvailablePeople = (peopleList, friendsList, invitesList, currentUserId = null) => {
     const blockedIds = new Set([
+      ...(currentUserId !== null && currentUserId !== undefined ? [String(currentUserId)] : []),
       ...(friendsList || []).map((friend) => String(friend?.id)),
       ...(invitesList || []).flatMap((invite) => extractParticipantIds(invite))
     ]);
@@ -224,12 +225,12 @@ function App() {
 
       const peopleResponse = await api.getPeople(token);
       const normalizedPeople = Array.isArray(peopleResponse) ? peopleResponse.map(normalizePerson) : [];
-      setPeopleList(filterAvailablePeople(normalizedPeople, normalizedFriends, combinedInvites));
+      setPeopleList(filterAvailablePeople(normalizedPeople, normalizedFriends, combinedInvites, profile?.id));
 
       return {
         friends: normalizedFriends,
         invites: combinedInvites,
-        people: filterAvailablePeople(normalizedPeople, normalizedFriends, combinedInvites)
+        people: filterAvailablePeople(normalizedPeople, normalizedFriends, combinedInvites, profile?.id)
       };
     } catch (err) {
       setError(err?.message || 'Failed to load friends data');
