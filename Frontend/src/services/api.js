@@ -1,4 +1,4 @@
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const API_BASE = process.env.REACT_APP_API_URL || 'https://localhost:8082';
 
 let httpErrorHandler = null;
 
@@ -56,6 +56,18 @@ function authHeader(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function unwrapList(data, key) {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (data && Array.isArray(data[key])) {
+    return data[key];
+  }
+
+  return [];
+}
+
 export async function login(email, password) {
   try {
     const res = await fetch(`${API_BASE}/auth/login`, {
@@ -67,6 +79,20 @@ export async function login(email, password) {
     return handleResponse(res);
   } catch (error) {
     throw new Error(error?.message || 'Network error during login');
+  }
+}
+
+export async function verifyTwoFactor(twoFactorToken, code) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/verify-2fa`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ twoFactorToken, code })
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during 2FA verification');
   }
 }
 
@@ -115,6 +141,10 @@ export function setHttpErrorHandler(fn) {
   httpErrorHandler = typeof fn === 'function' ? fn : null;
 }
 
+export function getGoogleOAuthUrl() {
+  return `${API_BASE}/auth/oauth2/authorize/google`;
+}
+
 export async function updateProfile(token, data) {
   try {
     const res = await fetch(`${API_BASE}/profile/me`, {
@@ -129,4 +159,132 @@ export async function updateProfile(token, data) {
   }
 }
 
-export default { login, register, logout, me, setHttpErrorHandler, updateProfile };
+export async function setupTwoFactor(token) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/2fa/setup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during 2FA setup');
+  }
+}
+
+export async function enableTwoFactor(token, code) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/2fa/enable`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) },
+      body: JSON.stringify({ code })
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during 2FA activation');
+  }
+}
+
+export async function listFriends(token) {
+  try {
+    const res = await fetch(`${API_BASE}/friends`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    const data = await handleResponse(res);
+    return unwrapList(data, 'friends');
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during friends lookup');
+  }
+}
+
+export async function listPendingRequests(token) {
+  try {
+    const res = await fetch(`${API_BASE}/friends/requests`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    const data = await handleResponse(res);
+    return unwrapList(data, 'requests');
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during pending requests lookup');
+  }
+}
+
+export async function searchUsers(token, query) {
+  try {
+    const res = await fetch(`${API_BASE}/users/search?q=${encodeURIComponent(query)}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    const data = await handleResponse(res);
+    return unwrapList(data, 'users');
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during users search');
+  }
+}
+
+export async function sendFriendRequest(token, receiverId) {
+  try {
+    const res = await fetch(`${API_BASE}/friends/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) },
+      body: JSON.stringify({ receiverId })
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during friend request');
+  }
+}
+
+export async function acceptFriendRequest(token, requestId) {
+  try {
+    const res = await fetch(`${API_BASE}/friends/${requestId}/accept`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during friend acceptance');
+  }
+}
+
+export async function rejectFriendRequest(token, requestId) {
+  try {
+    const res = await fetch(`${API_BASE}/friends/${requestId}/reject`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during friend rejection');
+  }
+}
+
+const api = {
+  login,
+  verifyTwoFactor,
+  register,
+  logout,
+  me,
+  setHttpErrorHandler,
+  updateProfile,
+  setupTwoFactor,
+  enableTwoFactor,
+  listFriends,
+  listPendingRequests,
+  searchUsers,
+  sendFriendRequest,
+  acceptFriendRequest,
+  rejectFriendRequest,
+  getGoogleOAuthUrl
+};
+
+export default api;

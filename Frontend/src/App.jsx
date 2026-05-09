@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import './App.css';
 import LoginHeader from './components/layout/LoginHeader';
 import HomeHeader from './components/layout/HomeHeader';
@@ -10,6 +10,7 @@ import Error5xx from './components/layout/Error5xx';
 import StatusBanner from './components/elements/StatusBanner';
 import LoadingOverlay from './components/elements/LoadingOverlay';
 import LoginCard from './components/auth/LoginCard';
+import TwoFactorLoginCard from './components/auth/TwoFactorLoginCard';
 import RegisterCard from './components/auth/RegisterCard';
 import PublicProfileCard from './components/profile/PublicProfileCard';
 import HomeCard from './components/home/HomeCard';
@@ -37,32 +38,32 @@ function App() {
     return null;
   };
 
-  const navigateToPath = (path, nextView) => {
+  const navigateToPath = useCallback((path, nextView) => {
     if (window.location.pathname !== path) {
       window.history.pushState({}, '', path);
     }
     setView(nextView);
-  };
+  }, []);
 
-  const resolveAvatarUrl = (avatarValue) => {
+  const resolveAvatarUrl = useCallback((avatarValue) => {
     if (typeof avatarValue === 'string') return avatarValue;
     if (avatarValue && typeof avatarValue === 'object' && typeof avatarValue.default === 'string') {
       return avatarValue.default;
     }
 
     return '';
-  };
+  }, []);
 
-  const resolveAvatarFromProfilePic = (profilePic) => {
+  const resolveAvatarFromProfilePic = useCallback((profilePic) => {
     const numericPic = Number(profilePic);
     if (!Number.isInteger(numericPic) || numericPic < 1 || numericPic > avatarOptions.length) {
       return '';
     }
 
     return avatarOptions[numericPic - 1] || '';
-  };
+  }, []);
 
-  const normalizeBackendUser = (payload, fallbackProfile = null) => {
+  const normalizeBackendUser = useCallback((payload, fallbackProfile = null) => {
     const user = payload?.user ?? payload ?? null;
     if (!user) return null;
 
@@ -73,9 +74,9 @@ function App() {
       ...user,
       avatarUrl
     };
-  };
+  }, [resolveAvatarFromProfilePic, resolveAvatarUrl]);
 
-  const profileFromUser = (user, fallbackProfile = null) => ({
+  const profileFromUser = useCallback((user, fallbackProfile = null) => ({
     name: user?.name || '',
     nickname: user?.nickname || '',
     email: user?.email || '',
@@ -85,7 +86,19 @@ function App() {
       resolveAvatarFromProfilePic(user?.profilePic) ||
       fallbackProfile?.avatarUrl ||
       '',
-    profilePic: Number(user?.profilePic) || fallbackProfile?.profilePic || 0
+    profilePic: Number(user?.profilePic) || fallbackProfile?.profilePic || 0,
+    twoFactorEnabled: Boolean(user?.twoFactorEnabled)
+  }), [resolveAvatarFromProfilePic, resolveAvatarUrl]);
+
+  const normalizeFriendshipRequest = (request) => ({
+    id: request?.id,
+    requestId: request?.id,
+    requesterId: request?.requesterId,
+    receiverId: request?.receiverId,
+    name: request?.requesterName || 'Convite pendente',
+    nickname: request?.requesterName || '',
+    status: request?.status || 'PENDING',
+    createdAt: request?.createdAt
   });
 
   const resolvePublicRecordValue = (source, fallback = 0) => {
@@ -104,15 +117,17 @@ function App() {
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const emptyProfileForm = {
+  const emptyProfileForm = useMemo(() => ({
     name: '',
     nickname: '',
     email: '',
     bio: 'Player ready to start the journey.',
     avatarUrl: '',
-    profilePic: 0
-  };
-  const emptyRegisterForm = {
+    profilePic: 0,
+    twoFactorEnabled: false
+  }), []);
+
+  const emptyRegisterForm = useMemo(() => ({
     name: '',
     nickname: '',
     email: '',
@@ -120,11 +135,18 @@ function App() {
     profilePic: 0,
     bio: 'Player ready to start the journey.',
     avatarUrl: ''
-  };
+  }), []);
   const [profile, setProfile] = useState(null);
   const [viewedProfile, setViewedProfile] = useState(null);
+  const [friends, setFriends] = useState([]);
+  const [invites, setInvites] = useState([]);
 
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
+  const [twoFactorSetup, setTwoFactorSetup] = useState(null);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorMessage, setTwoFactorMessage] = useState('');
+  const [twoFactorPendingToken, setTwoFactorPendingToken] = useState('');
+  const [twoFactorLoginCode, setTwoFactorLoginCode] = useState('');
 
   const [registerForm, setRegisterForm] = useState(emptyRegisterForm);
 
@@ -147,11 +169,39 @@ function App() {
     setLoginForm((previous) => ({ ...previous, [name]: value }));
   };
 
-  const syncProfileFromToken = async (targetView = 'home') => {
+  const refreshFriendshipData = useCallback(async (token = localStorage.getItem('transcendence_token')) => {
+    if (!token) {
+      setFriends([]);
+      setInvites([]);
+      return { friends: [], invites: [] };
+    }
+
+    const [friendsResult, invitesResult] = await Promise.allSettled([
+      api.listFriends(token),
+      api.listPendingRequests(token)
+    ]);
+
+    const nextFriends = friendsResult.status === 'fulfilled' && Array.isArray(friendsResult.value)
+      ? friendsResult.value
+      : [];
+
+    const nextInvites = invitesResult.status === 'fulfilled' && Array.isArray(invitesResult.value)
+      ? invitesResult.value.map(normalizeFriendshipRequest)
+      : [];
+
+    setFriends(nextFriends);
+    setInvites(nextInvites);
+
+    return { friends: nextFriends, invites: nextInvites };
+  }, []);
+
+  const syncProfileFromToken = useCallback(async (targetView = 'home') => {
     const token = localStorage.getItem('transcendence_token');
     if (!token) {
       setProfile(null);
       setProfileForm(emptyProfileForm);
+      setFriends([]);
+      setInvites([]);
       setView('login');
       return null;
     }
@@ -170,6 +220,7 @@ function App() {
       setProfile(resolved);
       setProfileForm(profileFromUser(resolved, null));
       setView(targetView);
+      await refreshFriendshipData(token);
 
       try {
         localStorage.setItem('transcendence_profile', JSON.stringify(resolved));
@@ -184,12 +235,14 @@ function App() {
       } catch {}
       setProfile(null);
       setProfileForm(emptyProfileForm);
+      setFriends([]);
+      setInvites([]);
       setView('login');
       return null;
     } finally {
       setLoading(false);
     }
-  };
+  }, [refreshFriendshipData, emptyProfileForm, normalizeBackendUser, profileFromUser]);
 
   useEffect(() => {
     const routeView = pathToErrorView(window.location.pathname);
@@ -198,8 +251,26 @@ function App() {
       return;
     }
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const oauthToken = urlParams.get('token');
+    const oauthError = urlParams.get('oauthError');
+
+    if (oauthToken) {
+      localStorage.setItem('transcendence_token', oauthToken);
+      window.history.replaceState({}, '', window.location.pathname);
+      syncProfileFromToken('home');
+      return;
+    }
+
+    if (oauthError) {
+      setError(decodeURIComponent(oauthError));
+      window.history.replaceState({}, '', window.location.pathname);
+      setView('login');
+      return;
+    }
+
     syncProfileFromToken('home');
-  }, []);
+  }, [syncProfileFromToken]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -237,6 +308,70 @@ function App() {
     setProfileForm((previous) => ({ ...previous, avatarUrl, profilePic }));
   };
 
+  const handleTwoFactorCodeChange = (event) => {
+    setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6));
+  };
+
+  const handleTwoFactorSetup = async () => {
+    const token = localStorage.getItem('transcendence_token');
+    if (!token) {
+      setTwoFactorMessage('Sessao expirada. Faca login novamente.');
+      return;
+    }
+
+    setError('');
+    setTwoFactorMessage('');
+    setLoading(true);
+
+    try {
+      const setup = await api.setupTwoFactor(token);
+      setTwoFactorSetup(setup);
+      setTwoFactorCode('');
+      setTwoFactorMessage('Escaneie o QR Code e confirme com o codigo do app.');
+    } catch (err) {
+      setTwoFactorMessage(err?.message || 'Nao foi possivel iniciar o 2FA.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTwoFactorEnable = async () => {
+    const token = localStorage.getItem('transcendence_token');
+    const normalizedCode = twoFactorCode.trim();
+
+    if (!token) {
+      setTwoFactorMessage('Sessao expirada. Faca login novamente.');
+      return;
+    }
+
+    if (!/^\d{6}$/.test(normalizedCode)) {
+      setTwoFactorMessage('Digite exatamente os 6 digitos do app autenticador.');
+      return;
+    }
+
+    setError('');
+    setTwoFactorMessage('');
+    setLoading(true);
+
+    try {
+      const response = await api.enableTwoFactor(token, normalizedCode);
+      if (!response?.success) {
+        throw new Error(response?.message || 'Codigo invalido.');
+      }
+
+      setTwoFactorSetup(null);
+      setTwoFactorCode('');
+      setTwoFactorMessage('2FA ativado com sucesso.');
+      setProfile((previous) => previous ? { ...previous, twoFactorEnabled: true } : previous);
+      setProfileForm((previous) => ({ ...previous, twoFactorEnabled: true }));
+      await syncProfileFromToken('profile');
+    } catch (err) {
+      setTwoFactorMessage(err?.message || 'Codigo invalido.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogin = (event) => {
     event.preventDefault();
     setError('');
@@ -249,6 +384,13 @@ function App() {
     api
       .login(loginForm.email, loginForm.password)
       .then((resp) => {
+        if (resp?.requiresTwoFactor && resp?.twoFactorToken) {
+          setTwoFactorPendingToken(resp.twoFactorToken);
+          setTwoFactorLoginCode('');
+          setView('twoFactorLogin');
+          return null;
+        }
+
         const token = resp?.token || resp?.accessToken || resp?.jwt || resp;
         if (!token) throw new Error('No token returned from server');
         localStorage.setItem('transcendence_token', token);
@@ -262,22 +404,55 @@ function App() {
       .finally(() => setLoading(false));
   };
 
+  const handleTwoFactorLoginCodeChange = (event) => {
+    setTwoFactorLoginCode(event.target.value.replace(/\D/g, '').slice(0, 6));
+  };
+
+  const handleTwoFactorLoginVerify = (event) => {
+    event.preventDefault();
+
+    const normalizedCode = twoFactorLoginCode.trim();
+    if (!twoFactorPendingToken) {
+      setError('Sessao de 2FA expirada. Faca login novamente.');
+      setView('login');
+      return;
+    }
+
+    if (!/^\d{6}$/.test(normalizedCode)) {
+      setError('Digite exatamente os 6 digitos do app autenticador.');
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+    api
+      .verifyTwoFactor(twoFactorPendingToken, normalizedCode)
+      .then((resp) => {
+        const token = resp?.token || resp?.accessToken || resp?.jwt;
+        if (!token) throw new Error('Codigo invalido.');
+        localStorage.setItem('transcendence_token', token);
+        setTwoFactorPendingToken('');
+        setTwoFactorLoginCode('');
+        return syncProfileFromToken('home');
+      })
+      .then((resolved) => {
+        if (!resolved) return;
+        setLoginForm({ email: '', password: '' });
+      })
+      .catch((err) => setError(err?.message || 'Codigo invalido.'))
+      .finally(() => setLoading(false));
+  };
+
+  const handleBackToLoginFromTwoFactor = () => {
+    setError('');
+    setTwoFactorPendingToken('');
+    setTwoFactorLoginCode('');
+    setView('login');
+  };
+
   const handleGoogleLogin = () => {
     setError('');
-    // Google login flow not implemented: keep simulated fallback
-    const nextProfile = {
-      name: 'google player',
-      nickname: 'google player',
-      email: 'google.player@gmail.com',
-      bio: 'Player ready to start the journey.',
-      avatarUrl: ''
-    };
-
-    setProfile(nextProfile);
-    setProfileForm(nextProfile);
-    localStorage.setItem('transcendence_profile', JSON.stringify(nextProfile));
-    setView('home');
-    setLoginForm({ email: '', password: '' });
+    window.location.href = api.getGoogleOAuthUrl();
   };
 
   const handleGoToRegister = () => {
@@ -322,10 +497,6 @@ function App() {
     setView('login');
   };
 
-  const handleGoToGame = () => {
-    if (!isAuthenticated) return;
-    setView('game');
-  };
   const [gameOrigin, setGameOrigin] = useState(null);
 
   const handleGoToGameWithOrigin = (origin) => {
@@ -387,13 +558,15 @@ function App() {
       } catch {}
       setProfile(null);
       setProfileForm(emptyProfileForm);
+      setFriends([]);
+      setInvites([]);
       setLoginForm({ email: '', password: '' });
       setView('login');
       setLoading(false);
     }
   };
 
-  const showHttpError = (status, message = '') => {
+  const showHttpError = useCallback((status, message = '') => {
     if (status >= 500) {
       setError(message || 'Erro interno do servidor');
       navigateToPath('/5xx', 'error5xx');
@@ -403,7 +576,7 @@ function App() {
     } else if (status >= 400) {
       setError(message || 'Falha na requisição');
     }
-  };
+  }, [navigateToPath]);
 
   useEffect(() => {
     // register API-level HTTP error handler so api can auto-trigger our error views
@@ -431,13 +604,66 @@ function App() {
     setView('home');
   };
 
+  const handleSendFriendRequest = async (user) => {
+    const token = localStorage.getItem('transcendence_token');
+    const receiverId = Number(user?.id);
+
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    if (!Number.isFinite(receiverId)) {
+      throw new Error('Invalid friend selection');
+    }
+
+    const response = await api.sendFriendRequest(token, receiverId);
+    await refreshFriendshipData(token);
+    return response;
+  };
+
+  const handleAcceptFriendRequest = async (requestId) => {
+    const token = localStorage.getItem('transcendence_token');
+
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    const response = await api.acceptFriendRequest(token, requestId);
+    await refreshFriendshipData(token);
+    return response;
+  };
+
+  const handleRejectFriendRequest = async (requestId) => {
+    const token = localStorage.getItem('transcendence_token');
+
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    const response = await api.rejectFriendRequest(token, requestId);
+    await refreshFriendshipData(token);
+    return response;
+  };
+
+  const handleSearchUsers = async (query) => {
+    const token = localStorage.getItem('transcendence_token');
+
+    if (!token) {
+      return [];
+    }
+
+    const users = await api.searchUsers(token, query);
+    return Array.isArray(users) ? users : [];
+  };
+
   const handleExitGame = () => {
     if (!isAuthenticated) return;
     setView('home');
   };
 
-  const goToLogin = () => setView('login');
+  
   const isLoginView = !isAuthenticated && view === 'login';
+  const isTwoFactorLoginView = !isAuthenticated && view === 'twoFactorLogin';
   const isRegisterView = !isAuthenticated && view === 'register';
   const isHomeView = isAuthenticated && view === 'home';
   const isGameView = isAuthenticated && view === 'game';
@@ -463,6 +689,8 @@ function App() {
         <LoadingOverlay show={loading} />
         <section className="game-stage" aria-label="Area principal do jogo">
           {isLoginView ? (
+            <LoginHeader />
+          ) : isTwoFactorLoginView ? (
             <LoginHeader />
           ) : isRegisterView ? (
             <RegisterHeader onGoToLogin={handleRegisterExit} />
@@ -498,6 +726,15 @@ function App() {
                 onCreateAccount={handleGoToRegister}
                 loading={loading}
               />
+            ) : isTwoFactorLoginView ? (
+              <TwoFactorLoginCard
+                code={twoFactorLoginCode}
+                error={error}
+                onCodeChange={handleTwoFactorLoginCodeChange}
+                onVerify={handleTwoFactorLoginVerify}
+                onBackToLogin={handleBackToLoginFromTwoFactor}
+                loading={loading}
+              />
             ) : isRegisterView ? (
               <RegisterCard
                 initials={initials}
@@ -509,7 +746,16 @@ function App() {
                 loading={loading}
               />
             ) : isHomeView ? (
-              <HomeCard onPlayGame={handleGoToGameWithOrigin} onOpenProfile={openPublicProfile} />
+              <HomeCard
+                onPlayGame={handleGoToGameWithOrigin}
+                friends={friends}
+                invites={invites}
+                onOpenProfile={openPublicProfile}
+                onSendInvite={handleSendFriendRequest}
+                onAcceptInvite={handleAcceptFriendRequest}
+                onRejectInvite={handleRejectFriendRequest}
+                onSearchUsers={handleSearchUsers}
+              />
             ) : isGameView ? (
               <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
             ) : isError4xxView ? (
