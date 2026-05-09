@@ -10,7 +10,7 @@ const AVATAR_OPTIONS = avatarContext
     return moduleValue?.default || moduleValue;
   });
 
-function HomeHeader({ initials, profileImage, onGoToProfile, onLogout }) {
+function HomeHeader({ initials, profileImage, onGoToProfile, onGoToEditProfile,onLogout }) {
   const resolveAvatarUrl = (avatarValue) => {
     if (!avatarValue) return '';
     if (typeof avatarValue === 'string') return avatarValue;
@@ -71,7 +71,7 @@ function HomeHeader({ initials, profileImage, onGoToProfile, onLogout }) {
         <button
           type="button"
           className="header-icon-button header-icon-button-edit"
-          onClick={onGoToProfile}
+          onClick={onGoToEditProfile}
           aria-label="Editar perfil"
           title="Editar perfil"
         >

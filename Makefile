@@ -4,7 +4,7 @@ COMPOSE := docker compose -f $(COMPOSE_FILE)
 .PHONY: back front start down logs ps restart db reset-db reset-db-dev reset-db-prod
 
 # Gerar certificado autoassinado para HTTPS
-CERT_FILE=certs/keystore-dev.p12
+CERT_FILE= ./Backend/certs/keystore-dev.p12
 
 cert:
 	@if [ ! -f $(CERT_FILE) ]; then \
