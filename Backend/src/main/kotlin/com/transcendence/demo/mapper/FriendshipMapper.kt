@@ -24,9 +24,11 @@ class FriendshipMapper {
             requesterId = requireNotNull(requester.id) { "Requester id is required" },
             requesterName = requester.name,
             requesterNickname = requester.nickname,
+            requesterProfilePic = requester.profilePic,
             receiverId = requireNotNull(receiver.id) { "Receiver id is required" },
             receiverName = receiver.name,
             receiverNickname = receiver.nickname,
+            receiverProfilePic = receiver.profilePic,
             status = friendship.status.name,
             direction = direction,
             createdAt = friendship.createdAt
@@ -38,7 +40,8 @@ class FriendshipMapper {
             id = requireNotNull(user.id) { "User id is required" },
             name = user.name,
             nickname = user.nickname,
-            status = user.status.ifBlank { "offline" }
+            status = user.status.ifBlank { "offline" },
+            profilePic = user.profilePic
         )
     }
 }

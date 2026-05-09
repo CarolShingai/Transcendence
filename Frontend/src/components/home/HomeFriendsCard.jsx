@@ -52,14 +52,25 @@ function HomeFriendsCard({
     if (!onOpenProfile) return;
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
+      const isSentInvite = invite.direction === 'sent';
+      const displayName = isSentInvite
+        ? (invite.receiverName || invite.requesterName || 'Convite')
+        : (invite.requesterName || invite.receiverName || 'Convite');
+      const displayNickname = isSentInvite
+        ? (invite.receiverNickname || invite.requesterNickname || '')
+        : (invite.requesterNickname || invite.receiverNickname || '');
+      const displayAvatarUrl = isSentInvite
+        ? (invite.receiverAvatarUrl || invite.requesterAvatarUrl || '')
+        : (invite.requesterAvatarUrl || invite.receiverAvatarUrl || '');
+
       openProfile({
         id: invite.direction === 'sent'
           ? (invite.receiverId ?? invite.id)
           : (invite.requesterId ?? invite.id),
-        name: invite.direction === 'sent'
-          ? (invite.receiverName || invite.requesterName || 'Convite')
-          : (invite.requesterName || invite.receiverName || 'Convite'),
-        nickname: invite.requesterNickname || invite.receiverNickname || '',
+        name: displayName,
+        nickname: displayNickname,
+        avatarUrl: displayAvatarUrl,
+        profilePic: isSentInvite ? (invite.receiverProfilePic || 0) : (invite.requesterProfilePic || 0),
         status: invite.status,
       });
     }
@@ -77,7 +88,17 @@ function HomeFriendsCard({
         onClick={() => openProfile(friend)}
         onKeyDown={handleFriendKeyDown(friend)}
       >
-        <div className="friend-avatar" aria-hidden="true">{getInitials(friend.name)}</div>
+        <div className="friend-avatar" aria-hidden="true">
+          {friend.avatarUrl ? (
+            <img
+              src={friend.avatarUrl}
+              alt={friend.name || friend.nickname || 'Avatar'}
+              className="friend-avatar-image"
+            />
+          ) : (
+            getInitials(friend.name)
+          )}
+        </div>
         <div className="friend-info">
           <div className="friend-name">{friend.name}</div>
           <div className="friend-nickname">@{friend.nickname}</div>
@@ -97,6 +118,9 @@ function HomeFriendsCard({
     const displayNickname = isSentInvite
       ? (invite.receiverNickname || invite.requesterNickname || '')
       : (invite.requesterNickname || invite.receiverNickname || '');
+    const displayAvatarUrl = invite.direction === 'sent'
+      ? (invite.receiverAvatarUrl || invite.requesterAvatarUrl || '')
+      : (invite.requesterAvatarUrl || invite.receiverAvatarUrl || '');
 
     return (
       <article
@@ -109,12 +133,24 @@ function HomeFriendsCard({
             ? (invite.receiverId ?? invite.id)
             : (invite.requesterId ?? invite.id),
           name: displayName,
-          nickname: invite.requesterNickname || invite.receiverNickname || '',
+          nickname: displayNickname,
+          avatarUrl: displayAvatarUrl,
+          profilePic: isSentInvite ? (invite.receiverProfilePic || 0) : (invite.requesterProfilePic || 0),
           status: invite.status,
         })}
         onKeyDown={handleInviteKeyDown(invite)}
       >
-        <div className="friend-avatar" aria-hidden="true">{getInitials(displayName)}</div>
+        <div className="friend-avatar" aria-hidden="true">
+          {displayAvatarUrl ? (
+            <img
+              src={displayAvatarUrl}
+              alt={displayName || displayNickname || 'Avatar'}
+              className="friend-avatar-image"
+            />
+          ) : (
+            getInitials(displayName)
+          )}
+        </div>
         <div className="friend-info">
           <div className="friend-name">{displayName}</div>
           <div className="friend-nickname">

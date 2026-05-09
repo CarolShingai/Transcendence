@@ -106,7 +106,9 @@ function App() {
     id: friend?.id,
     name: friend?.name || '',
     nickname: friend?.nickname || '',
-    status: friend?.status || 'Offline'
+    status: friend?.status || 'Offline',
+    profilePic: Number(friend?.profilePic) || 0,
+    avatarUrl: resolveAvatarFromProfilePic(friend?.profilePic) || friend?.avatarUrl || ''
   });
 
   const normalizeInvite = (invite) => ({
@@ -114,9 +116,13 @@ function App() {
     requesterId: invite?.requesterId ?? invite?.requester?.id ?? invite?.senderId ?? invite?.sender?.id ?? null,
     requesterName: invite?.requesterName ?? invite?.requester?.name ?? invite?.senderName ?? invite?.sender?.name ?? '',
     requesterNickname: invite?.requesterNickname ?? invite?.requester?.nickname ?? invite?.senderNickname ?? invite?.sender?.nickname ?? '',
+    requesterProfilePic: Number(invite?.requesterProfilePic ?? invite?.requester?.profilePic ?? invite?.senderProfilePic ?? invite?.sender?.profilePic) || 0,
+    requesterAvatarUrl: resolveAvatarFromProfilePic(invite?.requesterProfilePic ?? invite?.requester?.profilePic ?? invite?.senderProfilePic ?? invite?.sender?.profilePic) || invite?.requester?.avatarUrl || invite?.sender?.avatarUrl || '',
     receiverId: invite?.receiverId ?? invite?.receiver?.id ?? null,
     receiverName: invite?.receiverName ?? invite?.receiver?.name ?? '',
     receiverNickname: invite?.receiverNickname ?? invite?.receiver?.nickname ?? '',
+    receiverProfilePic: Number(invite?.receiverProfilePic ?? invite?.receiver?.profilePic) || 0,
+    receiverAvatarUrl: resolveAvatarFromProfilePic(invite?.receiverProfilePic ?? invite?.receiver?.profilePic) || invite?.receiver?.avatarUrl || '',
     status: invite?.status || 'PENDING',
     direction: invite?.direction || null,
     createdAt: invite?.createdAt || null

@@ -4,5 +4,6 @@ data class FriendDTO(
     val id: Long,
     val name: String,
     val nickname: String,
-    val status: String = "offline"
+    val status: String = "offline",
+    val profilePic: Int = 0
 )
