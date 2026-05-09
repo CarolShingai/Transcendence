@@ -131,8 +131,10 @@ class AuthController(
         }
 
         val user = userService.getUserProfileByEmail(email)
-            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(TwoFactorEnableResponseDTO(false, "User not found"))
+        }
 
         val response = userService.enableTwoFactor(user.id!!, request)
         return if (response.success) {
@@ -318,4 +320,5 @@ class AuthController(
             else -> false
         }
     }
+
 }

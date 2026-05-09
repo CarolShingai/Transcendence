@@ -176,8 +176,8 @@ class UserService(
         }
 
         val tempSecret = twoFactorService.generateTempSecret()
-    user.twoFactorSecretEncrypted = tempSecret
-    user.twoFactorConfirmedAt = null
+        user.twoFactorSecretEncrypted = tempSecret
+        user.twoFactorConfirmedAt = null
         userRepository.save(user)
 
         val qrCodeUrl = twoFactorService.generateQrCodeUrl(user.email, tempSecret)
@@ -190,10 +190,14 @@ class UserService(
 
     fun enableTwoFactor(userId: Long, request: TwoFactorSetupConfirmRequestDTO): TwoFactorEnableResponseDTO {
         val user = userRepository.findById(userId).orElse(null)
-            ?: return TwoFactorEnableResponseDTO(
-                success = false,
-                message = "User not found"
-            )
+        if (user == null) {
+            return TwoFactorEnableResponseDTO(
+                    success = false,
+                    message = "User not found"
+                )
+        }
+
+        val normalizedCode = request.code.trim()
 
         if (user.twoFactorEnabled) {
             return TwoFactorEnableResponseDTO(
@@ -203,12 +207,16 @@ class UserService(
         }
 
         val tempSecret = user.twoFactorSecretEncrypted
-            ?: return TwoFactorEnableResponseDTO(
-                success = false,
-                message = "2FA setup not initiated. Please call setup first."
-            )
+        if (tempSecret.isNullOrBlank()) {
+            return TwoFactorEnableResponseDTO(
+                    success = false,
+                    message = "2FA setup not initiated. Please call setup first."
+                )
+        }
 
-        if (!twoFactorService.verifyToken(request.code, tempSecret)) {
+        val tokenValid = twoFactorService.verifyToken(normalizedCode, tempSecret)
+
+        if (!tokenValid) {
             return TwoFactorEnableResponseDTO(
                 success = false,
                 message = "Invalid token"
@@ -369,7 +377,8 @@ class UserService(
             nickname = nickname,
             name = name,
             email = email,
-            profilePic = profilePic
+            profilePic = profilePic,
+            twoFactorEnabled = twoFactorEnabled
         )
     }
 }
