@@ -17,6 +17,9 @@ class CerradoScene extends Phaser.Scene {
     // Carrega a imagem da libelula (power-up de escudo)
     this.load.image('libelula', 'assets/images/libelula.png');
 
+    // Carrega a imagem do fogo
+    this.load.image('fire', 'assets/images/fire1.png');
+
     // Carrega a imagem de fundo do Cerrado
     this.load.image('cerrado_bg', 'assets/images/cerrado.png');
   }
@@ -54,6 +57,9 @@ class CerradoScene extends Phaser.Scene {
     
     // Cria o grupo de imãs (power-ups de magnetismo)
     this._imans = new MagnetGroup(this);
+
+    // Cria o grupo de fogo (obstáculos)
+    this._fires = new FireGroup(this);
 
     // Ativa o personagem (permite movimento)
     this._tyrannus.activate();
@@ -110,6 +116,15 @@ class CerradoScene extends Phaser.Scene {
       null,
       this
     );
+
+    // Colisão com fogo
+    this.physics.add.overlap(
+      this._tyrannus.sprite,
+      this._fires.getGroup(),
+      this._hitByFire,
+      null,
+      this
+    );
   }
 
   update(_time, delta) {
@@ -141,6 +156,9 @@ class CerradoScene extends Phaser.Scene {
 
     // Atualiza os imãs (passa Tyrannus para aplicar efeito de atração)
     this._imans.update(delta, this.scale.width, this.scale.height, this._tyrannus);
+
+    // Atualiza o fogo
+    this._fires.update(delta, this.scale.height, this.scale.width);
 
     // Aumenta pontos (1 ponto a cada frame enquanto vivo)
     if (this._tyrannus.alive) {
@@ -198,6 +216,30 @@ class CerradoScene extends Phaser.Scene {
     });
   }
 
+  // ── Colisão com Fogo ──────────────────────────────────────────────────────────
+
+  _hitByFire(tyrannus, fireSprite) {
+    fireSprite.destroy(); // Remove o fogo
+    
+    // Se o escudo está ativo, não causa dano
+    if (this._tyrannus.shieldActive) {
+      return;
+    }
+
+    this._lives--;
+    this._lifeText.setText(`❤️ Vidas: ${this._lives}`);
+
+    // Flash no Tyrannus quando bate
+    this._tyrannus.sprite.setTint(0xff0000);
+    this.time.delayedCall(100, () => {
+      this._tyrannus.sprite.clearTint();
+    });
+
+    if (this._lives <= 0) {
+      this._gameOver();
+    }
+  }
+
   // ── Coleta de Imã (power-up de magnetismo) ──────────────────────────────────
 
   _collectMagnet(tyrannus, imanSprite) {
@@ -222,6 +264,7 @@ class CerradoScene extends Phaser.Scene {
     this._carcaras.stop();
     this._libelulas.stop();
     this._imans.stop();
+    this._fires.stop();
 
     const gameOverText = this.add.text(
       this.scale.width / 2,
