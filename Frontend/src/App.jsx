@@ -15,7 +15,6 @@ import TwoFactorLoginCard from './components/auth/TwoFactorLoginCard';
 import RegisterCard from './components/auth/RegisterCard';
 import ProfileCard from './components/profile/ProfileCard';
 import PublicProfileCard from './components/profile/PublicProfileCard';
-import ProfileCard from './components/profile/ProfileCard';
 import HomeCard from './components/home/HomeCard';
 import GameCard from './components/game/GameCard';
 import api from './services/api';
