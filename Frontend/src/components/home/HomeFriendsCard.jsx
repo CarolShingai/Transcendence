@@ -11,6 +11,7 @@ const FRIENDS_TABS = [
 function HomeFriendsCard({
   friends = [],
   invites = [],
+  onOpenProfile,
   onSendInvite,
   onAcceptInvite,
   onRejectInvite,
@@ -31,8 +32,23 @@ function HomeFriendsCard({
   const renderFriendItem = (friend) => {
     const friendStatus = (friend.status || 'offline').toLowerCase();
 
+    const handleKeyDown = (e) => {
+      if (!onOpenProfile) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onOpenProfile(friend);
+      }
+    };
+
     return (
-      <article key={friend.id} className="friend-item">
+      <article
+        key={friend.id}
+        className="friend-item"
+        role={onOpenProfile ? 'button' : undefined}
+        tabIndex={onOpenProfile ? 0 : undefined}
+        onClick={() => onOpenProfile && onOpenProfile(friend)}
+        onKeyDown={handleKeyDown}
+      >
         <div className="friend-avatar" aria-hidden="true">{getInitials(friend.name)}</div>
         <div className="friend-info">
           <div className="friend-name">{friend.name}</div>
@@ -80,9 +96,22 @@ function HomeFriendsCard({
         </div>
       ) : (
         <div className="friends-invites-list">
-          {invites.map((invite) => (
-            <article key={invite.requestId || invite.id} className="friend-item friend-invite-item">
-              <div className="friend-avatar" aria-hidden="true">{getInitials(invite.name || invite.requesterName)}</div>
+           {invites.map((invite) => (
+              <article
+                key={invite.requestId || invite.id}
+                className="friend-item friend-invite-item"
+                role={onOpenProfile ? 'button' : undefined}
+                tabIndex={onOpenProfile ? 0 : undefined}
+                onClick={() => onOpenProfile && onOpenProfile(invite)}
+                onKeyDown={(e) => {
+                  if (!onOpenProfile) return;
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onOpenProfile(invite);
+                  }
+                }}
+              >
+                <div className="friend-avatar" aria-hidden="true">{getInitials(invite.name || invite.requesterName)}</div>
               <div className="friend-info">
                 <div className="friend-name">{invite.name || invite.requesterName || 'Convite pendente'}</div>
                 <div className="friend-nickname">{invite.nickname ? `@${invite.nickname}` : 'Solicitação pendente'}</div>
@@ -91,7 +120,10 @@ function HomeFriendsCard({
                 <button
                   type="button"
                   className="friend-action-button friend-accept-button"
-                  onClick={() => handleInviteAction(invite, onAcceptInvite)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleInviteAction(invite, onAcceptInvite);
+                  }}
                   disabled={isInviteProcessing(invite)}
                 >
                   Aceitar
@@ -99,7 +131,10 @@ function HomeFriendsCard({
                 <button
                   type="button"
                   className="friend-action-button friend-reject-button"
-                  onClick={() => handleInviteAction(invite, onRejectInvite)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleInviteAction(invite, onRejectInvite);
+                  }}
                   disabled={isInviteProcessing(invite)}
                 >
                   Recusar

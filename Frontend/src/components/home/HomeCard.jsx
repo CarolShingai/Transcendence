@@ -7,7 +7,17 @@ import HomeGameCard from './HomeGameCard';
 
 const EMPTY_CARDS = [{ id: 'single' }, { id: 'ranked' }, { id: 'friends' }];
 
-function HomeCard({ matches = [], friends = [], invites = [], onPlayGame, onSendInvite, onAcceptInvite, onRejectInvite, onSearchUsers }) {
+function HomeCard({
+  matches = [],
+  friends = [],
+  invites = [],
+  onPlayGame,
+  onOpenProfile,
+  onSendInvite,
+  onAcceptInvite,
+  onRejectInvite,
+  onSearchUsers
+}) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const goToPrevious = () => {
@@ -51,6 +61,7 @@ function HomeCard({ matches = [], friends = [], invites = [], onPlayGame, onSend
         <HomeFriendsCard
           friends={friends}
           invites={invites}
+          onOpenProfile={onOpenProfile}
           onSendInvite={onSendInvite}
           onAcceptInvite={onAcceptInvite}
           onRejectInvite={onRejectInvite}
