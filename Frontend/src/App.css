@@ -829,6 +829,59 @@
   width: min(100%, 240px);
 }
 
+.secondary-button {
+  border: 1px solid rgba(29, 122, 83, 0.35);
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+  color: var(--accent-dark);
+  background: rgba(255, 255, 255, 0.62);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.two-factor-panel {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 1rem;
+  border: 1px solid rgba(29, 122, 83, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.two-factor-panel h3 {
+  margin: 0;
+}
+
+.two-factor-setup {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.two-factor-qr {
+  width: min(180px, 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(14, 43, 35, 0.16);
+  background: #fff;
+  padding: 0.5rem;
+}
+
+.two-factor-secret {
+  display: block;
+  overflow-wrap: anywhere;
+  padding: 0.65rem;
+  border-radius: 10px;
+  background: rgba(14, 43, 35, 0.08);
+}
+
+.success-message,
+.status-message {
+  margin: 0;
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
 .home-card {
   text-align: center;
 }

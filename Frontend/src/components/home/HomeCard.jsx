@@ -9,28 +9,16 @@ const EMPTY_CARDS = [{ id: 'single' }, { id: 'ranked' }, { id: 'friends' }];
 
 function HomeCard({
   matches = [],
-  friends,
-  invites,
-  people,
-  currentUserId,
+  friends = [],
+  invites = [],
   onPlayGame,
   onOpenProfile,
   onSendInvite,
   onAcceptInvite,
   onRejectInvite,
-  currentIndex: propCurrentIndex,
-  onChangeIndex
+  onSearchUsers
 }) {
-  const [localIndex, setLocalIndex] = useState(0);
-  const currentIndex = typeof propCurrentIndex === 'number' ? propCurrentIndex : localIndex;
-  const setCurrentIndex = (updater) => {
-    const next = typeof updater === 'function' ? updater(currentIndex) : updater;
-    if (typeof onChangeIndex === 'function') {
-      onChangeIndex(next);
-    } else {
-      setLocalIndex(next);
-    }
-  };
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const goToPrevious = () => {
     setCurrentIndex((previous) => (previous === 0 ? EMPTY_CARDS.length - 1 : previous - 1));
@@ -73,12 +61,11 @@ function HomeCard({
         <HomeFriendsCard
           friends={friends}
           invites={invites}
-          people={people}
-          currentUserId={currentUserId}
           onOpenProfile={onOpenProfile}
           onSendInvite={onSendInvite}
           onAcceptInvite={onAcceptInvite}
           onRejectInvite={onRejectInvite}
+          onSearchUsers={onSearchUsers}
         />
       ),
     },

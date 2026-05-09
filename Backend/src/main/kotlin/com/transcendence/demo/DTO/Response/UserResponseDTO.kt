@@ -5,5 +5,6 @@ data class UserResponseDTO(
     val nickname: String = "",
     val name: String = "",
     val email: String = "",
-    val profilePic: Int = 0
+    val profilePic: Int = 0,
+    val twoFactorEnabled: Boolean = false
 )

@@ -11,14 +11,16 @@ const FRIENDS_TABS = [
 function HomeFriendsCard({
   friends = [],
   invites = [],
-  people = [],
-  currentUserId = null,
   onOpenProfile,
   onSendInvite,
   onAcceptInvite,
   onRejectInvite,
+  onSearchUsers,
 }) {
   const [activeTab, setActiveTab] = useState('friends');
+  const [sentInviteIds, setSentInviteIds] = useState([]);
+  const [processingInviteIds, setProcessingInviteIds] = useState([]);
+
 
   const getInitials = (name = '') => name
     .split(' ')
@@ -110,90 +112,32 @@ function HomeFriendsCard({
     );
   };
 
-  const renderInviteItem = (invite) => {
-    const isSentInvite = invite.direction === 'sent';
-    const displayName = invite.direction === 'sent'
-      ? (invite.receiverName || invite.requesterName || 'Convite')
-      : (invite.requesterName || invite.receiverName || 'Convite');
-    const displayNickname = isSentInvite
-      ? (invite.receiverNickname || invite.requesterNickname || '')
-      : (invite.requesterNickname || invite.receiverNickname || '');
-    const displayAvatarUrl = invite.direction === 'sent'
-      ? (invite.receiverAvatarUrl || invite.requesterAvatarUrl || '')
-      : (invite.requesterAvatarUrl || invite.receiverAvatarUrl || '');
+  const handleSendInvite = async (user) => {
+    if (typeof onSendInvite !== 'function') {
+      return null;
+    }
 
-    return (
-      <article
-        key={invite.id}
-        className="friend-item friend-invite-item"
-        role={onOpenProfile ? 'button' : undefined}
-        tabIndex={onOpenProfile ? 0 : undefined}
-        onClick={() => openProfile({
-          id: invite.direction === 'sent'
-            ? (invite.receiverId ?? invite.id)
-            : (invite.requesterId ?? invite.id),
-          name: displayName,
-          nickname: displayNickname,
-          avatarUrl: displayAvatarUrl,
-          profilePic: isSentInvite ? (invite.receiverProfilePic || 0) : (invite.requesterProfilePic || 0),
-          status: invite.status,
-        })}
-        onKeyDown={handleInviteKeyDown(invite)}
-      >
-        <div className="friend-avatar" aria-hidden="true">
-          {displayAvatarUrl ? (
-            <img
-              src={displayAvatarUrl}
-              alt={displayName || displayNickname || 'Avatar'}
-              className="friend-avatar-image"
-            />
-          ) : (
-            getInitials(displayName)
-          )}
-        </div>
-        <div className="friend-info">
-          <div className="friend-name">{displayName}</div>
-          <div className="friend-nickname">
-            {displayNickname ? `@${displayNickname}` : (isSentInvite ? 'Convite enviado' : 'Convite recebido')}
-          </div>
-        </div>
-        {isSentInvite ? (
-          <div className="friend-status friend-status-pending">Pendente</div>
-        ) : (
-          <div className="friend-invite-actions" aria-hidden="false">
-            <button
-              type="button"
-              className="friend-action-circle friend-accept-circle"
-              onClick={(event) => {
-                event.stopPropagation();
-                if (typeof onAcceptInvite === 'function') {
-                  void onAcceptInvite(invite.id);
-                }
-              }}
-              aria-label={`Aceitar convite de ${displayName}`}
-              title="Aceitar"
-            >
-              ✓
-            </button>
-            <button
-              type="button"
-              className="friend-action-circle friend-reject-circle"
-              onClick={(event) => {
-                event.stopPropagation();
-                if (typeof onRejectInvite === 'function') {
-                  void onRejectInvite(invite.id);
-                }
-              }}
-              aria-label={`Rejeitar convite de ${displayName}`}
-              title="Rejeitar"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-      </article>
-    );
+    const response = await onSendInvite(user);
+    setSentInviteIds((previous) => (previous.includes(user.id) ? previous : [...previous, user.id]));
+    return response;
   };
+
+  const handleInviteAction = async (invite, action) => {
+    const requestId = invite.requestId || invite.id;
+    if (!requestId || typeof action !== 'function') {
+      return null;
+    }
+
+    setProcessingInviteIds((previous) => [...previous, requestId]);
+
+    try {
+      return await action(requestId);
+    } finally {
+      setProcessingInviteIds((previous) => previous.filter((item) => item !== requestId));
+    }
+  };
+
+  const isInviteProcessing = (invite) => processingInviteIds.includes(invite.requestId || invite.id);
 
   const renderPanel = () => {
     if (activeTab === 'invites') {
@@ -203,7 +147,52 @@ function HomeFriendsCard({
         </div>
       ) : (
         <div className="friends-invites-list">
-          {invites.map(renderInviteItem)}
+           {invites.map((invite) => (
+              <article
+                key={invite.requestId || invite.id}
+                className="friend-item friend-invite-item"
+                role={onOpenProfile ? 'button' : undefined}
+                tabIndex={onOpenProfile ? 0 : undefined}
+                onClick={() => onOpenProfile && onOpenProfile(invite)}
+                onKeyDown={(e) => {
+                  if (!onOpenProfile) return;
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onOpenProfile(invite);
+                  }
+                }}
+              >
+                <div className="friend-avatar" aria-hidden="true">{getInitials(invite.name || invite.requesterName)}</div>
+              <div className="friend-info">
+                <div className="friend-name">{invite.name || invite.requesterName || 'Convite pendente'}</div>
+                <div className="friend-nickname">{invite.nickname ? `@${invite.nickname}` : 'Solicitação pendente'}</div>
+              </div>
+              <div className="friend-action-group">
+                <button
+                  type="button"
+                  className="friend-action-button friend-accept-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleInviteAction(invite, onAcceptInvite);
+                  }}
+                  disabled={isInviteProcessing(invite)}
+                >
+                  Aceitar
+                </button>
+                <button
+                  type="button"
+                  className="friend-action-button friend-reject-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleInviteAction(invite, onRejectInvite);
+                  }}
+                  disabled={isInviteProcessing(invite)}
+                >
+                  Recusar
+                </button>
+              </div>
+            </article>
+          ))}
         </div>
       );
     }
@@ -211,12 +200,10 @@ function HomeFriendsCard({
     if (activeTab === 'search') {
       return (
         <FriendsSearch
-          people={people}
-          onSendInvite={onSendInvite}
-          onOpenProfile={onOpenProfile}
-          friendIds={friends.map((friend) => friend.id)}
-          currentUserId={currentUserId}
-          inviteIds={invites.flatMap((invite) => [invite.requesterId, invite.receiverId]).filter((value) => value !== null && value !== undefined)}
+          onSendInvite={handleSendInvite}
+          sentInviteIds={sentInviteIds}
+          onSearchUsers={onSearchUsers}
+          friendIds={friends.map((f) => f.id)}
         />
       );
     }
@@ -233,7 +220,7 @@ function HomeFriendsCard({
   };
 
   return (
-    <div className="card home-carousel-item-card has-footer-layout home-carousel-item-card-folder" aria-hidden="true">
+    <div className="card home-carousel-item-card has-footer-layout home-carousel-item-card-folder">
       <header className="home-card-header" aria-hidden="true">
         <img
           src={amigosTrans}
@@ -267,7 +254,7 @@ function HomeFriendsCard({
         <div className="home-card-footer-note">
           {activeTab === 'friends' && `${friends.length} amigo(s)`}
           {activeTab === 'invites' && `${invites.length} convite(s) pendente(s)`}
-          {activeTab === 'search' && `${people.length} pessoa(s) disponível(is)`}
+          {activeTab === 'search' && 'Digite um nome ou nickname para encontrar alguém'}
         </div>
       </footer>
     </div>
