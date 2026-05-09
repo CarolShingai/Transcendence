@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { sendFriendRequest as mockSendFriendRequest } from '../../services/friendsService';
 import { MOCK_SEARCH_USERS } from '../../services/friendsMockData';
 
-function FriendsSearch({ onSendInvite, onSearchUsers, sentInviteIds = [], friendIds = [], minLength = 3, debounceMs = 1000 }) {
+function FriendsSearch({ onSendInvite, onOpenProfile, onSearchUsers, sentInviteIds = [], friendIds = [], minLength = 3, debounceMs = 1000 }) {
   const [query, setQuery] = useState('');
   const friendIdSet = new Set((friendIds || []).map((id) => String(id)));
   const [localSentIds, setLocalSentIds] = useState(() => new Set((sentInviteIds || []).map((id) => String(id))));
@@ -41,6 +41,12 @@ function FriendsSearch({ onSendInvite, onSearchUsers, sentInviteIds = [], friend
     return resp;
   };
 
+  const handleOpenProfile = (user) => {
+    if (typeof onOpenProfile === 'function') {
+      onOpenProfile(user);
+    }
+  };
+
   return (
     <>
       <input
@@ -63,16 +69,26 @@ function FriendsSearch({ onSendInvite, onSearchUsers, sentInviteIds = [], friend
 
       <div className="friends-search-scroll-area">
         <div className="friends-section">
-          <div className="friends-suggestions-title">
-            {query.trim() === '' ? 'Pessoas que você pode adicionar' : 'Resultados da pesquisa'}
-          </div>
           <div className="friends-search-results">
             {visibleUsers.map((user) => {
               const userIdStr = String(user.id);
               const alreadySent = localSentIds.has(userIdStr);
 
               return (
-                <article key={user.id} className="friend-item friend-search-item">
+                <article
+                  key={user.id}
+                  className="friend-item friend-search-item"
+                  role={onOpenProfile ? 'button' : undefined}
+                  tabIndex={onOpenProfile ? 0 : undefined}
+                  onClick={() => handleOpenProfile(user)}
+                  onKeyDown={(event) => {
+                    if (!onOpenProfile) return;
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      handleOpenProfile(user);
+                    }
+                  }}
+                >
                   <div className="friend-avatar" aria-hidden="true">{(user.name || '').split(' ').map(Boolean).slice(0,2).map(t => t[0]?.toUpperCase()).join('')}</div>
                   <div className="friend-info">
                     <div className="friend-name">{user.name}</div>
@@ -81,7 +97,10 @@ function FriendsSearch({ onSendInvite, onSearchUsers, sentInviteIds = [], friend
                   <button
                     type="button"
                     className="friend-action-button friend-send-button"
-                    onClick={() => handleSendInvite(user)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleSendInvite(user);
+                    }}
                     disabled={alreadySent}
                   >
                     {alreadySent ? 'Convite enviado' : 'Enviar convite'}

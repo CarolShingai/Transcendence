@@ -219,6 +219,7 @@ function HomeFriendsCard({
       return (
         <FriendsSearch
           onSendInvite={handleSendInvite}
+          onOpenProfile={onOpenProfile}
           sentInviteIds={sentInviteIds}
           friendIds={friendsList.map((friend) => friend.id)}
           onSearchUsers={typeof onSearchUsers === 'function' ? onSearchUsers : mockSearchUsers}
