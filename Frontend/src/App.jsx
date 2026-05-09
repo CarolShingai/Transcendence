@@ -126,6 +126,8 @@ function App() {
     id: person?.id,
     name: person?.name || '',
     nickname: person?.nickname || '',
+    profilePic: Number(person?.profilePic) || 0,
+    avatarUrl: resolveAvatarFromProfilePic(person?.profilePic) || person?.avatarUrl || '',
     status: person?.status || 'online'
   });
 
@@ -701,6 +703,7 @@ function App() {
                 friends={friendsList}
                 invites={invitesList}
                 people={peopleList}
+                currentUserId={profile?.id}
                 onSendInvite={handleSendFriendRequest}
                 onAcceptInvite={handleAcceptFriendRequest}
                 onRejectInvite={handleRejectFriendRequest}

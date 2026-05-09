@@ -12,6 +12,7 @@ function HomeFriendsCard({
   friends = [],
   invites = [],
   people = [],
+  currentUserId = null,
   onOpenProfile,
   onSendInvite,
   onAcceptInvite,
@@ -178,6 +179,7 @@ function HomeFriendsCard({
           onSendInvite={onSendInvite}
           onOpenProfile={onOpenProfile}
           friendIds={friends.map((friend) => friend.id)}
+          currentUserId={currentUserId}
           inviteIds={invites.flatMap((invite) => [invite.requesterId, invite.receiverId]).filter((value) => value !== null && value !== undefined)}
         />
       );

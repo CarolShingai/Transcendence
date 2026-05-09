@@ -7,6 +7,7 @@ function FriendsSearch({
   sentInviteIds = [],
   friendIds = [],
   inviteIds = [],
+  currentUserId = null,
   minLength = 3,
 }) {
   const [query, setQuery] = useState('');
@@ -18,6 +19,7 @@ function FriendsSearch({
 
   const friendIdSet = useMemo(() => new Set((friendIds || []).map((id) => String(id))), [friendIds]);
   const inviteIdSet = useMemo(() => new Set((inviteIds || []).map((id) => String(id))), [inviteIds]);
+  const currentUserIdStr = currentUserId === null || currentUserId === undefined ? null : String(currentUserId);
 
   const visiblePeople = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -26,6 +28,7 @@ function FriendsSearch({
 
     return source.filter((person) => {
       const idStr = String(person?.id);
+      if (currentUserIdStr && idStr === currentUserIdStr) return false;
       if (friendIdSet.has(idStr)) return false;
       if (inviteIdSet.has(idStr)) return false;
       if (localSentIds.has(idStr)) return false;
@@ -98,12 +101,20 @@ function FriendsSearch({
                   }}
                 >
                   <div className="friend-avatar" aria-hidden="true">
-                    {(person.name || '')
-                      .split(' ')
-                      .filter(Boolean)
-                      .slice(0, 2)
-                      .map((token) => token[0]?.toUpperCase())
-                      .join('')}
+                    {person.avatarUrl ? (
+                      <img
+                        src={person.avatarUrl}
+                        alt={person.name || person.nickname || 'Avatar'}
+                        className="friend-avatar-image"
+                      />
+                    ) : (
+                      (person.name || '')
+                        .split(' ')
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((token) => token[0]?.toUpperCase())
+                        .join('')
+                    )}
                   </div>
                   <div className="friend-info">
                     <div className="friend-name">{person.name}</div>
