@@ -295,7 +295,7 @@ class UserService(
             .asSequence()
             .filter { it.active }
             .map { it.toUserResponseDto() }
-            .sortedWith(compareBy<String> { it.nickname.lowercase() }.thenBy { it.name.lowercase() })
+            .sortedWith(compareBy({ it.nickname.lowercase() }, { it.name.lowercase() }))
             .toList()
     }
 

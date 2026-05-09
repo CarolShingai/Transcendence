@@ -75,7 +75,7 @@ class FriendshipService(
         val user = findAuthenticatedUser(requesterEmail)
         return friendshipRepository.findFriends(user.id!!)
             .map(friendshipMapper::toFriendDTO)
-            .sortedWith(compareBy<String> { it.nickname.lowercase() }.thenBy { it.name.lowercase() })
+            .sortedWith(compareBy({ it.nickname.lowercase() }, { it.name.lowercase() }))
     }
 
     private fun findAuthenticatedUser(email: String): User {

@@ -1,4 +1,4 @@
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8082';
 const REQUEST_TIMEOUT_MS = 5000;
 
 let httpErrorHandler = null;
@@ -74,6 +74,12 @@ async function request(path, { token, method = 'GET', body, authenticated = true
     });
 
     return handleResponse(res);
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error(`Request timed out while calling ${path}`);
+    }
+
+    throw new Error(`Failed to reach backend at ${API_BASE}${path}`);
   } finally {
     clearTimeout(timeoutId);
   }
