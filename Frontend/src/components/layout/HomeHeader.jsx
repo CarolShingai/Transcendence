@@ -44,6 +44,32 @@ function HomeHeader({ initials, profileImage, onGoToProfile, onLogout }) {
       <div className="home-header-actions" aria-label="Acoes da home">
         <button
           type="button"
+          className="header-icon-button header-icon-button-view"
+          onClick={onGoToProfile}
+          aria-label="Ver perfil público"
+          title="Ver perfil público"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className="header-view-icon">
+            <path
+              d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <circle
+              cx="12"
+              cy="12"
+              r="2.75"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+            />
+          </svg>
+        </button>
+        <button
+          type="button"
           className="header-icon-button header-icon-button-edit"
           onClick={onGoToProfile}
           aria-label="Editar perfil"

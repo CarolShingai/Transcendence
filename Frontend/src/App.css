@@ -219,6 +219,141 @@
   padding-right: 2.5%;
 }
 
+.App-header-profile {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(0.75rem, 1.8vw, 1.1rem);
+  border-bottom: 1px solid rgba(227, 255, 220, 0.35);
+  padding-left: 2.5%;
+  padding-right: 2.5%;
+  position: relative;
+  overflow: hidden;
+}
+
+.public-profile-avatar-slot {
+  justify-self: start;
+}
+
+.public-profile-summary {
+  min-width: 0;
+  text-align: center;
+  color: #efffe8;
+}
+
+.public-profile-name {
+  margin: 0;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.2rem, 2.6vw, 2.1rem);
+  letter-spacing: 0.03em;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.public-profile-nickname {
+  margin: 0.2rem 0 0;
+  font-size: clamp(0.88rem, 1.8vw, 1.08rem);
+  color: rgba(239, 255, 232, 0.86);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.public-profile-close-button {
+  justify-self: end;
+  min-height: clamp(39px, 5.4vh, 56px);
+  padding: 0 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(8, 38, 25, 0.35);
+  color: #ffffff;
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(0.88rem, 1.8vw, 1rem);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(3, 20, 12, 0.2);
+  transition: transform 0.2s ease, background-color 0.2s ease, filter 0.2s ease;
+}
+
+.public-profile-close-button:hover {
+  transform: translateY(-1px);
+  background: rgba(8, 38, 25, 0.5);
+  filter: brightness(1.05);
+}
+
+.public-profile-page {
+  width: min(100%, 1100px);
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.public-profile-stats-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1rem, 2vw, 1.4rem);
+}
+
+.public-profile-stat-card {
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 22px;
+  background: var(--card);
+  border: 1px solid #d6efca;
+  box-shadow: 0 22px 46px rgba(11, 46, 29, 0.25);
+  display: grid;
+  grid-template-rows: minmax(42%, 1fr) auto;
+}
+
+.public-profile-stat-header {
+  display: grid;
+  place-items: center;
+  padding: clamp(0.75rem, 1.6vw, 1.1rem);
+  background: rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(11, 46, 29, 0.08);
+}
+
+.public-profile-stat-image {
+  width: min(78%, 290px);
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.public-profile-stat-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 1rem 1rem 1.2rem;
+  text-align: center;
+}
+
+.public-profile-stat-label {
+  color: var(--muted);
+  font-size: clamp(1rem, 2vw, 1.35rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.public-profile-stat-value {
+  color: var(--accent-dark);
+  font-family: 'Courier New', 'Courier', monospace;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
 .App-header-home .header-user-slot {
   margin-left: 2.5%;
   justify-self: start;
@@ -327,11 +462,18 @@
   filter: brightness(1.05);
 }
 
-.header-icon-button-edit {
+.header-icon-button-edit,
+.header-icon-button-view {
   color: var(--accent);
   border: 1px solid #c3ddb7;
   background: var(--card);
   box-shadow: 0 4px 10px rgba(11, 46, 29, 0.18);
+}
+
+.header-view-icon {
+  width: 58%;
+  height: 58%;
+  display: block;
 }
 
 .header-icon-button-exit {
@@ -450,6 +592,11 @@
   flex-direction: column;
   align-items: stretch; /* allow children to fill full height */
   justify-content: center;
+}
+
+.App-main-profile {
+  padding: 1rem 1.25rem 1.25rem;
+  align-items: center;
 }
 
 .home-empty {
@@ -1470,6 +1617,10 @@
     justify-self: start;
   }
 
+  .App-header-profile {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
   .home-header-actions {
     justify-self: end;
   }
@@ -1537,6 +1688,15 @@
 
   .profile-content-grid {
     grid-template-columns: 1fr;
+  }
+
+  .public-profile-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .public-profile-stat-card {
+    aspect-ratio: auto;
+    min-height: 320px;
   }
 
   .home-carousel {

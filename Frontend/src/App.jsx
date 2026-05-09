@@ -2,16 +2,16 @@ import React, { useMemo, useState, useEffect } from 'react';
 import './App.css';
 import LoginHeader from './components/layout/LoginHeader';
 import HomeHeader from './components/layout/HomeHeader';
-import EditHeader from './components/layout/EditHeader';
 import RegisterHeader from './components/layout/RegisterHeader';
 import AppFooter from './components/layout/AppFooter';
+import PublicProfileHeader from './components/layout/PublicProfileHeader';
 import Error4xx from './components/layout/Error4xx';
 import Error5xx from './components/layout/Error5xx';
 import StatusBanner from './components/elements/StatusBanner';
 import LoadingOverlay from './components/elements/LoadingOverlay';
 import LoginCard from './components/auth/LoginCard';
 import RegisterCard from './components/auth/RegisterCard';
-import ProfileCard from './components/profile/ProfileCard';
+import PublicProfileCard from './components/profile/PublicProfileCard';
 import HomeCard from './components/home/HomeCard';
 import GameCard from './components/game/GameCard';
 import api from './services/api';
@@ -87,6 +87,18 @@ function App() {
       '',
     profilePic: Number(user?.profilePic) || fallbackProfile?.profilePic || 0
   });
+
+  const resolvePublicRecordValue = (source, fallback = 0) => {
+    if (source === null || source === undefined || source === '') {
+      return fallback;
+    }
+
+    if (typeof source === 'number' && Number.isFinite(source)) {
+      return source;
+    }
+
+    return source;
+  };
 
   const [view, setView] = useState('login');
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
@@ -403,7 +415,8 @@ function App() {
 
   const goToProfile = () => {
     if (!isAuthenticated) return;
-    syncProfileFromToken('profile');
+    setError('');
+    setView('profile');
   };
 
   const goToHome = () => {
@@ -421,12 +434,20 @@ function App() {
   const isRegisterView = !isAuthenticated && view === 'register';
   const isHomeView = isAuthenticated && view === 'home';
   const isGameView = isAuthenticated && view === 'game';
+  const isProfileView = isAuthenticated && view === 'profile';
   const isError4xxView = view === 'error4xx';
   const isError5xxView = view === 'error5xx';
   const isErrorView = isError4xxView || isError5xxView;
-  const isProfileView = isAuthenticated && !isHomeView && !isGameView && !isErrorView;
   const bannerMessage = isLoginView || isRegisterView || isProfileView ? '' : error;
   const gameEndpoint = process.env.REACT_APP_GAME_ENDPOINT || '/game';
+  const publicSingleRecord = resolvePublicRecordValue(
+    profile?.records?.single ?? profile?.singleRecord ?? profile?.singleScore ?? profile?.singleWins ?? 0,
+    0
+  );
+  const publicRankedRecord = resolvePublicRecordValue(
+    profile?.records?.ranked ?? profile?.rankedRecord ?? profile?.rankedScore ?? profile?.rankedWins ?? 0,
+    0
+  );
 
   return (
     <div className="App">
@@ -446,11 +467,17 @@ function App() {
               onGoToProfile={goToProfile}
               onLogout={handleLogout}
             />
-          ) : isGameView || isErrorView ? null : (
-            <EditHeader onGoToHome={goToHome} onLogout={handleLogout} />
-          )}
+          ) : isProfileView ? (
+            <PublicProfileHeader
+              initials={initials}
+              profileImage={profile?.avatarUrl}
+              name={profile?.name}
+              nickname={profile?.nickname}
+              onClose={goToHome}
+            />
+          ) : null}
 
-          <main className={`App-main ${isGameView ? 'App-main-game' : ''}`}>
+          <main className={`App-main ${isGameView ? 'App-main-game' : ''} ${isProfileView ? 'App-main-profile' : ''}`}>
             {isLoginView ? (
               <LoginCard
                 loginForm={loginForm}
@@ -479,19 +506,12 @@ function App() {
               <Error4xx code={404} />
             ) : isError5xxView ? (
               <Error5xx code={500} />
-            ) : (
-              <ProfileCard
-                  initials={initials}
-                  profileForm={profileForm}
-                  error={error}
-                  onProfileChange={handleProfileChange}
-                  onProfileSave={handleProfileSave}
-                  onProfileAvatarSelect={handleProfileAvatarSelect}
-                />
-            )}
+            ) : isProfileView ? (
+              <PublicProfileCard singleRecord={publicSingleRecord} rankedRecord={publicRankedRecord} />
+            ) : null}
           </main>
 
-          {!isGameView && !isErrorView && <AppFooter />}
+          {!isGameView && !isErrorView && !isProfileView && <AppFooter />}
         </section>
       </div>
     </div>
