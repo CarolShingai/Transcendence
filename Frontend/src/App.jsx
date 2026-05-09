@@ -122,6 +122,7 @@ function App() {
     avatarUrl: ''
   };
   const [profile, setProfile] = useState(null);
+  const [viewedProfile, setViewedProfile] = useState(null);
 
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
 
@@ -419,6 +420,12 @@ function App() {
     setView('profile');
   };
 
+  const openPublicProfile = (publicProfile) => {
+    setViewedProfile(publicProfile || null);
+    setError('');
+    setView('profile');
+  };
+
   const goToHome = () => {
     if (!isAuthenticated) return;
     setView('home');
@@ -460,7 +467,7 @@ function App() {
           ) : isRegisterView ? (
             <RegisterHeader onGoToLogin={handleRegisterExit} />
           ) : isHomeView ? (
-            <HomeHeader
+              <HomeHeader
               initials={initials}
               profileImage={profile?.avatarUrl}
               welcomeName={profile?.nickname || profile?.name || 'Viajante'}
@@ -470,10 +477,13 @@ function App() {
           ) : isProfileView ? (
             <PublicProfileHeader
               initials={initials}
-              profileImage={profile?.avatarUrl}
-              name={profile?.name}
-              nickname={profile?.nickname}
-              onClose={goToHome}
+              profileImage={(viewedProfile || profile)?.avatarUrl}
+              name={(viewedProfile || profile)?.name}
+              nickname={(viewedProfile || profile)?.nickname}
+              onClose={() => {
+                setViewedProfile(null);
+                goToHome();
+              }}
             />
           ) : null}
 
@@ -499,7 +509,7 @@ function App() {
                 loading={loading}
               />
             ) : isHomeView ? (
-              <HomeCard onPlayGame={handleGoToGameWithOrigin} />
+              <HomeCard onPlayGame={handleGoToGameWithOrigin} onOpenProfile={openPublicProfile} />
             ) : isGameView ? (
               <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
             ) : isError4xxView ? (
@@ -507,7 +517,7 @@ function App() {
             ) : isError5xxView ? (
               <Error5xx code={500} />
             ) : isProfileView ? (
-              <PublicProfileCard profile={profile} />
+              <PublicProfileCard profile={viewedProfile || profile} />
             ) : null}
           </main>
 
