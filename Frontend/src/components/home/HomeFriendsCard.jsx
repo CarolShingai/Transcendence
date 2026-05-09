@@ -54,8 +54,16 @@ function HomeFriendsCard({
     .map((token) => token[0].toUpperCase())
     .join('');
 
+  const normalizeStatus = (raw) => {
+    const s = (raw || '').toString().trim().toLowerCase();
+    if (!s) return 'Offline';
+    if (s === 'offline' || s === 'desconectado' || s === 'desconectada') return 'Offline';
+    // map any other value (including 'jogando', 'playing', 'online') to Online
+    return 'Online';
+  };
+
   const renderFriendItem = (friend) => {
-    const friendStatus = (friend.status || 'offline').toLowerCase();
+    const friendStatus = normalizeStatus(friend.status).toLowerCase();
 
     const handleKeyDown = (e) => {
       if (!onOpenProfile) return;
@@ -80,7 +88,7 @@ function HomeFriendsCard({
           <div className="friend-nickname">@{friend.nickname}</div>
         </div>
         <div className={`friend-status friend-status-${friendStatus}`}>
-          {friend.status || 'Offline'}
+          {normalizeStatus(friend.status)}
         </div>
       </article>
     );

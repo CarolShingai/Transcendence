@@ -1,55 +1,44 @@
-import React, { useEffect, useState } from 'react';
-import { searchUsers as mockSearchUsers, sendFriendRequest as mockSendFriendRequest } from '../../services/friendsService';
+import React, { useEffect, useMemo, useState } from 'react';
+import { sendFriendRequest as mockSendFriendRequest } from '../../services/friendsService';
+import { MOCK_SEARCH_USERS } from '../../services/friendsMockData';
 
 function FriendsSearch({ onSendInvite, onSearchUsers, sentInviteIds = [], friendIds = [], minLength = 3, debounceMs = 1000 }) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [showNoResults, setShowNoResults] = useState(false);
   const friendIdSet = new Set((friendIds || []).map((id) => String(id)));
+  const [localSentIds, setLocalSentIds] = useState(() => new Set((sentInviteIds || []).map((id) => String(id))));
 
   useEffect(() => {
-    const trimmed = query.trim();
+    setLocalSentIds(new Set((sentInviteIds || []).map((id) => String(id))));
+  }, [sentInviteIds]);
+  const visibleUsers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const master = Array.isArray(MOCK_SEARCH_USERS) ? MOCK_SEARCH_USERS : [];
 
-    if (trimmed.length < minLength) {
-      setResults([]);
-      setShowNoResults(false);
-      setLoading(false);
-      return undefined;
-    }
+    return master.filter((user) => {
+      const idStr = String(user.id);
+      if (friendIdSet.has(idStr)) return false;
+      if (localSentIds.has(idStr)) return false;
 
-    setLoading(true);
-    setShowNoResults(false);
+      if (!q) return true;
 
-    const t = setTimeout(() => {
-      const executeSearch = async () => {
-        const searchFn = typeof onSearchUsers === 'function' ? onSearchUsers : mockSearchUsers;
+      const haystack = [user.name, user.nickname, user.email]
+        .map((v) => String(v || '').toLowerCase())
+        .join(' ');
 
-        try {
-          const data = await searchFn(trimmed);
-          const list = Array.isArray(data) ? data : [];
-          setResults(list);
-          setShowNoResults(list.length === 0);
-        } catch {
-          setResults([]);
-          setShowNoResults(true);
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      void executeSearch();
-    }, debounceMs);
-
-    return () => clearTimeout(t);
-  }, [query, minLength, debounceMs, onSearchUsers]);
+      return haystack.includes(q);
+    });
+  }, [query, friendIdSet, localSentIds]);
 
   const handleSendInvite = async (user) => {
     if (typeof onSendInvite === 'function') {
-      return onSendInvite(user);
+      const resp = await onSendInvite(user);
+      setLocalSentIds((prev) => new Set([...Array.from(prev), String(user.id)]));
+      return resp;
     }
 
-    return mockSendFriendRequest(user);
+    const resp = await mockSendFriendRequest(user);
+    setLocalSentIds((prev) => new Set([...Array.from(prev), String(user.id)]));
+    return resp;
   };
 
   return (
@@ -63,7 +52,7 @@ function FriendsSearch({ onSendInvite, onSearchUsers, sentInviteIds = [], friend
         aria-label="Pesquisar amigos"
       />
 
-      {query.trim() !== '' && showNoResults && (
+      {query.trim() !== '' && visibleUsers.length === 0 && (
         <div
           className="friends-search-no-results"
           style={{ color: '#d9534f', fontSize: '0.85rem', marginTop: '8px' }}
@@ -72,32 +61,36 @@ function FriendsSearch({ onSendInvite, onSearchUsers, sentInviteIds = [], friend
         </div>
       )}
 
-      <div className="friends-search-results">
-        {loading && <div className="friends-search-loading">Carregando...</div>}
+      <div className="friends-search-scroll-area">
+        <div className="friends-section">
+          <div className="friends-suggestions-title">
+            {query.trim() === '' ? 'Pessoas que você pode adicionar' : 'Resultados da pesquisa'}
+          </div>
+          <div className="friends-search-results">
+            {visibleUsers.map((user) => {
+              const userIdStr = String(user.id);
+              const alreadySent = localSentIds.has(userIdStr);
 
-        {!loading && results.length > 0 && results.map((user) => {
-          const userIdStr = String(user.id);
-          const alreadySent = sentInviteIds.includes(user.id) || sentInviteIds.includes(userIdStr);
-          const isFriend = friendIdSet.has(userIdStr);
-
-          return (
-            <article key={user.id} className="friend-item friend-search-item">
-              <div className="friend-avatar" aria-hidden="true">{(user.name || '').split(' ').map(Boolean).slice(0,2).map(t => t[0]?.toUpperCase()).join('')}</div>
-              <div className="friend-info">
-                <div className="friend-name">{user.name}</div>
-                <div className="friend-nickname">@{user.nickname || user.email}</div>
-              </div>
-              <button
-                type="button"
-                className="friend-action-button friend-send-button"
-                onClick={() => handleSendInvite(user)}
-                disabled={alreadySent || isFriend}
-              >
-                {isFriend ? 'Amigo' : alreadySent ? 'Convite enviado' : 'Enviar convite'}
-              </button>
-            </article>
-          );
-        })}
+              return (
+                <article key={user.id} className="friend-item friend-search-item">
+                  <div className="friend-avatar" aria-hidden="true">{(user.name || '').split(' ').map(Boolean).slice(0,2).map(t => t[0]?.toUpperCase()).join('')}</div>
+                  <div className="friend-info">
+                    <div className="friend-name">{user.name}</div>
+                    <div className="friend-nickname">@{user.nickname || user.email}</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="friend-action-button friend-send-button"
+                    onClick={() => handleSendInvite(user)}
+                    disabled={alreadySent}
+                  >
+                    {alreadySent ? 'Convite enviado' : 'Enviar convite'}
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </>
   );
