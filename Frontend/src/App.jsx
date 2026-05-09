@@ -507,7 +507,7 @@ function App() {
             ) : isError5xxView ? (
               <Error5xx code={500} />
             ) : isProfileView ? (
-              <PublicProfileCard singleRecord={publicSingleRecord} rankedRecord={publicRankedRecord} />
+              <PublicProfileCard profile={profile} />
             ) : null}
           </main>
 

@@ -67,20 +67,35 @@ function PublicProfileStatCard({ image, alt, value }) {
   );
 }
 
-function PublicProfileCard({ singleRecord, rankedRecord }) {
+function PublicProfileCard({ profile, singleRecord, rankedRecord }) {
+  const resolveRecord = (p, type, fallback = 0) => {
+    if (!p) return fallback;
+    if (type === 'single') {
+      return (
+        p?.records?.single ?? p?.singleRecord ?? p?.singleScore ?? p?.singleWins ?? fallback
+      );
+    }
+    return (
+      p?.records?.ranked ?? p?.rankedRecord ?? p?.rankedScore ?? p?.rankedWins ?? fallback
+    );
+  };
+
+  const singleValue = profile ? resolveRecord(profile, 'single', 0) : resolveRecordValue(singleRecord);
+  const rankedValue = profile ? resolveRecord(profile, 'ranked', 0) : resolveRecordValue(rankedRecord);
+
   return (
     <section className="public-profile-page" aria-label="Dados públicos do perfil">
       <div className="public-profile-stats-grid">
         <PublicProfileStatCard
           image={singleTrans}
           alt="Single Trans"
-          value={singleRecord}
+          value={singleValue}
         />
 
         <PublicProfileStatCard
           image={rankedTrans}
           alt="Ranked Trans"
-          value={rankedRecord}
+          value={rankedValue}
         />
       </div>
     </section>
