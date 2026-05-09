@@ -1,13 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import amigosTrans from '../../assets/logo/trans_amigos1.png';
 import FriendsSearch from '../elements/FriendsSearch';
-import {
-  acceptFriendRequest as mockAcceptFriendRequest,
-  rejectFriendRequest as mockRejectFriendRequest,
-  searchUsers as mockSearchUsers,
-  sendFriendRequest as mockSendFriendRequest
-} from '../../services/friendsService';
-import { MOCK_FRIENDS, MOCK_PENDING_INVITES } from '../../services/friendsMockData';
 
 const FRIENDS_TABS = [
   { id: 'friends', label: 'Amigos' },
@@ -16,36 +9,15 @@ const FRIENDS_TABS = [
 ];
 
 function HomeFriendsCard({
-  friends,
-  invites,
+  friends = [],
+  invites = [],
+  people = [],
   onOpenProfile,
   onSendInvite,
   onAcceptInvite,
   onRejectInvite,
-  onSearchUsers
 }) {
   const [activeTab, setActiveTab] = useState('friends');
-  const [friendsList, setFriendsList] = useState(() => (Array.isArray(friends) ? friends : MOCK_FRIENDS));
-  const [inviteList, setInviteList] = useState(() => (Array.isArray(invites) ? invites : MOCK_PENDING_INVITES));
-  const [sentInviteIds, setSentInviteIds] = useState(() => (
-    Array.isArray(invites)
-      ? invites.map((invite) => invite.receiverId ?? invite.id)
-      : MOCK_PENDING_INVITES.map((invite) => invite.receiverId ?? invite.id)
-  ));
-
-  useEffect(() => {
-    if (Array.isArray(friends)) {
-      setFriendsList(friends);
-    }
-  }, [friends]);
-
-  useEffect(() => {
-    if (Array.isArray(invites)) {
-      setInviteList(invites);
-      setSentInviteIds(invites.map((invite) => invite.receiverId ?? invite.id));
-    }
-  }, [invites]);
-
 
   const getInitials = (name = '') => name
     .split(' ')
@@ -58,20 +30,42 @@ function HomeFriendsCard({
     const s = (raw || '').toString().trim().toLowerCase();
     if (!s) return 'Offline';
     if (s === 'offline' || s === 'desconectado' || s === 'desconectada') return 'Offline';
-    // map any other value (including 'jogando', 'playing', 'online') to Online
     return 'Online';
+  };
+
+  const openProfile = (profile) => {
+    if (typeof onOpenProfile === 'function') {
+      onOpenProfile(profile);
+    }
+  };
+
+  const handleFriendKeyDown = (friend) => (event) => {
+    if (!onOpenProfile) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openProfile(friend);
+    }
+  };
+
+  const handleInviteKeyDown = (invite) => (event) => {
+    if (!onOpenProfile) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openProfile({
+        id: invite.direction === 'sent'
+          ? (invite.receiverId ?? invite.id)
+          : (invite.requesterId ?? invite.id),
+        name: invite.direction === 'sent'
+          ? (invite.receiverName || invite.requesterName || 'Convite')
+          : (invite.requesterName || invite.receiverName || 'Convite'),
+        nickname: invite.requesterNickname || invite.receiverNickname || '',
+        status: invite.status,
+      });
+    }
   };
 
   const renderFriendItem = (friend) => {
     const friendStatus = normalizeStatus(friend.status).toLowerCase();
-
-    const handleKeyDown = (e) => {
-      if (!onOpenProfile) return;
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onOpenProfile(friend);
-      }
-    };
 
     return (
       <article
@@ -79,8 +73,8 @@ function HomeFriendsCard({
         className="friend-item"
         role={onOpenProfile ? 'button' : undefined}
         tabIndex={onOpenProfile ? 0 : undefined}
-        onClick={() => onOpenProfile && onOpenProfile(friend)}
-        onKeyDown={handleKeyDown}
+        onClick={() => openProfile(friend)}
+        onKeyDown={handleFriendKeyDown(friend)}
       >
         <div className="friend-avatar" aria-hidden="true">{getInitials(friend.name)}</div>
         <div className="friend-info">
@@ -94,123 +88,77 @@ function HomeFriendsCard({
     );
   };
 
-  const filteredFriends = useMemo(() => {
-    return friendsList;
-  }, [friendsList]);
+  const renderInviteItem = (invite) => {
+    const displayName = invite.direction === 'sent'
+      ? (invite.receiverName || invite.requesterName || 'Convite')
+      : (invite.requesterName || invite.receiverName || 'Convite');
 
-  const removeSentInvite = (invite) => {
-    const pendingId = invite.receiverId ?? invite.id;
-    setSentInviteIds((previous) => previous.filter((item) => item !== pendingId && String(item) !== String(pendingId)));
-  };
-
-  const handleAcceptInvite = async (invite) => {
-    if (typeof onAcceptInvite === 'function') {
-      return onAcceptInvite(invite.requestId ?? invite.id);
-    }
-
-    const requestId = invite.requestId ?? invite.id;
-    const acceptedFriend = await mockAcceptFriendRequest(requestId);
-
-    setInviteList((previous) => previous.filter((item) => (item.requestId ?? item.id) !== requestId));
-    removeSentInvite(invite);
-    setFriendsList((previous) => ([
-      ...previous,
-      acceptedFriend,
-    ]));
-
-    return acceptedFriend;
-  };
-
-  const handleRejectInvite = async (invite) => {
-    if (typeof onRejectInvite === 'function') {
-      return onRejectInvite(invite.requestId ?? invite.id);
-    }
-
-    const requestId = invite.requestId ?? invite.id;
-    const rejectedInvite = await mockRejectFriendRequest(requestId);
-
-    setInviteList((previous) => previous.filter((item) => (item.requestId ?? item.id) !== requestId));
-    removeSentInvite(rejectedInvite);
-    return rejectedInvite;
-  };
-
-  const handleSendInvite = async (user) => {
-    if (typeof onSendInvite === 'function') {
-      return onSendInvite(user);
-    }
-
-    const pendingInvite = await mockSendFriendRequest(user);
-
-    setSentInviteIds((previous) => (previous.includes(user.id) ? previous : [...previous, user.id]));
-    setInviteList((previous) => {
-      const requestId = pendingInvite?.requestId ?? Date.now();
-      const normalizedInvite = {
-        id: requestId,
-        requestId,
-        receiverId: Number(user.id),
-        name: user.name,
-        nickname: user.nickname || user.email,
-        status: 'Pendente'
-      };
-
-      return previous.some((item) => (item.requestId ?? item.id) === requestId)
-        ? previous
-        : [...previous, normalizedInvite];
-    });
-
-    return pendingInvite;
+    return (
+      <article
+        key={invite.id}
+        className="friend-item friend-invite-item"
+        role={onOpenProfile ? 'button' : undefined}
+        tabIndex={onOpenProfile ? 0 : undefined}
+        onClick={() => openProfile({
+          id: invite.direction === 'sent'
+            ? (invite.receiverId ?? invite.id)
+            : (invite.requesterId ?? invite.id),
+          name: displayName,
+          nickname: invite.requesterNickname || invite.receiverNickname || '',
+          status: invite.status,
+        })}
+        onKeyDown={handleInviteKeyDown(invite)}
+      >
+        <div className="friend-avatar" aria-hidden="true">{getInitials(displayName)}</div>
+        <div className="friend-info">
+          <div className="friend-name">{displayName}</div>
+          <div className="friend-nickname">
+            {invite.status || 'PENDING'}
+          </div>
+        </div>
+        <div className="friend-invite-actions" aria-hidden="false">
+          <button
+            type="button"
+            className="friend-action-circle friend-accept-circle"
+            onClick={(event) => {
+              event.stopPropagation();
+              if (typeof onAcceptInvite === 'function') {
+                void onAcceptInvite(invite.id);
+              }
+            }}
+            aria-label={`Aceitar convite de ${displayName}`}
+            title="Aceitar"
+          >
+            ✓
+          </button>
+          <button
+            type="button"
+            className="friend-action-circle friend-reject-circle"
+            onClick={(event) => {
+              event.stopPropagation();
+              if (typeof onRejectInvite === 'function') {
+                void onRejectInvite(invite.id);
+              }
+            }}
+            aria-label={`Rejeitar convite de ${displayName}`}
+            title="Rejeitar"
+          >
+            ✕
+          </button>
+        </div>
+      </article>
+    );
   };
 
   const renderPanel = () => {
     if (activeTab === 'invites') {
-      return inviteList.length === 0 ? (
+      return invites.length === 0 ? (
         <div className="friends-empty-state">
           <p>Nenhum convite pendente!</p>
         </div>
       ) : (
         <div className="friends-invites-list">
-          {inviteList.map((invite) => (
-            <article
-              key={invite.requestId ?? invite.id}
-              className="friend-item friend-invite-item"
-              role={onOpenProfile ? 'button' : undefined}
-              tabIndex={onOpenProfile ? 0 : undefined}
-              onClick={() => onOpenProfile && onOpenProfile(invite)}
-              onKeyDown={(e) => {
-                if (!onOpenProfile) return;
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onOpenProfile(invite);
-                }
-              }}
-            >
-              <div className="friend-avatar" aria-hidden="true">{getInitials(invite.name)}</div>
-              <div className="friend-info">
-                <div className="friend-name">{invite.name}</div>
-                <div className="friend-nickname">@{invite.nickname}</div>
-              </div>
-              <div className="friend-invite-actions" aria-hidden="false">
-                <button
-                  type="button"
-                  className="friend-action-circle friend-accept-circle"
-                  onClick={(e) => { e.stopPropagation(); handleAcceptInvite(invite); }}
-                  aria-label={`Aceitar convite de ${invite.name}`}
-                  title="Aceitar"
-                >
-                  ✓
-                </button>
-                <button
-                  type="button"
-                  className="friend-action-circle friend-reject-circle"
-                  onClick={(e) => { e.stopPropagation(); handleRejectInvite(invite); }}
-                  aria-label={`Rejeitar convite de ${invite.name}`}
-                  title="Rejeitar"
-                >
-                  ✕
-                </button>
-              </div>
-            </article>
-          ))}
+          {invites.map(renderInviteItem)}
         </div>
       );
     }
@@ -218,22 +166,22 @@ function HomeFriendsCard({
     if (activeTab === 'search') {
       return (
         <FriendsSearch
-          onSendInvite={handleSendInvite}
+          people={people}
+          onSendInvite={onSendInvite}
           onOpenProfile={onOpenProfile}
-          sentInviteIds={sentInviteIds}
-          friendIds={friendsList.map((friend) => friend.id)}
-          onSearchUsers={typeof onSearchUsers === 'function' ? onSearchUsers : mockSearchUsers}
+          friendIds={friends.map((friend) => friend.id)}
+          inviteIds={invites.flatMap((invite) => [invite.requesterId, invite.receiverId]).filter((value) => value !== null && value !== undefined)}
         />
       );
     }
 
-    return filteredFriends.length === 0 ? (
+    return friends.length === 0 ? (
       <div className="friends-empty-state">
         <p>Nenhum amigo registrado!</p>
       </div>
     ) : (
       <div className="friends-list">
-        {filteredFriends.map(renderFriendItem)}
+        {friends.map(renderFriendItem)}
       </div>
     );
   };
@@ -271,9 +219,9 @@ function HomeFriendsCard({
 
       <footer className="home-card-footer" aria-hidden="true">
         <div className="home-card-footer-note">
-          {activeTab === 'friends' && `${friendsList.length} amigo(s)`}
-          {activeTab === 'invites' && `${inviteList.length} convite(s) pendente(s)`}
-          {activeTab === 'search' && 'Digite um nome ou nickname para encontrar alguém'}
+          {activeTab === 'friends' && `${friends.length} amigo(s)`}
+          {activeTab === 'invites' && `${invites.length} convite(s) pendente(s)`}
+          {activeTab === 'search' && `${people.length} pessoa(s) disponível(is)`}
         </div>
       </footer>
     </div>

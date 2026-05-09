@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import './App.css';
 import LoginHeader from './components/layout/LoginHeader';
 import HomeHeader from './components/layout/HomeHeader';
@@ -100,6 +100,46 @@ function App() {
     return source;
   };
 
+  const normalizeFriend = (friend) => ({
+    id: friend?.id,
+    name: friend?.name || '',
+    nickname: friend?.nickname || '',
+    status: friend?.status || 'Offline'
+  });
+
+  const normalizeInvite = (invite) => ({
+    id: invite?.id,
+    requesterId: invite?.requesterId ?? invite?.requester?.id ?? invite?.senderId ?? invite?.sender?.id ?? null,
+    requesterName: invite?.requesterName ?? invite?.requester?.name ?? invite?.senderName ?? invite?.sender?.name ?? '',
+    receiverId: invite?.receiverId ?? invite?.receiver?.id ?? null,
+    receiverName: invite?.receiverName ?? invite?.receiver?.name ?? '',
+    status: invite?.status || 'PENDING',
+    createdAt: invite?.createdAt || null
+  });
+
+  const normalizePerson = (person) => ({
+    id: person?.id,
+    name: person?.name || '',
+    nickname: person?.nickname || '',
+    status: person?.status || 'online'
+  });
+
+  const extractParticipantIds = (invite) => {
+    const ids = [invite?.requesterId, invite?.receiverId]
+      .filter((value) => value !== null && value !== undefined)
+      .map((value) => String(value));
+    return ids;
+  };
+
+  const filterAvailablePeople = (peopleList, friendsList, invitesList) => {
+    const blockedIds = new Set([
+      ...(friendsList || []).map((friend) => String(friend?.id)),
+      ...(invitesList || []).flatMap((invite) => extractParticipantIds(invite))
+    ]);
+
+    return (peopleList || []).filter((person) => !blockedIds.has(String(person?.id)));
+  };
+
   const [view, setView] = useState('login');
   const [homeCarouselIndex, setHomeCarouselIndex] = useState(0);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
@@ -124,6 +164,10 @@ function App() {
   };
   const [profile, setProfile] = useState(null);
   const [viewedProfile, setViewedProfile] = useState(null);
+  const [friendsList, setFriendsList] = useState([]);
+  const [invitesList, setInvitesList] = useState([]);
+  const [peopleList, setPeopleList] = useState([]);
+  const [optimisticInvites, setOptimisticInvites] = useState([]);
 
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
 
@@ -148,11 +192,64 @@ function App() {
     setLoginForm((previous) => ({ ...previous, [name]: value }));
   };
 
+  const refreshFriendshipData = useCallback(async (
+    token = localStorage.getItem('transcendence_token'),
+    optimisticInviteSnapshot = optimisticInvites,
+  ) => {
+    if (!token) {
+      setFriendsList([]);
+      setInvitesList([]);
+      setPeopleList([]);
+      setOptimisticInvites([]);
+      return null;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const friendsResponse = await api.getFriends(token);
+      const normalizedFriends = Array.isArray(friendsResponse) ? friendsResponse.map(normalizeFriend) : [];
+      setFriendsList(normalizedFriends);
+
+      const invitesResponse = await api.getInvites(token);
+      const normalizedInvites = Array.isArray(invitesResponse) ? invitesResponse.map(normalizeInvite) : [];
+      const combinedInvites = [
+        ...normalizedInvites,
+        ...optimisticInviteSnapshot.filter((optimisticInvite) => !normalizedInvites.some((invite) => String(invite.id) === String(optimisticInvite.id)))
+      ];
+      setInvitesList(combinedInvites);
+
+      const peopleResponse = await api.getPeople(token);
+      const normalizedPeople = Array.isArray(peopleResponse) ? peopleResponse.map(normalizePerson) : [];
+      setPeopleList(filterAvailablePeople(normalizedPeople, normalizedFriends, combinedInvites));
+
+      return {
+        friends: normalizedFriends,
+        invites: combinedInvites,
+        people: filterAvailablePeople(normalizedPeople, normalizedFriends, combinedInvites)
+      };
+    } catch (err) {
+      setError(err?.message || 'Failed to load friends data');
+      setFriendsList([]);
+      setInvitesList([]);
+      setPeopleList([]);
+      setOptimisticInvites([]);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [optimisticInvites]);
+
   const syncProfileFromToken = async (targetView = 'home') => {
     const token = localStorage.getItem('transcendence_token');
     if (!token) {
       setProfile(null);
       setProfileForm(emptyProfileForm);
+      setFriendsList([]);
+      setInvitesList([]);
+      setPeopleList([]);
+      setOptimisticInvites([]);
       setView('login');
       return null;
     }
@@ -185,6 +282,10 @@ function App() {
       } catch {}
       setProfile(null);
       setProfileForm(emptyProfileForm);
+      setFriendsList([]);
+      setInvitesList([]);
+      setPeopleList([]);
+      setOptimisticInvites([]);
       setView('login');
       return null;
     } finally {
@@ -201,6 +302,15 @@ function App() {
 
     syncProfileFromToken('home');
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || view !== 'home') {
+      return undefined;
+    }
+
+    void refreshFriendshipData();
+    return undefined;
+  }, [isAuthenticated, view, refreshFriendshipData]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -369,6 +479,59 @@ function App() {
       .finally(() => setLoading(false));
   };
 
+  const handleSendFriendRequest = async (user) => {
+    const token = localStorage.getItem('transcendence_token');
+    const receiverId = Number(user?.id);
+
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    if (!Number.isFinite(receiverId)) {
+      throw new Error('Invalid friend selection');
+    }
+
+    const response = await api.sendFriendRequest(token, receiverId);
+    const optimisticInvite = normalizeInvite({
+      ...response,
+      id: response?.id ?? Date.now(),
+      receiverId,
+      receiverName: user?.name || response?.receiverName || '',
+      status: response?.status || 'PENDING',
+      direction: 'sent'
+    });
+    const nextOptimisticInvites = [
+      ...optimisticInvites.filter((item) => String(item.id) !== String(optimisticInvite.id)),
+      optimisticInvite,
+    ];
+    setOptimisticInvites(nextOptimisticInvites);
+    return response;
+  };
+
+  const handleAcceptFriendRequest = async (requestId) => {
+    const token = localStorage.getItem('transcendence_token');
+
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    const response = await api.acceptFriendRequest(token, requestId);
+    await refreshFriendshipData(token);
+    return response;
+  };
+
+  const handleRejectFriendRequest = async (requestId) => {
+    const token = localStorage.getItem('transcendence_token');
+
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    const response = await api.rejectFriendRequest(token, requestId);
+    await refreshFriendshipData(token);
+    return response;
+  };
+
   const handleLogout = async () => {
     setError('');
     setLoading(true);
@@ -388,6 +551,10 @@ function App() {
       } catch {}
       setProfile(null);
       setProfileForm(emptyProfileForm);
+      setFriendsList([]);
+      setInvitesList([]);
+      setPeopleList([]);
+      setOptimisticInvites([]);
       setLoginForm({ email: '', password: '' });
       setView('login');
       setLoading(false);
@@ -513,6 +680,12 @@ function App() {
               <HomeCard
                 onPlayGame={handleGoToGameWithOrigin}
                 onOpenProfile={openPublicProfile}
+                friends={friendsList}
+                invites={invitesList}
+                people={peopleList}
+                onSendInvite={handleSendFriendRequest}
+                onAcceptInvite={handleAcceptFriendRequest}
+                onRejectInvite={handleRejectFriendRequest}
                 currentIndex={homeCarouselIndex}
                 onChangeIndex={setHomeCarouselIndex}
               />

@@ -1,4 +1,5 @@
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const REQUEST_TIMEOUT_MS = 5000;
 
 let httpErrorHandler = null;
 
@@ -56,15 +57,41 @@ function authHeader(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export async function login(email, password) {
+async function request(path, { token, method = 'GET', body, authenticated = true, headers = {} } = {}) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
   try {
-    const res = await fetch(`${API_BASE}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+    const res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authenticated ? authHeader(token) : {}),
+        ...headers,
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
     });
 
     return handleResponse(res);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function unwrapList(data, key) {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data[key])) return data[key];
+  return [];
+}
+
+export async function login(email, password) {
+  try {
+    return request('/auth/login', {
+      method: 'POST',
+      authenticated: false,
+      body: { email, password },
+    });
   } catch (error) {
     throw new Error(error?.message || 'Network error during login');
   }
@@ -72,13 +99,11 @@ export async function login(email, password) {
 
 export async function register(data) {
   try {
-    const res = await fetch(`${API_BASE}/auth/register`, {
+    return request('/auth/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      authenticated: false,
+      body: data,
     });
-
-    return handleResponse(res);
   } catch (error) {
     throw new Error(error?.message || 'Network error during registration');
   }
@@ -86,12 +111,7 @@ export async function register(data) {
 
 export async function logout(token) {
   try {
-    const res = await fetch(`${API_BASE}/auth/logout`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
-    });
-
-    return handleResponse(res);
+    return request('/auth/logout', { method: 'POST', token });
   } catch (error) {
     throw new Error(error?.message || 'Network error during logout');
   }
@@ -99,12 +119,7 @@ export async function logout(token) {
 
 export async function me(token) {
   try {
-    const res = await fetch(`${API_BASE}/auth/me`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
-    });
-
-    const data = await handleResponse(res);
+    const data = await request('/auth/me', { method: 'GET', token });
     return data?.user ?? data;
   } catch (error) {
     throw new Error(error?.message || 'Network error during profile lookup');
@@ -117,16 +132,126 @@ export function setHttpErrorHandler(fn) {
 
 export async function updateProfile(token, data) {
   try {
-    const res = await fetch(`${API_BASE}/profile/me`, {
+    return request('/profile/me', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...authHeader(token) },
-      body: JSON.stringify(data)
+      token,
+      body: data,
     });
-
-    return handleResponse(res);
   } catch (error) {
     throw new Error(error?.message || 'Network error during profile update');
   }
 }
 
-export default { login, register, logout, me, setHttpErrorHandler, updateProfile };
+export async function getFriends(token) {
+  try {
+    const data = await request('/friends', { method: 'GET', token });
+    return unwrapList(data, 'friends');
+  } catch (error) {
+    return [];
+  }
+}
+
+export async function getInvites(token) {
+  try {
+    const data = await request('/friends/requests', { method: 'GET', token });
+    return unwrapList(data, 'requests');
+  } catch (error) {
+    return [];
+  }
+}
+
+export async function getPeople(token) {
+  try {
+    const data = await request('/presence/online-users', {
+      method: 'GET',
+      authenticated: false,
+      token,
+    });
+    return unwrapList(data, 'onlineUsers');
+  } catch (error) {
+    return [];
+  }
+}
+
+export async function sendFriendRequest(token, receiverId) {
+  try {
+    return request('/friends/request', {
+      method: 'POST',
+      token,
+      body: { receiverId },
+    });
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during friend request');
+  }
+}
+
+export async function acceptFriendRequest(token, requestId) {
+  try {
+    return request(`/friends/${requestId}/accept`, {
+      method: 'PATCH',
+      token,
+    });
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during friend acceptance');
+  }
+}
+
+export async function rejectFriendRequest(token, requestId) {
+  try {
+    return request(`/friends/${requestId}/reject`, {
+      method: 'PATCH',
+      token,
+    });
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during friend rejection');
+  }
+}
+
+// Backward-compatible aliases.
+export async function listFriends(token) {
+  return getFriends(token);
+}
+
+export async function listPendingRequests(token) {
+  return getInvites(token);
+}
+
+export async function searchUsers(token, query) {
+  // Search-by-name endpoint is not required for the friends area anymore.
+  // Keep this alias to avoid breaking older call sites.
+  try {
+    const people = await getPeople(token);
+    const normalizedQuery = String(query || '').trim().toLowerCase();
+    if (!normalizedQuery) return people;
+
+    return people.filter((person) => {
+      const haystack = [person.name, person.nickname, person.email]
+        .map((value) => String(value || '').toLowerCase())
+        .join(' ');
+
+      return haystack.includes(normalizedQuery);
+    });
+  } catch {
+    return [];
+  }
+}
+
+const api = {
+  login,
+  register,
+  logout,
+  me,
+  setHttpErrorHandler,
+  updateProfile,
+  getFriends,
+  getInvites,
+  getPeople,
+  sendFriendRequest,
+  acceptFriendRequest,
+  rejectFriendRequest,
+  listFriends,
+  listPendingRequests,
+  searchUsers,
+};
+
+export default api;

@@ -1,44 +1,52 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { sendFriendRequest as mockSendFriendRequest } from '../../services/friendsService';
-import { MOCK_SEARCH_USERS } from '../../services/friendsMockData';
 
-function FriendsSearch({ onSendInvite, onOpenProfile, onSearchUsers, sentInviteIds = [], friendIds = [], minLength = 3, debounceMs = 1000 }) {
+function FriendsSearch({
+  people = [],
+  onSendInvite,
+  onOpenProfile,
+  sentInviteIds = [],
+  friendIds = [],
+  inviteIds = [],
+  minLength = 3,
+}) {
   const [query, setQuery] = useState('');
-  const friendIdSet = new Set((friendIds || []).map((id) => String(id)));
   const [localSentIds, setLocalSentIds] = useState(() => new Set((sentInviteIds || []).map((id) => String(id))));
 
   useEffect(() => {
     setLocalSentIds(new Set((sentInviteIds || []).map((id) => String(id))));
   }, [sentInviteIds]);
-  const visibleUsers = useMemo(() => {
+
+  const friendIdSet = useMemo(() => new Set((friendIds || []).map((id) => String(id))), [friendIds]);
+  const inviteIdSet = useMemo(() => new Set((inviteIds || []).map((id) => String(id))), [inviteIds]);
+
+  const visiblePeople = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const master = Array.isArray(MOCK_SEARCH_USERS) ? MOCK_SEARCH_USERS : [];
+    const source = Array.isArray(people) ? people : [];
+    const shouldFilterByText = q.length >= minLength;
 
-    return master.filter((user) => {
-      const idStr = String(user.id);
+    return source.filter((person) => {
+      const idStr = String(person?.id);
       if (friendIdSet.has(idStr)) return false;
+      if (inviteIdSet.has(idStr)) return false;
       if (localSentIds.has(idStr)) return false;
+      if (!shouldFilterByText) return true;
 
-      if (!q) return true;
-
-      const haystack = [user.name, user.nickname, user.email]
-        .map((v) => String(v || '').toLowerCase())
+      const haystack = [person?.name, person?.nickname, person?.email]
+        .map((value) => String(value || '').toLowerCase())
         .join(' ');
 
       return haystack.includes(q);
     });
-  }, [query, friendIdSet, localSentIds]);
+  }, [people, query, minLength, friendIdSet, inviteIdSet, localSentIds]);
 
   const handleSendInvite = async (user) => {
-    if (typeof onSendInvite === 'function') {
-      const resp = await onSendInvite(user);
-      setLocalSentIds((prev) => new Set([...Array.from(prev), String(user.id)]));
-      return resp;
+    if (typeof onSendInvite !== 'function') {
+      return null;
     }
 
-    const resp = await mockSendFriendRequest(user);
-    setLocalSentIds((prev) => new Set([...Array.from(prev), String(user.id)]));
-    return resp;
+    const response = await onSendInvite(user);
+    setLocalSentIds((previous) => new Set([...Array.from(previous), String(user.id)]));
+    return response;
   };
 
   const handleOpenProfile = (user) => {
@@ -58,7 +66,7 @@ function FriendsSearch({ onSendInvite, onOpenProfile, onSearchUsers, sentInviteI
         aria-label="Pesquisar amigos"
       />
 
-      {query.trim() !== '' && visibleUsers.length === 0 && (
+      {query.trim() !== '' && visiblePeople.length === 0 && (
         <div
           className="friends-search-no-results"
           style={{ color: '#d9534f', fontSize: '0.85rem', marginTop: '8px' }}
@@ -70,36 +78,43 @@ function FriendsSearch({ onSendInvite, onOpenProfile, onSearchUsers, sentInviteI
       <div className="friends-search-scroll-area">
         <div className="friends-section">
           <div className="friends-search-results">
-            {visibleUsers.map((user) => {
-              const userIdStr = String(user.id);
-              const alreadySent = localSentIds.has(userIdStr);
+            {visiblePeople.map((person) => {
+              const personIdStr = String(person.id);
+              const alreadySent = localSentIds.has(personIdStr);
 
               return (
                 <article
-                  key={user.id}
+                  key={person.id}
                   className="friend-item friend-search-item"
                   role={onOpenProfile ? 'button' : undefined}
                   tabIndex={onOpenProfile ? 0 : undefined}
-                  onClick={() => handleOpenProfile(user)}
+                  onClick={() => handleOpenProfile(person)}
                   onKeyDown={(event) => {
                     if (!onOpenProfile) return;
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
-                      handleOpenProfile(user);
+                      handleOpenProfile(person);
                     }
                   }}
                 >
-                  <div className="friend-avatar" aria-hidden="true">{(user.name || '').split(' ').map(Boolean).slice(0,2).map(t => t[0]?.toUpperCase()).join('')}</div>
+                  <div className="friend-avatar" aria-hidden="true">
+                    {(person.name || '')
+                      .split(' ')
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((token) => token[0]?.toUpperCase())
+                      .join('')}
+                  </div>
                   <div className="friend-info">
-                    <div className="friend-name">{user.name}</div>
-                    <div className="friend-nickname">@{user.nickname || user.email}</div>
+                    <div className="friend-name">{person.name}</div>
+                    <div className="friend-nickname">@{person.nickname || person.email}</div>
                   </div>
                   <button
                     type="button"
                     className="friend-action-button friend-send-button"
                     onClick={(event) => {
                       event.stopPropagation();
-                      handleSendInvite(user);
+                      void handleSendInvite(person);
                     }}
                     disabled={alreadySent}
                   >

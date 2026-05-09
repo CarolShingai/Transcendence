@@ -11,12 +11,12 @@ function HomeCard({
   matches = [],
   friends,
   invites,
+  people,
   onPlayGame,
   onOpenProfile,
   onSendInvite,
   onAcceptInvite,
   onRejectInvite,
-  onSearchUsers,
   currentIndex: propCurrentIndex,
   onChangeIndex
 }) {
@@ -72,11 +72,11 @@ function HomeCard({
         <HomeFriendsCard
           friends={friends}
           invites={invites}
+          people={people}
           onOpenProfile={onOpenProfile}
           onSendInvite={onSendInvite}
           onAcceptInvite={onAcceptInvite}
           onRejectInvite={onRejectInvite}
-          onSearchUsers={onSearchUsers}
         />
       ),
     },
