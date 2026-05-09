@@ -70,13 +70,42 @@ function unwrapList(data, key) {
 
 export async function login(email, password) {
   try {
-    const res = await fetch(`${API_BASE}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+    const res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authenticated ? authHeader(token) : {}),
+        ...headers,
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
     });
 
     return handleResponse(res);
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error(`Request timed out while calling ${path}`);
+    }
+
+    throw new Error(`Failed to reach backend at ${API_BASE}${path}`);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function unwrapList(data, key) {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data[key])) return data[key];
+  return [];
+}
+
+export async function login(email, password) {
+  try {
+    return request('/auth/login', {
+      method: 'POST',
+      authenticated: false,
+      body: { email, password },
+    });
   } catch (error) {
     throw new Error(error?.message || 'Network error during login');
   }
@@ -98,13 +127,11 @@ export async function verifyTwoFactor(twoFactorToken, code) {
 
 export async function register(data) {
   try {
-    const res = await fetch(`${API_BASE}/auth/register`, {
+    return request('/auth/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      authenticated: false,
+      body: data,
     });
-
-    return handleResponse(res);
   } catch (error) {
     throw new Error(error?.message || 'Network error during registration');
   }
@@ -112,12 +139,7 @@ export async function register(data) {
 
 export async function logout(token) {
   try {
-    const res = await fetch(`${API_BASE}/auth/logout`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
-    });
-
-    return handleResponse(res);
+    return request('/auth/logout', { method: 'POST', token });
   } catch (error) {
     throw new Error(error?.message || 'Network error during logout');
   }
@@ -125,12 +147,7 @@ export async function logout(token) {
 
 export async function me(token) {
   try {
-    const res = await fetch(`${API_BASE}/auth/me`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
-    });
-
-    const data = await handleResponse(res);
+    const data = await request('/auth/me', { method: 'GET', token });
     return data?.user ?? data;
   } catch (error) {
     throw new Error(error?.message || 'Network error during profile lookup');
@@ -147,13 +164,11 @@ export function getGoogleOAuthUrl() {
 
 export async function updateProfile(token, data) {
   try {
-    const res = await fetch(`${API_BASE}/profile/me`, {
+    return request('/profile/me', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...authHeader(token) },
-      body: JSON.stringify(data)
+      token,
+      body: data,
     });
-
-    return handleResponse(res);
   } catch (error) {
     throw new Error(error?.message || 'Network error during profile update');
   }

@@ -12,6 +12,19 @@ interface FriendshipRepository : JpaRepository<Friendship, Long> {
 
     fun findByReceiverIdAndStatus(receiverId: Long, status: FriendshipStatus): List<Friendship>
 
+        @Query(
+                """
+                select distinct f
+                from Friendship f
+                join fetch f.requester
+                join fetch f.receiver
+                where f.status = com.transcendence.demo.entity.FriendshipStatus.PENDING
+                    and (f.requester.id = :userId or f.receiver.id = :userId)
+                order by f.createdAt desc
+                """
+        )
+        fun findPendingFriendshipsByUserId(@Param("userId") userId: Long): List<Friendship>
+
     @Query(
         """
         select case when count(f) > 0 then true else false end

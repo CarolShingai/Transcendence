@@ -1337,6 +1337,17 @@
   gap: 0.8rem;
 }
 
+.friends-search-scroll-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.25rem;
+}
+
 .friends-search-input {
   width: 100%;
   box-sizing: border-box;
@@ -1368,6 +1379,18 @@
   gap: 0.7rem;
   overflow: auto;
   padding: 0;
+}
+
+.friends-search-scroll-area .friends-search-results {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.friends-suggestions-title {
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0.5rem 0 0.6rem 0;
+  font-size: 0.95rem;
 }
 
 .friend-invite-item {
@@ -1424,6 +1447,24 @@
   box-shadow: 0 8px 18px rgba(11, 46, 29, 0.08);
 }
 
+.friend-item[role='button'],
+.friend-invite-item[role='button'] {
+  cursor: pointer;
+}
+
+.friend-item[role='button']:hover,
+.friend-invite-item[role='button']:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(11, 46, 29, 0.12);
+  border-color: #bfe2ba;
+}
+
+.friend-item[role='button']:focus-visible,
+.friend-invite-item[role='button']:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(29, 122, 83, 0.18), 0 12px 24px rgba(11, 46, 29, 0.12);
+}
+
 .friend-avatar {
   width: clamp(2.4rem, 5.5vw, 3rem);
   height: clamp(2.4rem, 5.5vw, 3rem);
@@ -1434,6 +1475,14 @@
   color: #fffef9;
   font-weight: 800;
   letter-spacing: 0.04em;
+}
+
+.friend-avatar-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
 }
 
 .friend-info {
@@ -1475,6 +1524,11 @@
   background: #e5e7eb;
 }
 
+.friend-status-pending {
+  color: #8a5a00;
+  background: #fff1cc;
+}
+
 .friend-action-button {
   justify-self: end;
   border: none;
@@ -1497,6 +1551,63 @@
   cursor: default;
   opacity: 0.72;
   transform: none;
+}
+
+/* Circular accept/reject buttons used in invites list */
+.friend-action-circle {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  font-weight: 900;
+  color: #ffffff;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(11,46,29,0.12);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+
+.friend-action-circle:hover {
+  transform: translateY(-4px);
+  filter: brightness(1.03);
+  box-shadow: 0 12px 24px rgba(11,46,29,0.14);
+}
+
+.friend-action-circle:active {
+  transform: translateY(-1px) scale(0.99);
+}
+
+.friend-accept-circle {
+  background: linear-gradient(180deg, #34c17a, #1f8b50);
+}
+
+.friend-reject-circle {
+  background: linear-gradient(180deg, #ff6b6b, #d64545);
+}
+
+.friend-action-circle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.06), 0 0 0 5px rgba(0,0,0,0.06), 0 0 0 6px rgba(29,122,83,0.12);
+}
+
+/* container to keep accept/reject buttons aligned on the right */
+.friend-invite-actions {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+  justify-self: end;
+}
+
+/* ensure the actions don't shrink in very small widths */
+.friend-invite-actions > button {
+  flex: 0 0 auto;
 }
 
 .friend-send-button {

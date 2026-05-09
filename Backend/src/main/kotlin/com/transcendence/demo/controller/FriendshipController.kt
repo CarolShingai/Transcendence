@@ -70,7 +70,7 @@ class FriendshipController(
     }
 
     @Operation(
-        summary = "List pending friend requests",
+        summary = "List pending friend requests for the current user",
         security = [SecurityRequirement(name = "bearerAuth")]
     )
     @GetMapping("/requests")
