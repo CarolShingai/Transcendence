@@ -8,7 +8,9 @@ function FriendsSearch({
   friendIds = [],
   inviteIds = [],
   currentUserId = null,
-  minLength = 3,
+  minLength = 1,
+  debounceMs = 1000,
+  onRemoteSearch = null,
 }) {
   const [query, setQuery] = useState('');
   const [localSentIds, setLocalSentIds] = useState(() => new Set((sentInviteIds || []).map((id) => String(id))));
@@ -24,7 +26,7 @@ function FriendsSearch({
   const visiblePeople = useMemo(() => {
     const q = query.trim().toLowerCase();
     const source = Array.isArray(people) ? people : [];
-    const shouldFilterByText = q.length >= minLength;
+    const shouldFilterByText = q.length > 0; // always filter locally as user types
 
     return source.filter((person) => {
       const idStr = String(person?.id);
@@ -41,6 +43,23 @@ function FriendsSearch({
       return haystack.includes(q);
     });
   }, [people, query, minLength, friendIdSet, inviteIdSet, localSentIds]);
+
+  // Debounce remote search: call parent-provided `onRemoteSearch` after user stops typing
+  useEffect(() => {
+    const trimmed = query.trim();
+    const timer = setTimeout(() => {
+      if (typeof onRemoteSearch === 'function') {
+        if (trimmed.length >= minLength) {
+          onRemoteSearch(trimmed);
+        } else {
+          // signal empty query (optional)
+          onRemoteSearch('');
+        }
+      }
+    }, debounceMs);
+
+    return () => clearTimeout(timer);
+  }, [query, debounceMs, minLength, onRemoteSearch]);
 
   const handleSendInvite = async (user) => {
     if (typeof onSendInvite !== 'function') {
