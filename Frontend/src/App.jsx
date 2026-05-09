@@ -101,6 +101,7 @@ function App() {
   };
 
   const [view, setView] = useState('login');
+  const [homeCarouselIndex, setHomeCarouselIndex] = useState(0);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -509,7 +510,12 @@ function App() {
                 loading={loading}
               />
             ) : isHomeView ? (
-              <HomeCard onPlayGame={handleGoToGameWithOrigin} onOpenProfile={openPublicProfile} />
+              <HomeCard
+                onPlayGame={handleGoToGameWithOrigin}
+                onOpenProfile={openPublicProfile}
+                currentIndex={homeCarouselIndex}
+                onChangeIndex={setHomeCarouselIndex}
+              />
             ) : isGameView ? (
               <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
             ) : isError4xxView ? (

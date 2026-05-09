@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { searchUsers as mockSearchUsers, sendFriendRequest as mockSendFriendRequest } from '../../services/friendsService';
 
-function FriendsSearch({ onSendInvite, sentInviteIds = [], minLength = 3, debounceMs = 1000 }) {
+function FriendsSearch({ onSendInvite, onSearchUsers, sentInviteIds = [], friendIds = [], minLength = 3, debounceMs = 1000 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showNoResults, setShowNoResults] = useState(false);
+  const friendIdSet = new Set((friendIds || []).map((id) => String(id)));
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -20,28 +22,35 @@ function FriendsSearch({ onSendInvite, sentInviteIds = [], minLength = 3, deboun
     setShowNoResults(false);
 
     const t = setTimeout(() => {
-      // TODO: Colocar o endpoint aqui!
-      const url = `/api/users/search?q=${encodeURIComponent(trimmed)}`;
+      const executeSearch = async () => {
+        const searchFn = typeof onSearchUsers === 'function' ? onSearchUsers : mockSearchUsers;
 
-      fetch(url)
-        .then((res) => {
-          if (!res.ok) throw new Error('Network response was not ok');
-          return res.json();
-        })
-        .then((data) => {
+        try {
+          const data = await searchFn(trimmed);
           const list = Array.isArray(data) ? data : [];
           setResults(list);
           setShowNoResults(list.length === 0);
-        })
-        .catch(() => {
+        } catch {
           setResults([]);
           setShowNoResults(true);
-        })
-        .finally(() => setLoading(false));
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      void executeSearch();
     }, debounceMs);
 
     return () => clearTimeout(t);
-  }, [query, minLength, debounceMs]);
+  }, [query, minLength, debounceMs, onSearchUsers]);
+
+  const handleSendInvite = async (user) => {
+    if (typeof onSendInvite === 'function') {
+      return onSendInvite(user);
+    }
+
+    return mockSendFriendRequest(user);
+  };
 
   return (
     <>
@@ -67,7 +76,9 @@ function FriendsSearch({ onSendInvite, sentInviteIds = [], minLength = 3, deboun
         {loading && <div className="friends-search-loading">Carregando...</div>}
 
         {!loading && results.length > 0 && results.map((user) => {
-          const alreadySent = sentInviteIds.includes(user.id);
+          const userIdStr = String(user.id);
+          const alreadySent = sentInviteIds.includes(user.id) || sentInviteIds.includes(userIdStr);
+          const isFriend = friendIdSet.has(userIdStr);
 
           return (
             <article key={user.id} className="friend-item friend-search-item">
@@ -79,10 +90,10 @@ function FriendsSearch({ onSendInvite, sentInviteIds = [], minLength = 3, deboun
               <button
                 type="button"
                 className="friend-action-button friend-send-button"
-                onClick={() => onSendInvite && onSendInvite(user)}
-                disabled={alreadySent}
+                onClick={() => handleSendInvite(user)}
+                disabled={alreadySent || isFriend}
               >
-                {alreadySent ? 'Convite enviado' : 'Enviar convite'}
+                {isFriend ? 'Amigo' : alreadySent ? 'Convite enviado' : 'Enviar convite'}
               </button>
             </article>
           );

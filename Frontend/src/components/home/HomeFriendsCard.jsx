@@ -1,6 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import amigosTrans from '../../assets/logo/trans_amigos1.png';
 import FriendsSearch from '../elements/FriendsSearch';
+import {
+  acceptFriendRequest as mockAcceptFriendRequest,
+  rejectFriendRequest as mockRejectFriendRequest,
+  searchUsers as mockSearchUsers,
+  sendFriendRequest as mockSendFriendRequest
+} from '../../services/friendsService';
+import { MOCK_FRIENDS, MOCK_PENDING_INVITES } from '../../services/friendsMockData';
 
 const FRIENDS_TABS = [
   { id: 'friends', label: 'Amigos' },
@@ -8,11 +15,36 @@ const FRIENDS_TABS = [
   { id: 'search', label: 'Pesquisar amigos' },
 ];
 
-function HomeFriendsCard({ friends = [], invites = [], onOpenProfile }) {
+function HomeFriendsCard({
+  friends,
+  invites,
+  onOpenProfile,
+  onSendInvite,
+  onAcceptInvite,
+  onRejectInvite,
+  onSearchUsers
+}) {
   const [activeTab, setActiveTab] = useState('friends');
-  const [friendsList, setFriendsList] = useState(friends);
-  const [inviteList, setInviteList] = useState(invites);
-  const [sentInviteIds, setSentInviteIds] = useState([]);
+  const [friendsList, setFriendsList] = useState(() => (Array.isArray(friends) ? friends : MOCK_FRIENDS));
+  const [inviteList, setInviteList] = useState(() => (Array.isArray(invites) ? invites : MOCK_PENDING_INVITES));
+  const [sentInviteIds, setSentInviteIds] = useState(() => (
+    Array.isArray(invites)
+      ? invites.map((invite) => invite.receiverId ?? invite.id)
+      : MOCK_PENDING_INVITES.map((invite) => invite.receiverId ?? invite.id)
+  ));
+
+  useEffect(() => {
+    if (Array.isArray(friends)) {
+      setFriendsList(friends);
+    }
+  }, [friends]);
+
+  useEffect(() => {
+    if (Array.isArray(invites)) {
+      setInviteList(invites);
+      setSentInviteIds(invites.map((invite) => invite.receiverId ?? invite.id));
+    }
+  }, [invites]);
 
 
   const getInitials = (name = '') => name
@@ -58,21 +90,67 @@ function HomeFriendsCard({ friends = [], invites = [], onOpenProfile }) {
     return friendsList;
   }, [friendsList]);
 
-  const handleAcceptInvite = (invite) => {
-    setInviteList((previous) => previous.filter((item) => item.id !== invite.id));
-    setFriendsList((previous) => ([
-      ...previous,
-      {
-        id: invite.id,
-        name: invite.name,
-        nickname: invite.nickname,
-        status: 'Online',
-      },
-    ]));
+  const removeSentInvite = (invite) => {
+    const pendingId = invite.receiverId ?? invite.id;
+    setSentInviteIds((previous) => previous.filter((item) => item !== pendingId && String(item) !== String(pendingId)));
   };
 
-  const handleSendInvite = (user) => {
-    setSentInviteIds((previous) => [...previous, user.id]);
+  const handleAcceptInvite = async (invite) => {
+    if (typeof onAcceptInvite === 'function') {
+      return onAcceptInvite(invite.requestId ?? invite.id);
+    }
+
+    const requestId = invite.requestId ?? invite.id;
+    const acceptedFriend = await mockAcceptFriendRequest(requestId);
+
+    setInviteList((previous) => previous.filter((item) => (item.requestId ?? item.id) !== requestId));
+    removeSentInvite(invite);
+    setFriendsList((previous) => ([
+      ...previous,
+      acceptedFriend,
+    ]));
+
+    return acceptedFriend;
+  };
+
+  const handleRejectInvite = async (invite) => {
+    if (typeof onRejectInvite === 'function') {
+      return onRejectInvite(invite.requestId ?? invite.id);
+    }
+
+    const requestId = invite.requestId ?? invite.id;
+    const rejectedInvite = await mockRejectFriendRequest(requestId);
+
+    setInviteList((previous) => previous.filter((item) => (item.requestId ?? item.id) !== requestId));
+    removeSentInvite(rejectedInvite);
+    return rejectedInvite;
+  };
+
+  const handleSendInvite = async (user) => {
+    if (typeof onSendInvite === 'function') {
+      return onSendInvite(user);
+    }
+
+    const pendingInvite = await mockSendFriendRequest(user);
+
+    setSentInviteIds((previous) => (previous.includes(user.id) ? previous : [...previous, user.id]));
+    setInviteList((previous) => {
+      const requestId = pendingInvite?.requestId ?? Date.now();
+      const normalizedInvite = {
+        id: requestId,
+        requestId,
+        receiverId: Number(user.id),
+        name: user.name,
+        nickname: user.nickname || user.email,
+        status: 'Pendente'
+      };
+
+      return previous.some((item) => (item.requestId ?? item.id) === requestId)
+        ? previous
+        : [...previous, normalizedInvite];
+    });
+
+    return pendingInvite;
   };
 
   const renderPanel = () => {
@@ -85,7 +163,7 @@ function HomeFriendsCard({ friends = [], invites = [], onOpenProfile }) {
         <div className="friends-invites-list">
           {inviteList.map((invite) => (
             <article
-              key={invite.id}
+              key={invite.requestId ?? invite.id}
               className="friend-item friend-invite-item"
               role={onOpenProfile ? 'button' : undefined}
               tabIndex={onOpenProfile ? 0 : undefined}
@@ -103,13 +181,26 @@ function HomeFriendsCard({ friends = [], invites = [], onOpenProfile }) {
                 <div className="friend-name">{invite.name}</div>
                 <div className="friend-nickname">@{invite.nickname}</div>
               </div>
-              <button
-                type="button"
-                className="friend-action-button friend-accept-button"
-                onClick={(e) => { e.stopPropagation(); handleAcceptInvite(invite); }}
-              >
-                Aceitar
-              </button>
+              <div className="friend-invite-actions" aria-hidden="false">
+                <button
+                  type="button"
+                  className="friend-action-circle friend-accept-circle"
+                  onClick={(e) => { e.stopPropagation(); handleAcceptInvite(invite); }}
+                  aria-label={`Aceitar convite de ${invite.name}`}
+                  title="Aceitar"
+                >
+                  ✓
+                </button>
+                <button
+                  type="button"
+                  className="friend-action-circle friend-reject-circle"
+                  onClick={(e) => { e.stopPropagation(); handleRejectInvite(invite); }}
+                  aria-label={`Rejeitar convite de ${invite.name}`}
+                  title="Rejeitar"
+                >
+                  ✕
+                </button>
+              </div>
             </article>
           ))}
         </div>
@@ -121,6 +212,8 @@ function HomeFriendsCard({ friends = [], invites = [], onOpenProfile }) {
         <FriendsSearch
           onSendInvite={handleSendInvite}
           sentInviteIds={sentInviteIds}
+          friendIds={friendsList.map((friend) => friend.id)}
+          onSearchUsers={typeof onSearchUsers === 'function' ? onSearchUsers : mockSearchUsers}
         />
       );
     }
