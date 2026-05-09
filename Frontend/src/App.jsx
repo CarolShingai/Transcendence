@@ -195,6 +195,7 @@ function App() {
   const [viewedProfile, setViewedProfile] = useState(null);
   const [friends, setFriends] = useState([]);
   const [invites, setInvites] = useState([]);
+  const [optimisticInvites, setOptimisticInvites] = useState([]);
 
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
   const [twoFactorSetup, setTwoFactorSetup] = useState(null);
@@ -727,47 +728,6 @@ function App() {
   const goToHome = () => {
     if (!isAuthenticated) return;
     setView('home');
-  };
-
-  const handleSendFriendRequest = async (user) => {
-    const token = localStorage.getItem('transcendence_token');
-    const receiverId = Number(user?.id);
-
-    if (!token) {
-      throw new Error('Session expired');
-    }
-
-    if (!Number.isFinite(receiverId)) {
-      throw new Error('Invalid friend selection');
-    }
-
-    const response = await api.sendFriendRequest(token, receiverId);
-    await refreshFriendshipData(token);
-    return response;
-  };
-
-  const handleAcceptFriendRequest = async (requestId) => {
-    const token = localStorage.getItem('transcendence_token');
-
-    if (!token) {
-      throw new Error('Session expired');
-    }
-
-    const response = await api.acceptFriendRequest(token, requestId);
-    await refreshFriendshipData(token);
-    return response;
-  };
-
-  const handleRejectFriendRequest = async (requestId) => {
-    const token = localStorage.getItem('transcendence_token');
-
-    if (!token) {
-      throw new Error('Session expired');
-    }
-
-    const response = await api.rejectFriendRequest(token, requestId);
-    await refreshFriendshipData(token);
-    return response;
   };
 
   const handleSearchUsers = async (query) => {

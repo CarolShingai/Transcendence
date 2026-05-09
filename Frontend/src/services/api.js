@@ -6,47 +6,23 @@ async function handleResponse(res) {
   const contentType = res.headers.get('content-type') || '';
   const isJson = contentType.includes('application/json');
 
-  const extractMessage = async () => {
-    const rawText = await res.text().catch(() => '');
-
-    if (!rawText) {
-      return res.statusText || 'Request failed';
-    }
-
-    try {
-      const parsed = JSON.parse(rawText);
-      return parsed?.message || parsed?.error || parsed?.detail || rawText;
-    } catch {
-      return rawText;
-    }
-  };
-
   if (res.ok) {
     if (isJson) return res.json();
-
-    const rawText = await res.text().catch(() => '');
-    if (!rawText) return null;
-
-    try {
-      return JSON.parse(rawText);
-    } catch {
-      return rawText;
-    }
+    const text = await res.text().catch(() => '');
+    if (!text) return null;
+    try { return JSON.parse(text); } catch { return text; }
   }
 
   let message = '';
-
   if (isJson) {
     const err = await res.json().catch(() => null);
     message = err?.message || err?.error || err?.detail || res.statusText || 'Request failed';
   } else {
-    message = await extractMessage();
+    message = await res.text().catch(() => res.statusText || 'Request failed');
   }
 
   if (typeof httpErrorHandler === 'function') {
-    try {
-      httpErrorHandler(res.status, message);
-    } catch (e) {}
+    try { httpErrorHandler(res.status, message); } catch (e) {}
   }
 
   throw new Error(message);
@@ -57,46 +33,43 @@ function authHeader(token) {
 }
 
 function unwrapList(data, key) {
-  if (Array.isArray(data)) {
-    return data;
-  }
-
-  if (data && Array.isArray(data[key])) {
-    return data[key];
-  }
-
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data[key])) return data[key];
   return [];
 }
 
-export async function login(email, password) {
+async function request(path, opts = {}) {
+  const {
+    method = 'GET',
+    token = null,
+    body = undefined,
+    authenticated = true,
+    headers = {},
+    timeout = 15000
+  } = opts;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       method,
       headers: {
         'Content-Type': 'application/json',
         ...(authenticated ? authHeader(token) : {}),
-        ...headers,
+        ...headers
       },
       body: body === undefined ? undefined : JSON.stringify(body),
-      signal: controller.signal,
+      signal: controller.signal
     });
 
-    return handleResponse(res);
-  } catch (error) {
-    if (error?.name === 'AbortError') {
-      throw new Error(`Request timed out while calling ${path}`);
-    }
-
-    throw new Error(`Failed to reach backend at ${API_BASE}${path}`);
+    return await handleResponse(res);
+  } catch (err) {
+    if (err?.name === 'AbortError') throw new Error(`Request timed out calling ${path}`);
+    throw new Error(err?.message || `Network error calling ${path}`);
   } finally {
     clearTimeout(timeoutId);
   }
-}
-
-function unwrapList(data, key) {
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data[key])) return data[key];
-  return [];
 }
 
 export async function login(email, password) {
