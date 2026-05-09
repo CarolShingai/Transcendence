@@ -3,6 +3,17 @@ COMPOSE := docker compose -f $(COMPOSE_FILE)
 
 .PHONY: back front start down logs ps restart db reset-db reset-db-dev reset-db-prod
 
+# Gerar certificado autoassinado para HTTPS
+CERT_FILE= ./Backend/certs/keystore-dev.p12
+
+cert:
+	@if [ ! -f $(CERT_FILE) ]; then \
+		echo ">> Gerando keystore..."; \
+		KEYSTORE_PASSWORD=changeit ./certs/generate-keystore.sh dev; \
+	else \
+		echo ">> Keystore já existe"; \
+	fi
+
 # Build apenas a imagem do backend.
 back:
 	$(COMPOSE) build backend
@@ -12,11 +23,11 @@ front:
 	$(COMPOSE) build frontend
 
 # Builda e sobe a stack de desenvolvimento completa: banco, backend e frontend.
-start:
+start: cert
 	$(COMPOSE) up --build -d
 
 # Para subir os container após o build
-up:
+up: cert
 	$(COMPOSE) up -d
 
 # Para e remove os containers da stack de desenvolvimento.

@@ -10,7 +10,7 @@ const AVATAR_OPTIONS = avatarContext
     return moduleValue?.default || moduleValue;
   });
 
-function HomeHeader({ initials, profileImage, onGoToProfile, onGoToEditProfile, onLogout }) {
+function HomeHeader({ initials, profileImage, onGoToProfile, onGoToEditProfile,onLogout }) {
   const resolveAvatarUrl = (avatarValue) => {
     if (!avatarValue) return '';
     if (typeof avatarValue === 'string') return avatarValue;

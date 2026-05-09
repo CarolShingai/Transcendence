@@ -15,6 +15,7 @@ import TwoFactorLoginCard from './components/auth/TwoFactorLoginCard';
 import RegisterCard from './components/auth/RegisterCard';
 import ProfileCard from './components/profile/ProfileCard';
 import PublicProfileCard from './components/profile/PublicProfileCard';
+import ProfileCard from './components/profile/ProfileCard';
 import HomeCard from './components/home/HomeCard';
 import GameCard from './components/game/GameCard';
 import api from './services/api';
@@ -709,14 +710,15 @@ function App() {
   const goToProfile = () => {
     if (!isAuthenticated) return;
     setError('');
+    setViewedProfile(null);
     setView('profile');
   };
 
   const goToEditProfile = () => {
     if (!isAuthenticated) return;
-    setViewedProfile(null);
     setError('');
-    setView('editProfile');
+    setViewedProfile(null);
+    setView('profileEdit');
   };
 
   const openPublicProfile = (publicProfile) => {
@@ -754,6 +756,7 @@ function App() {
   const isEditProfileView = isAuthenticated && view === 'editProfile';
   const isGameView = isAuthenticated && view === 'game';
   const isProfileView = isAuthenticated && view === 'profile';
+  const isProfileEditView = isAuthenticated && view === 'profileEdit';
   const isError4xxView = view === 'error4xx';
   const isError5xxView = view === 'error5xx';
   const isErrorView = isError4xxView || isError5xxView;
@@ -780,7 +783,7 @@ function App() {
             <LoginHeader />
           ) : isRegisterView ? (
             <RegisterHeader onGoToLogin={handleRegisterExit} />
-          ) : isHomeView ? (
+          ) : isHomeView || isProfileEditView ? (
               <HomeHeader
               initials={initials}
               profileImage={profile?.avatarUrl}
@@ -851,6 +854,22 @@ function App() {
               <Error4xx code={404} />
             ) : isError5xxView ? (
               <Error5xx code={500} />
+            ) : isProfileEditView ? (
+              <ProfileCard
+                initials={initials}
+                profileForm={profileForm}
+                error={error}
+                onProfileChange={handleProfileChange}
+                onProfileSave={handleProfileSave}
+                onProfileAvatarSelect={handleProfileAvatarSelect}
+                twoFactorSetup={twoFactorSetup}
+                twoFactorCode={twoFactorCode}
+                twoFactorMessage={twoFactorMessage}
+                onTwoFactorCodeChange={handleTwoFactorCodeChange}
+                onTwoFactorSetup={handleTwoFactorSetup}
+                onTwoFactorEnable={handleTwoFactorEnable}
+                loading={loading}
+              />
             ) : isProfileView ? (
               <PublicProfileCard profile={viewedProfile || profile} />
             ) : null}
