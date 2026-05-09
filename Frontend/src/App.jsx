@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import './App.css';
 import LoginHeader from './components/layout/LoginHeader';
 import HomeHeader from './components/layout/HomeHeader';
+import EditHeader from './components/layout/EditHeader';
 import RegisterHeader from './components/layout/RegisterHeader';
 import AppFooter from './components/layout/AppFooter';
 import PublicProfileHeader from './components/layout/PublicProfileHeader';
@@ -12,6 +13,7 @@ import LoadingOverlay from './components/elements/LoadingOverlay';
 import LoginCard from './components/auth/LoginCard';
 import TwoFactorLoginCard from './components/auth/TwoFactorLoginCard';
 import RegisterCard from './components/auth/RegisterCard';
+import ProfileCard from './components/profile/ProfileCard';
 import PublicProfileCard from './components/profile/PublicProfileCard';
 import ProfileCard from './components/profile/ProfileCard';
 import HomeCard from './components/home/HomeCard';
@@ -114,7 +116,60 @@ function App() {
     return source;
   };
 
+  const normalizeFriend = (friend) => ({
+    id: friend?.id,
+    name: friend?.name || '',
+    nickname: friend?.nickname || '',
+    status: friend?.status || 'Offline',
+    profilePic: Number(friend?.profilePic) || 0,
+    avatarUrl: resolveAvatarFromProfilePic(friend?.profilePic) || friend?.avatarUrl || ''
+  });
+
+  const normalizeInvite = (invite) => ({
+    id: invite?.id,
+    requesterId: invite?.requesterId ?? invite?.requester?.id ?? invite?.senderId ?? invite?.sender?.id ?? null,
+    requesterName: invite?.requesterName ?? invite?.requester?.name ?? invite?.senderName ?? invite?.sender?.name ?? '',
+    requesterNickname: invite?.requesterNickname ?? invite?.requester?.nickname ?? invite?.senderNickname ?? invite?.sender?.nickname ?? '',
+    requesterProfilePic: Number(invite?.requesterProfilePic ?? invite?.requester?.profilePic ?? invite?.senderProfilePic ?? invite?.sender?.profilePic) || 0,
+    requesterAvatarUrl: resolveAvatarFromProfilePic(invite?.requesterProfilePic ?? invite?.requester?.profilePic ?? invite?.senderProfilePic ?? invite?.sender?.profilePic) || invite?.requester?.avatarUrl || invite?.sender?.avatarUrl || '',
+    receiverId: invite?.receiverId ?? invite?.receiver?.id ?? null,
+    receiverName: invite?.receiverName ?? invite?.receiver?.name ?? '',
+    receiverNickname: invite?.receiverNickname ?? invite?.receiver?.nickname ?? '',
+    receiverProfilePic: Number(invite?.receiverProfilePic ?? invite?.receiver?.profilePic) || 0,
+    receiverAvatarUrl: resolveAvatarFromProfilePic(invite?.receiverProfilePic ?? invite?.receiver?.profilePic) || invite?.receiver?.avatarUrl || '',
+    status: invite?.status || 'PENDING',
+    direction: invite?.direction || null,
+    createdAt: invite?.createdAt || null
+  });
+
+  const normalizePerson = (person) => ({
+    id: person?.id,
+    name: person?.name || '',
+    nickname: person?.nickname || '',
+    profilePic: Number(person?.profilePic) || 0,
+    avatarUrl: resolveAvatarFromProfilePic(person?.profilePic) || person?.avatarUrl || '',
+    status: person?.status || 'online'
+  });
+
+  const extractParticipantIds = (invite) => {
+    const ids = [invite?.requesterId, invite?.receiverId]
+      .filter((value) => value !== null && value !== undefined)
+      .map((value) => String(value));
+    return ids;
+  };
+
+  const filterAvailablePeople = (peopleList, friendsList, invitesList, currentUserId = null) => {
+    const blockedIds = new Set([
+      ...(currentUserId !== null && currentUserId !== undefined ? [String(currentUserId)] : []),
+      ...(friendsList || []).map((friend) => String(friend?.id)),
+      ...(invitesList || []).flatMap((invite) => extractParticipantIds(invite))
+    ]);
+
+    return (peopleList || []).filter((person) => !blockedIds.has(String(person?.id)));
+  };
+
   const [view, setView] = useState('login');
+  const [homeCarouselIndex, setHomeCarouselIndex] = useState(0);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -141,6 +196,7 @@ function App() {
   const [viewedProfile, setViewedProfile] = useState(null);
   const [friends, setFriends] = useState([]);
   const [invites, setInvites] = useState([]);
+  const [optimisticInvites, setOptimisticInvites] = useState([]);
 
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
   const [twoFactorSetup, setTwoFactorSetup] = useState(null);
@@ -272,6 +328,15 @@ function App() {
 
     syncProfileFromToken('home');
   }, [syncProfileFromToken]);
+
+  useEffect(() => {
+    if (!isAuthenticated || view !== 'home') {
+      return undefined;
+    }
+
+    void refreshFriendshipData();
+    return undefined;
+  }, [isAuthenticated, view, refreshFriendshipData]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -540,6 +605,60 @@ function App() {
       .finally(() => setLoading(false));
   };
 
+  const handleSendFriendRequest = async (user) => {
+    const token = localStorage.getItem('transcendence_token');
+    const receiverId = Number(user?.id);
+
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    if (!Number.isFinite(receiverId)) {
+      throw new Error('Invalid friend selection');
+    }
+
+    const response = await api.sendFriendRequest(token, receiverId);
+    const optimisticInvite = normalizeInvite({
+      ...response,
+      id: response?.id ?? Date.now(),
+      receiverId,
+      receiverName: user?.name || response?.receiverName || '',
+      status: response?.status || 'PENDING',
+      direction: 'sent'
+    });
+    const nextOptimisticInvites = [
+      ...optimisticInvites.filter((item) => String(item.id) !== String(optimisticInvite.id)),
+      optimisticInvite,
+    ];
+    setOptimisticInvites(nextOptimisticInvites);
+    await refreshFriendshipData(token, nextOptimisticInvites);
+    return response;
+  };
+
+  const handleAcceptFriendRequest = async (requestId) => {
+    const token = localStorage.getItem('transcendence_token');
+
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    const response = await api.acceptFriendRequest(token, requestId);
+    await refreshFriendshipData(token);
+    return response;
+  };
+
+  const handleRejectFriendRequest = async (requestId) => {
+    const token = localStorage.getItem('transcendence_token');
+
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    const response = await api.rejectFriendRequest(token, requestId);
+    await refreshFriendshipData(token);
+    return response;
+  };
+
   const handleLogout = async () => {
     setError('');
     setLoading(true);
@@ -613,47 +732,6 @@ function App() {
     setView('home');
   };
 
-  const handleSendFriendRequest = async (user) => {
-    const token = localStorage.getItem('transcendence_token');
-    const receiverId = Number(user?.id);
-
-    if (!token) {
-      throw new Error('Session expired');
-    }
-
-    if (!Number.isFinite(receiverId)) {
-      throw new Error('Invalid friend selection');
-    }
-
-    const response = await api.sendFriendRequest(token, receiverId);
-    await refreshFriendshipData(token);
-    return response;
-  };
-
-  const handleAcceptFriendRequest = async (requestId) => {
-    const token = localStorage.getItem('transcendence_token');
-
-    if (!token) {
-      throw new Error('Session expired');
-    }
-
-    const response = await api.acceptFriendRequest(token, requestId);
-    await refreshFriendshipData(token);
-    return response;
-  };
-
-  const handleRejectFriendRequest = async (requestId) => {
-    const token = localStorage.getItem('transcendence_token');
-
-    if (!token) {
-      throw new Error('Session expired');
-    }
-
-    const response = await api.rejectFriendRequest(token, requestId);
-    await refreshFriendshipData(token);
-    return response;
-  };
-
   const handleSearchUsers = async (query) => {
     const token = localStorage.getItem('transcendence_token');
 
@@ -675,13 +753,14 @@ function App() {
   const isTwoFactorLoginView = !isAuthenticated && view === 'twoFactorLogin';
   const isRegisterView = !isAuthenticated && view === 'register';
   const isHomeView = isAuthenticated && view === 'home';
+  const isEditProfileView = isAuthenticated && view === 'editProfile';
   const isGameView = isAuthenticated && view === 'game';
   const isProfileView = isAuthenticated && view === 'profile';
   const isProfileEditView = isAuthenticated && view === 'profileEdit';
   const isError4xxView = view === 'error4xx';
   const isError5xxView = view === 'error5xx';
   const isErrorView = isError4xxView || isError5xxView;
-  const bannerMessage = isLoginView || isRegisterView || isProfileView ? '' : error;
+  const bannerMessage = isLoginView || isRegisterView || isProfileView || isEditProfileView ? '' : error;
   const gameEndpoint = process.env.REACT_APP_GAME_ENDPOINT || '/game';
   const publicSingleRecord = resolvePublicRecordValue(
     profile?.records?.single ?? profile?.singleRecord ?? profile?.singleScore ?? profile?.singleWins ?? 0,
@@ -713,6 +792,8 @@ function App() {
               onGoToEditProfile={goToEditProfile}
               onLogout={handleLogout}
             />
+          ) : isEditProfileView ? (
+            <EditHeader onGoToHome={goToHome} onLogout={handleLogout} />
           ) : isProfileView ? (
             <PublicProfileHeader
               initials={initials}
@@ -726,7 +807,7 @@ function App() {
             />
           ) : null}
 
-          <main className={`App-main ${isGameView ? 'App-main-game' : ''} ${isProfileView ? 'App-main-profile' : ''}`}>
+          <main className={`App-main ${isGameView ? 'App-main-game' : ''} ${isProfileView ? 'App-main-profile' : ''} ${isEditProfileView ? 'App-main-profile' : ''}`}>
             {isLoginView ? (
               <LoginCard
                 loginForm={loginForm}
@@ -794,7 +875,7 @@ function App() {
             ) : null}
           </main>
 
-          {!isGameView && !isErrorView && !isProfileView && <AppFooter />}
+          {!isGameView && !isErrorView && !isProfileView && !isEditProfileView && <AppFooter />}
         </section>
       </div>
     </div>

@@ -29,16 +29,57 @@ function HomeFriendsCard({
     .map((token) => token[0].toUpperCase())
     .join('');
 
-  const renderFriendItem = (friend) => {
-    const friendStatus = (friend.status || 'offline').toLowerCase();
+  const normalizeStatus = (raw) => {
+    const s = (raw || '').toString().trim().toLowerCase();
+    if (!s) return 'Offline';
+    if (s === 'offline' || s === 'desconectado' || s === 'desconectada') return 'Offline';
+    return 'Online';
+  };
 
-    const handleKeyDown = (e) => {
-      if (!onOpenProfile) return;
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onOpenProfile(friend);
-      }
-    };
+  const openProfile = (profile) => {
+    if (typeof onOpenProfile === 'function') {
+      onOpenProfile(profile);
+    }
+  };
+
+  const handleFriendKeyDown = (friend) => (event) => {
+    if (!onOpenProfile) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openProfile(friend);
+    }
+  };
+
+  const handleInviteKeyDown = (invite) => (event) => {
+    if (!onOpenProfile) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      const isSentInvite = invite.direction === 'sent';
+      const displayName = isSentInvite
+        ? (invite.receiverName || invite.requesterName || 'Convite')
+        : (invite.requesterName || invite.receiverName || 'Convite');
+      const displayNickname = isSentInvite
+        ? (invite.receiverNickname || invite.requesterNickname || '')
+        : (invite.requesterNickname || invite.receiverNickname || '');
+      const displayAvatarUrl = isSentInvite
+        ? (invite.receiverAvatarUrl || invite.requesterAvatarUrl || '')
+        : (invite.requesterAvatarUrl || invite.receiverAvatarUrl || '');
+
+      openProfile({
+        id: invite.direction === 'sent'
+          ? (invite.receiverId ?? invite.id)
+          : (invite.requesterId ?? invite.id),
+        name: displayName,
+        nickname: displayNickname,
+        avatarUrl: displayAvatarUrl,
+        profilePic: isSentInvite ? (invite.receiverProfilePic || 0) : (invite.requesterProfilePic || 0),
+        status: invite.status,
+      });
+    }
+  };
+
+  const renderFriendItem = (friend) => {
+    const friendStatus = normalizeStatus(friend.status).toLowerCase();
 
     return (
       <article
@@ -46,16 +87,26 @@ function HomeFriendsCard({
         className="friend-item"
         role={onOpenProfile ? 'button' : undefined}
         tabIndex={onOpenProfile ? 0 : undefined}
-        onClick={() => onOpenProfile && onOpenProfile(friend)}
-        onKeyDown={handleKeyDown}
+        onClick={() => openProfile(friend)}
+        onKeyDown={handleFriendKeyDown(friend)}
       >
-        <div className="friend-avatar" aria-hidden="true">{getInitials(friend.name)}</div>
+        <div className="friend-avatar" aria-hidden="true">
+          {friend.avatarUrl ? (
+            <img
+              src={friend.avatarUrl}
+              alt={friend.name || friend.nickname || 'Avatar'}
+              className="friend-avatar-image"
+            />
+          ) : (
+            getInitials(friend.name)
+          )}
+        </div>
         <div className="friend-info">
           <div className="friend-name">{friend.name}</div>
           <div className="friend-nickname">@{friend.nickname}</div>
         </div>
         <div className={`friend-status friend-status-${friendStatus}`}>
-          {friend.status || 'Offline'}
+          {normalizeStatus(friend.status)}
         </div>
       </article>
     );
