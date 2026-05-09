@@ -12,6 +12,7 @@ import com.transcendence.demo.DTO.Response.UserResponseDTO
 import com.transcendence.demo.entity.User
 import com.transcendence.demo.providers.JwtTokenGenerator
 import com.transcendence.demo.repository.UserRepository
+import org.slf4j.LoggerFactory
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -31,6 +32,7 @@ class UserService(
     }
 
     private val passwordEncoder = BCryptPasswordEncoder()
+    private val logger = LoggerFactory.getLogger(UserService::class.java)
 
     /**
      * Registra um novo usuário com a senha criptografada
@@ -172,13 +174,23 @@ class UserService(
             ?: throw IllegalArgumentException("User not found")
 
         if (user.twoFactorEnabled) {
+            logger.warn("2FA setup rejected because it is already enabled. userId={} email={}", user.id, maskEmail(user.email))
             throw IllegalArgumentException("2FA is already enabled")
         }
 
         val tempSecret = twoFactorService.generateTempSecret()
-    user.twoFactorSecretEncrypted = tempSecret
-    user.twoFactorConfirmedAt = null
+        user.twoFactorSecretEncrypted = tempSecret
+        user.twoFactorConfirmedAt = null
         userRepository.save(user)
+
+        logger.info(
+            "2FA setup secret stored. userId={} email={} secretLength={} confirmedAt={} enabled={}",
+            user.id,
+            maskEmail(user.email),
+            tempSecret.length,
+            user.twoFactorConfirmedAt,
+            user.twoFactorEnabled
+        )
 
         val qrCodeUrl = twoFactorService.generateQrCodeUrl(user.email, tempSecret)
 
@@ -190,12 +202,28 @@ class UserService(
 
     fun enableTwoFactor(userId: Long, request: TwoFactorSetupConfirmRequestDTO): TwoFactorEnableResponseDTO {
         val user = userRepository.findById(userId).orElse(null)
-            ?: return TwoFactorEnableResponseDTO(
-                success = false,
-                message = "User not found"
-            )
+        if (user == null) {
+            logger.warn("2FA enable rejected because user was not found. userId={} codeLength={}", userId, request.code.length)
+            return TwoFactorEnableResponseDTO(
+                    success = false,
+                    message = "User not found"
+                )
+        }
+
+        val normalizedCode = request.code.trim()
+        logger.info(
+            "2FA enable requested. userId={} email={} enabled={} hasSecret={} secretLength={} codeLength={} codeNumeric={}",
+            user.id,
+            maskEmail(user.email),
+            user.twoFactorEnabled,
+            !user.twoFactorSecretEncrypted.isNullOrBlank(),
+            user.twoFactorSecretEncrypted?.length ?: 0,
+            normalizedCode.length,
+            normalizedCode.all { it.isDigit() }
+        )
 
         if (user.twoFactorEnabled) {
+            logger.warn("2FA enable rejected because it is already enabled. userId={} email={}", user.id, maskEmail(user.email))
             return TwoFactorEnableResponseDTO(
                 success = false,
                 message = "2FA is already enabled"
@@ -203,12 +231,18 @@ class UserService(
         }
 
         val tempSecret = user.twoFactorSecretEncrypted
-            ?: return TwoFactorEnableResponseDTO(
-                success = false,
-                message = "2FA setup not initiated. Please call setup first."
-            )
+        if (tempSecret.isNullOrBlank()) {
+            logger.warn("2FA enable rejected because setup secret is missing. userId={} email={}", user.id, maskEmail(user.email))
+            return TwoFactorEnableResponseDTO(
+                    success = false,
+                    message = "2FA setup not initiated. Please call setup first."
+                )
+        }
 
-        if (!twoFactorService.verifyToken(request.code, tempSecret)) {
+        val tokenValid = twoFactorService.verifyToken(normalizedCode, tempSecret)
+        logger.info("2FA token verification completed. userId={} email={} valid={}", user.id, maskEmail(user.email), tokenValid)
+
+        if (!tokenValid) {
             return TwoFactorEnableResponseDTO(
                 success = false,
                 message = "Invalid token"
@@ -218,6 +252,8 @@ class UserService(
         user.twoFactorEnabled = true
         user.twoFactorConfirmedAt = LocalDateTime.now()
         userRepository.save(user)
+
+        logger.info("2FA enabled successfully. userId={} email={} confirmedAt={}", user.id, maskEmail(user.email), user.twoFactorConfirmedAt)
 
         return TwoFactorEnableResponseDTO(
             success = true,
@@ -363,13 +399,22 @@ class UserService(
         return email.contains("@") && email.contains(".")
     }
 
+    private fun maskEmail(email: String): String {
+        val parts = email.split("@", limit = 2)
+        if (parts.size != 2) return "***"
+        val local = parts[0]
+        val visibleLocal = local.take(2)
+        return "$visibleLocal***@${parts[1]}"
+    }
+
     private fun User.toUserResponseDto(): UserResponseDTO {
         return UserResponseDTO(
             id = id,
             nickname = nickname,
             name = name,
             email = email,
-            profilePic = profilePic
+            profilePic = profilePic,
+            twoFactorEnabled = twoFactorEnabled
         )
     }
 }

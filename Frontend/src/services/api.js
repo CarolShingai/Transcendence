@@ -82,6 +82,20 @@ export async function login(email, password) {
   }
 }
 
+export async function verifyTwoFactor(twoFactorToken, code) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/verify-2fa`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ twoFactorToken, code })
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during 2FA verification');
+  }
+}
+
 export async function register(data) {
   try {
     const res = await fetch(`${API_BASE}/auth/register`, {
@@ -142,6 +156,33 @@ export async function updateProfile(token, data) {
     return handleResponse(res);
   } catch (error) {
     throw new Error(error?.message || 'Network error during profile update');
+  }
+}
+
+export async function setupTwoFactor(token) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/2fa/setup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during 2FA setup');
+  }
+}
+
+export async function enableTwoFactor(token, code) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/2fa/enable`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) },
+      body: JSON.stringify({ code })
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during 2FA activation');
   }
 }
 
@@ -229,11 +270,14 @@ export async function rejectFriendRequest(token, requestId) {
 
 const api = {
   login,
+  verifyTwoFactor,
   register,
   logout,
   me,
   setHttpErrorHandler,
   updateProfile,
+  setupTwoFactor,
+  enableTwoFactor,
   listFriends,
   listPendingRequests,
   searchUsers,

@@ -10,6 +10,7 @@ import Error5xx from './components/layout/Error5xx';
 import StatusBanner from './components/elements/StatusBanner';
 import LoadingOverlay from './components/elements/LoadingOverlay';
 import LoginCard from './components/auth/LoginCard';
+import TwoFactorLoginCard from './components/auth/TwoFactorLoginCard';
 import RegisterCard from './components/auth/RegisterCard';
 import ProfileCard from './components/profile/ProfileCard';
 import HomeCard from './components/home/HomeCard';
@@ -85,7 +86,8 @@ function App() {
       resolveAvatarFromProfilePic(user?.profilePic) ||
       fallbackProfile?.avatarUrl ||
       '',
-    profilePic: Number(user?.profilePic) || fallbackProfile?.profilePic || 0
+    profilePic: Number(user?.profilePic) || fallbackProfile?.profilePic || 0,
+    twoFactorEnabled: Boolean(user?.twoFactorEnabled)
   }), [resolveAvatarFromProfilePic, resolveAvatarUrl]);
 
   const normalizeFriendshipRequest = (request) => ({
@@ -109,7 +111,8 @@ function App() {
     email: '',
     bio: 'Player ready to start the journey.',
     avatarUrl: '',
-    profilePic: 0
+    profilePic: 0,
+    twoFactorEnabled: false
   }), []);
 
   const emptyRegisterForm = useMemo(() => ({
@@ -126,6 +129,11 @@ function App() {
   const [invites, setInvites] = useState([]);
 
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
+  const [twoFactorSetup, setTwoFactorSetup] = useState(null);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorMessage, setTwoFactorMessage] = useState('');
+  const [twoFactorPendingToken, setTwoFactorPendingToken] = useState('');
+  const [twoFactorLoginCode, setTwoFactorLoginCode] = useState('');
 
   const [registerForm, setRegisterForm] = useState(emptyRegisterForm);
 
@@ -287,6 +295,70 @@ function App() {
     setProfileForm((previous) => ({ ...previous, avatarUrl, profilePic }));
   };
 
+  const handleTwoFactorCodeChange = (event) => {
+    setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6));
+  };
+
+  const handleTwoFactorSetup = async () => {
+    const token = localStorage.getItem('transcendence_token');
+    if (!token) {
+      setTwoFactorMessage('Sessao expirada. Faca login novamente.');
+      return;
+    }
+
+    setError('');
+    setTwoFactorMessage('');
+    setLoading(true);
+
+    try {
+      const setup = await api.setupTwoFactor(token);
+      setTwoFactorSetup(setup);
+      setTwoFactorCode('');
+      setTwoFactorMessage('Escaneie o QR Code e confirme com o codigo do app.');
+    } catch (err) {
+      setTwoFactorMessage(err?.message || 'Nao foi possivel iniciar o 2FA.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTwoFactorEnable = async () => {
+    const token = localStorage.getItem('transcendence_token');
+    const normalizedCode = twoFactorCode.trim();
+
+    if (!token) {
+      setTwoFactorMessage('Sessao expirada. Faca login novamente.');
+      return;
+    }
+
+    if (!/^\d{6}$/.test(normalizedCode)) {
+      setTwoFactorMessage('Digite exatamente os 6 digitos do app autenticador.');
+      return;
+    }
+
+    setError('');
+    setTwoFactorMessage('');
+    setLoading(true);
+
+    try {
+      const response = await api.enableTwoFactor(token, normalizedCode);
+      if (!response?.success) {
+        throw new Error(response?.message || 'Codigo invalido.');
+      }
+
+      setTwoFactorSetup(null);
+      setTwoFactorCode('');
+      setTwoFactorMessage('2FA ativado com sucesso.');
+      setProfile((previous) => previous ? { ...previous, twoFactorEnabled: true } : previous);
+      setProfileForm((previous) => ({ ...previous, twoFactorEnabled: true }));
+      await syncProfileFromToken('profile');
+    } catch (err) {
+      setTwoFactorMessage(err?.message || 'Codigo invalido.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogin = (event) => {
     event.preventDefault();
     setError('');
@@ -299,6 +371,13 @@ function App() {
     api
       .login(loginForm.email, loginForm.password)
       .then((resp) => {
+        if (resp?.requiresTwoFactor && resp?.twoFactorToken) {
+          setTwoFactorPendingToken(resp.twoFactorToken);
+          setTwoFactorLoginCode('');
+          setView('twoFactorLogin');
+          return null;
+        }
+
         const token = resp?.token || resp?.accessToken || resp?.jwt || resp;
         if (!token) throw new Error('No token returned from server');
         localStorage.setItem('transcendence_token', token);
@@ -310,6 +389,52 @@ function App() {
       })
       .catch((err) => setError(err?.message || 'Login failed'))
       .finally(() => setLoading(false));
+  };
+
+  const handleTwoFactorLoginCodeChange = (event) => {
+    setTwoFactorLoginCode(event.target.value.replace(/\D/g, '').slice(0, 6));
+  };
+
+  const handleTwoFactorLoginVerify = (event) => {
+    event.preventDefault();
+
+    const normalizedCode = twoFactorLoginCode.trim();
+    if (!twoFactorPendingToken) {
+      setError('Sessao de 2FA expirada. Faca login novamente.');
+      setView('login');
+      return;
+    }
+
+    if (!/^\d{6}$/.test(normalizedCode)) {
+      setError('Digite exatamente os 6 digitos do app autenticador.');
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+    api
+      .verifyTwoFactor(twoFactorPendingToken, normalizedCode)
+      .then((resp) => {
+        const token = resp?.token || resp?.accessToken || resp?.jwt;
+        if (!token) throw new Error('Codigo invalido.');
+        localStorage.setItem('transcendence_token', token);
+        setTwoFactorPendingToken('');
+        setTwoFactorLoginCode('');
+        return syncProfileFromToken('home');
+      })
+      .then((resolved) => {
+        if (!resolved) return;
+        setLoginForm({ email: '', password: '' });
+      })
+      .catch((err) => setError(err?.message || 'Codigo invalido.'))
+      .finally(() => setLoading(false));
+  };
+
+  const handleBackToLoginFromTwoFactor = () => {
+    setError('');
+    setTwoFactorPendingToken('');
+    setTwoFactorLoginCode('');
+    setView('login');
   };
 
   const handleGoogleLogin = () => {
@@ -518,6 +643,7 @@ function App() {
 
   
   const isLoginView = !isAuthenticated && view === 'login';
+  const isTwoFactorLoginView = !isAuthenticated && view === 'twoFactorLogin';
   const isRegisterView = !isAuthenticated && view === 'register';
   const isHomeView = isAuthenticated && view === 'home';
   const isGameView = isAuthenticated && view === 'game';
@@ -535,6 +661,8 @@ function App() {
         <LoadingOverlay show={loading} />
         <section className="game-stage" aria-label="Area principal do jogo">
           {isLoginView ? (
+            <LoginHeader />
+          ) : isTwoFactorLoginView ? (
             <LoginHeader />
           ) : isRegisterView ? (
             <RegisterHeader onGoToLogin={handleRegisterExit} />
@@ -559,6 +687,15 @@ function App() {
                 onLogin={handleLogin}
                 onGoogleLogin={handleGoogleLogin}
                 onCreateAccount={handleGoToRegister}
+                loading={loading}
+              />
+            ) : isTwoFactorLoginView ? (
+              <TwoFactorLoginCard
+                code={twoFactorLoginCode}
+                error={error}
+                onCodeChange={handleTwoFactorLoginCodeChange}
+                onVerify={handleTwoFactorLoginVerify}
+                onBackToLogin={handleBackToLoginFromTwoFactor}
                 loading={loading}
               />
             ) : isRegisterView ? (
@@ -595,6 +732,13 @@ function App() {
                   onProfileChange={handleProfileChange}
                   onProfileSave={handleProfileSave}
                   onProfileAvatarSelect={handleProfileAvatarSelect}
+                  twoFactorSetup={twoFactorSetup}
+                  twoFactorCode={twoFactorCode}
+                  twoFactorMessage={twoFactorMessage}
+                  onTwoFactorCodeChange={handleTwoFactorCodeChange}
+                  onTwoFactorSetup={handleTwoFactorSetup}
+                  onTwoFactorEnable={handleTwoFactorEnable}
+                  loading={loading}
                 />
             )}
           </main>

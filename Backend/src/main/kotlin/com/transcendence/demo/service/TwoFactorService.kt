@@ -18,8 +18,10 @@ import kotlin.random.Random
 class TwoFactorService {
 
     private val secretGenerator: SecretGenerator = DefaultSecretGenerator()
-    private val codeVerifier: CodeVerifier = DefaultCodeVerifier(DefaultCodeGenerator(), SystemTimeProvider())
-     private val logger = LoggerFactory.getLogger(TwoFactorService::class.java)
+    private val codeVerifier: CodeVerifier = DefaultCodeVerifier(DefaultCodeGenerator(), SystemTimeProvider()).apply {
+        setAllowedTimePeriodDiscrepancy(1)
+    }
+    private val logger = LoggerFactory.getLogger(TwoFactorService::class.java)
     /**
      * Generates a temporary TOTP secret for 2FA setup
      */
@@ -52,7 +54,7 @@ class TwoFactorService {
      */
     fun verifyToken(token: String, secret: String): Boolean {
         return try {
-            codeVerifier.isValidCode(token, secret)
+            codeVerifier.isValidCode(secret, token)
         } catch (e: Exception) {
             false
         }
