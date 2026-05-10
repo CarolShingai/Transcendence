@@ -1553,6 +1553,16 @@
   transform: none;
 }
 
+.invite-status-pending {
+  justify-self: end;
+  padding: 0.45rem 0.8rem;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #ffa500;
+  white-space: nowrap;
+}
+
 /* Circular accept/reject buttons used in invites list */
 .friend-action-circle {
   width: 40px;

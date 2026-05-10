@@ -98,10 +98,19 @@ function App() {
     id: request?.id,
     requestId: request?.id,
     requesterId: request?.requesterId,
+    requesterName: request?.requesterName || '',
+    requesterNickname: request?.requesterNickname || '',
+    requesterProfilePic: Number(request?.requesterProfilePic) || 0,
+    requesterAvatarUrl: resolveAvatarFromProfilePic(request?.requesterProfilePic) || request?.requesterAvatarUrl || '',
     receiverId: request?.receiverId,
+    receiverName: request?.receiverName || '',
+    receiverNickname: request?.receiverNickname || '',
+    receiverProfilePic: Number(request?.receiverProfilePic) || 0,
+    receiverAvatarUrl: resolveAvatarFromProfilePic(request?.receiverProfilePic) || request?.receiverAvatarUrl || '',
     name: request?.requesterName || 'Convite pendente',
     nickname: request?.requesterName || '',
     status: request?.status || 'PENDING',
+    direction: request?.direction || null,
     createdAt: request?.createdAt
   });
 
@@ -906,7 +915,7 @@ function App() {
             ) : null}
           </main>
 
-          {!isGameView && !isErrorView && !isProfileView && !isEditProfileView && <AppFooter onGoToPrivacyPolicy={goToPrivacyPolicy} onGoToTermsOfUse={goToTermsOfUse}/>}
+          {!isGameView && !isErrorView && !isProfileView && !isEditProfileView && <AppFooter onGoToPrivacyPolicy={goToPrivacyPolicy} onGoToTermsOfUse={goToTermsOfUse} isAuthenticated={isAuthenticated}/>}
         </section>
       </div>
     </div>
