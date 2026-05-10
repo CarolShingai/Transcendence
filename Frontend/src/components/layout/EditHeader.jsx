@@ -11,7 +11,7 @@ function EditHeader({ onGoToHome, onLogout }) {
       <div className="home-header-actions" aria-label="Acoes da edicao">
         <button
           type="button"
-          className="header-icon-button header-icon-button-edit"
+          className=""
           onClick={onGoToHome}
           aria-label="Ir para home"
           title="Ir para home"

@@ -18,6 +18,8 @@ import PublicProfileCard from './components/profile/PublicProfileCard';
 import HomeCard from './components/home/HomeCard';
 import GameCard from './components/game/GameCard';
 import api from './services/api';
+import PrivacyPolicyCard from './components/layout/PrivacyPolicyCard';
+import TermsOfUseCard from './components/layout/TermsOfUseCard';
 
 const avatarContext = require.context('./assets/profile', false, /\.(png|jpe?g|webp)$/);
 const avatarOptions = avatarContext
@@ -770,6 +772,12 @@ function App() {
     0
   );
 
+  const goToPrivacyPolicy = () => setView('privacyPolicy');
+  const goToTermsOfUse = () => setView('termsOfUse');
+
+  const isPrivacyPolicyView = view === 'privacyPolicy';
+  const isTermsOfUseView = view === 'termsOfUse';
+
   return (
     <div className="App">
       <div className="game-shell">
@@ -783,7 +791,7 @@ function App() {
           ) : isRegisterView ? (
             <RegisterHeader onGoToLogin={handleRegisterExit} />
           ) : isHomeView || isProfileEditView ? (
-              <HomeHeader
+            <HomeHeader
               initials={initials}
               profileImage={profile?.avatarUrl}
               welcomeName={profile?.nickname || profile?.name || 'Viajante'}
@@ -804,6 +812,30 @@ function App() {
                 goToHome();
               }}
             />
+          ) : isPrivacyPolicyView ? (
+            <>
+              <HomeHeader
+                initials={initials}
+                profileImage={profile?.avatarUrl}
+                welcomeName={profile?.nickname || profile?.name || 'Viajante'}
+                onGoToProfile={goToProfile}
+                onGoToEditProfile={goToEditProfile}
+                onLogout={handleLogout}
+              />
+              <PrivacyPolicyCard onBack={() => setView('home')} />
+            </>
+          ) : isTermsOfUseView ? (
+            <>
+              <HomeHeader
+                initials={initials}
+                profileImage={profile?.avatarUrl}
+                welcomeName={profile?.nickname || profile?.name || 'Viajante'}
+                onGoToProfile={goToProfile}
+                onGoToEditProfile={goToEditProfile}
+                onLogout={handleLogout}
+              />
+              <TermsOfUseCard onBack={() => setView('home')} />
+            </>
           ) : null}
 
           <main className={`App-main ${isGameView ? 'App-main-game' : ''} ${isProfileView ? 'App-main-profile' : ''} ${isEditProfileView ? 'App-main-profile' : ''}`}>
@@ -874,7 +906,7 @@ function App() {
             ) : null}
           </main>
 
-          {!isGameView && !isErrorView && !isProfileView && !isEditProfileView && <AppFooter />}
+          {!isGameView && !isErrorView && !isProfileView && !isEditProfileView && <AppFooter onGoToPrivacyPolicy={goToPrivacyPolicy} onGoToTermsOfUse={goToTermsOfUse}/>}
         </section>
       </div>
     </div>
