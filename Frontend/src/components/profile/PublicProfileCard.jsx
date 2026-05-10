@@ -24,6 +24,7 @@ function PublicProfileStatCard({ image, alt, value }) {
         flexDirection: 'column',
         alignItems: 'stretch',
         width: '100%',
+        height: '90%',
         aspectRatio: '1 / 1',
         boxSizing: 'border-box',
       }}
@@ -31,7 +32,7 @@ function PublicProfileStatCard({ image, alt, value }) {
       <header
         className="public-profile-stat-header"
         style={{
-          flex: '0 0 30%',
+          flex: '0 0 27%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

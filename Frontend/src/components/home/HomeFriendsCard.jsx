@@ -16,6 +16,7 @@ function HomeFriendsCard({
   onAcceptInvite,
   onRejectInvite,
   onSearchUsers,
+  onLoadAllUsers,
 }) {
   const [activeTab, setActiveTab] = useState('friends');
   const [sentInviteIds, setSentInviteIds] = useState([]);
@@ -235,6 +236,8 @@ function HomeFriendsCard({
           onSendInvite={handleSendInvite}
           sentInviteIds={sentInviteIds}
           onSearchUsers={onSearchUsers}
+          onLoadAllUsers={onLoadAllUsers}
+          onOpenProfile={onOpenProfile}
           friendIds={friends.map((f) => f.id)}
         />
       );

@@ -216,6 +216,20 @@ export async function searchUsers(token, query) {
   }
 }
 
+export async function listAllUsers(token) {
+  try {
+    const res = await fetch(`${API_BASE}/users`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    const data = await handleResponse(res);
+    return unwrapList(data, 'users');
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during users list');
+  }
+}
+
 export async function sendFriendRequest(token, receiverId) {
   try {
     const res = await fetch(`${API_BASE}/friends/request`, {
@@ -268,6 +282,7 @@ const api = {
   enableTwoFactor,
   listFriends,
   listPendingRequests,
+  listAllUsers,
   searchUsers,
   sendFriendRequest,
   acceptFriendRequest,

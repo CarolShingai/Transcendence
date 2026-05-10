@@ -16,7 +16,8 @@ function HomeCard({
   onSendInvite,
   onAcceptInvite,
   onRejectInvite,
-  onSearchUsers
+  onSearchUsers,
+  onLoadAllUsers
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -66,6 +67,7 @@ function HomeCard({
           onAcceptInvite={onAcceptInvite}
           onRejectInvite={onRejectInvite}
           onSearchUsers={onSearchUsers}
+          onLoadAllUsers={onLoadAllUsers}
         />
       ),
     },
