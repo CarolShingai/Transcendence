@@ -18,8 +18,10 @@ import PublicProfileCard from './components/profile/PublicProfileCard';
 import HomeCard from './components/home/HomeCard';
 import GameCard from './components/game/GameCard';
 import api from './services/api';
+import createWebSocketClient from './services/ws';
 import PrivacyPolicyCard from './components/layout/PrivacyPolicyCard';
 import TermsOfUseCard from './components/layout/TermsOfUseCard';
+import usePresenceWebSocket from './hooks/usePresenceWebSocket';
 
 const avatarContext = require.context('./assets/profile', false, /\.(png|jpe?g|webp)$/);
 const avatarOptions = avatarContext
@@ -218,6 +220,9 @@ function App() {
   const [registerForm, setRegisterForm] = useState(emptyRegisterForm);
 
   const isAuthenticated = Boolean(profile);
+
+  const wsToken = isAuthenticated ? localStorage.getItem('transcendence_token') : null;
+  const { onlineUsers, isConnected } = usePresenceWebSocket(wsToken);
 
   const initials = useMemo(() => {
     const sourceName = profile?.name?.trim() || profile?.nickname?.trim() || '';
@@ -883,6 +888,8 @@ function App() {
                 friends={friends}
                 invites={invites}
                 onOpenProfile={openPublicProfile}
+                onlineUsers={onlineUsers}
+                isWsConnected={isConnected}
                 onSendInvite={handleSendFriendRequest}
                 onAcceptInvite={handleAcceptFriendRequest}
                 onRejectInvite={handleRejectFriendRequest}
