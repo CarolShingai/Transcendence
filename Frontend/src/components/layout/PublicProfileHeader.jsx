@@ -83,6 +83,7 @@ function PublicProfileHeader({ initials, profileImage, name, nickname, onClose }
         onClick={onClose}
         aria-label="Fechar perfil público"
         title="Fechar"
+        style={{ marginTop: '-0.8rem' }}
       >
         Fechar
       </button>

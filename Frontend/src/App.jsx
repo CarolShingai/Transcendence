@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import './App.css';
 import LoginHeader from './components/layout/LoginHeader';
 import HomeHeader from './components/layout/HomeHeader';
@@ -206,6 +207,8 @@ function App() {
   }), []);
   const [profile, setProfile] = useState(null);
   const [viewedProfile, setViewedProfile] = useState(null);
+  const [viewedProfileOverlay, setViewedProfileOverlay] = useState(null);
+  const [overlayDialogSize, setOverlayDialogSize] = useState(null);
   const [friends, setFriends] = useState([]);
   const [invites, setInvites] = useState([]);
   const [optimisticInvites, setOptimisticInvites] = useState([]);
@@ -579,11 +582,12 @@ function App() {
   };
 
   const [gameOrigin, setGameOrigin] = useState(null);
+  const [gameOverlayOpen, setGameOverlayOpen] = useState(false);
 
   const handleGoToGameWithOrigin = (origin) => {
     if (!isAuthenticated) return;
     setGameOrigin(origin || null);
-    setView('game');
+    setGameOverlayOpen(true);
   };
 
   const handleProfileSave = (event) => {
@@ -736,11 +740,53 @@ function App() {
     setView('profileEdit');
   };
 
+  const computeOverlaySize = useCallback(() => {
+    try {
+      const homeEl = document.querySelector('.home-card');
+      if (!homeEl) {
+        setOverlayDialogSize(null);
+        return;
+      }
+      const rect = homeEl.getBoundingClientRect();
+      // take 100% (increased 30% from 98%)
+      const width = Math.max(0, rect.width * 1.0);
+      const height = Math.max(0, rect.height * 1.0);
+      setOverlayDialogSize({ width, height });
+    } catch (err) {
+      setOverlayDialogSize(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!viewedProfileOverlay) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setViewedProfileOverlay(null);
+    };
+    // compute size when overlay opens
+    computeOverlaySize();
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('resize', computeOverlaySize);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', computeOverlaySize);
+    };
+  }, [viewedProfileOverlay, computeOverlaySize]);
+
   const openPublicProfile = (publicProfile) => {
+    // If user is on the home view, open profile as an overlay and keep home view
+    if (view === 'home') {
+      setViewedProfileOverlay(publicProfile || null);
+      setError('');
+      return;
+    }
+
     setViewedProfile(publicProfile || null);
     setError('');
     setView('profile');
   };
+
+
+  
 
   const goToHome = () => {
     if (!isAuthenticated) return;
@@ -749,18 +795,45 @@ function App() {
 
   const handleSearchUsers = async (query) => {
     const token = localStorage.getItem('transcendence_token');
+    console.log('[App.handleSearchUsers] Query:', query, 'Token exists:', !!token);
 
     if (!token) {
+      console.warn('[App.handleSearchUsers] No token in localStorage');
       return [];
     }
 
-    const users = await api.searchUsers(token, query);
-    return Array.isArray(users) ? users : [];
+    try {
+      const users = await api.searchUsers(token, query);
+      console.log('[App.handleSearchUsers] Users returned:', users);
+      return Array.isArray(users) ? users : [];
+    } catch (error) {
+      console.error('[App.handleSearchUsers] Error:', error);
+      return [];
+    }
+  };
+
+  const handleLoadAllUsers = async () => {
+    const token = localStorage.getItem('transcendence_token');
+    console.log('[App.handleLoadAllUsers] Loading all users, Token exists:', !!token);
+
+    if (!token) {
+      console.warn('[App.handleLoadAllUsers] No token in localStorage');
+      return [];
+    }
+
+    try {
+      const users = await api.listAllUsers(token);
+      console.log('[App.handleLoadAllUsers] All users loaded:', users);
+      return Array.isArray(users) ? users : [];
+    } catch (error) {
+      console.error('[App.handleLoadAllUsers] Error:', error);
+      return [];
+    }
   };
 
   const handleExitGame = () => {
     if (!isAuthenticated) return;
-    setView('home');
+    setGameOverlayOpen(false);
   };
 
   
@@ -894,6 +967,7 @@ function App() {
                 onAcceptInvite={handleAcceptFriendRequest}
                 onRejectInvite={handleRejectFriendRequest}
                 onSearchUsers={handleSearchUsers}
+                onLoadAllUsers={handleLoadAllUsers}
               />
             ) : isGameView ? (
               <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
@@ -925,6 +999,83 @@ function App() {
           {!isGameView && !isErrorView && !isProfileView && !isEditProfileView && <AppFooter onGoToPrivacyPolicy={goToPrivacyPolicy} onGoToTermsOfUse={goToTermsOfUse} isAuthenticated={isAuthenticated}/>}
         </section>
       </div>
+      {view === 'home' && viewedProfileOverlay && ReactDOM.createPortal(
+        <div
+          className="profile-overlay-backdrop"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1200,
+          }}
+          onClick={() => setViewedProfileOverlay(null)}
+        >
+          <div
+            role="dialog"
+            aria-label="Perfil público"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '80vw',
+              height: '80vh',
+              overflow: 'hidden',
+              position: 'relative',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <div className="game-card overlay-profile-container" style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1, height: '100%' }}>
+              <PublicProfileHeader
+                initials={profileFromUser(viewedProfileOverlay)?.nickname?.slice(0,2).toUpperCase() || profileFromUser(viewedProfileOverlay)?.name?.split(' ').map(Boolean).slice(0,2).map(t=>t[0].toUpperCase()).join('') || 'U'}
+                profileImage={profileFromUser(viewedProfileOverlay)?.avatarUrl}
+                name={profileFromUser(viewedProfileOverlay)?.name}
+                nickname={profileFromUser(viewedProfileOverlay)?.nickname}
+                onClose={() => setViewedProfileOverlay(null)}
+              />
+              <div style={{ marginTop: '0.5rem', flex: 1, minHeight: 0, height: '100%' }}>
+                <PublicProfileCard profile={profileFromUser(viewedProfileOverlay)} />
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      {isAuthenticated && gameOverlayOpen && ReactDOM.createPortal(
+        <div
+          className="game-overlay-backdrop"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1200,
+          }}
+          onClick={() => setGameOverlayOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-label="Jogo"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '90vw',
+              height: '90vh',
+              overflow: 'hidden',
+              position: 'relative',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
