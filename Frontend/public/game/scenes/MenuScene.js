@@ -98,17 +98,14 @@ class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
   // Botão de Configurações
-    const settingsBtn = this.add.text(W - 50, H - 50, '⚙️', {
-      fontSize: '32px',
-      backgroundColor: '#2a5a3a',
-      padding: { x: 10, y: 5 }
+    const settingsBtn = this.add.text(W - 20, H - 20, '⚙️', {
+      fontSize: '28px'
     })
-    .setOrigin(0.5)
+    .setOrigin(1, 1)
     .setInteractive({ useHandCursor: true })
     .setDepth(100);
 
     settingsBtn.on('pointerup', () => {
-      console.log('Settings button clicked!');
       this.scene.start('SettingsScene'); // troque pelo nome da sua cena de configurações
     });
 

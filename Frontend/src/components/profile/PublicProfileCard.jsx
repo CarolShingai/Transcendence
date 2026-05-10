@@ -67,7 +67,7 @@ function PublicProfileStatCard({ image, alt, value }) {
   );
 }
 
-function PublicProfileCard({ profile, singleRecord, rankedRecord }) {
+function PublicProfileCard({ profile, singleRecord, rankedRecord, onPlayGame }) {
   const resolveRecord = (p, type, fallback = 0) => {
     if (!p) return fallback;
     if (type === 'single') {
@@ -86,17 +86,73 @@ function PublicProfileCard({ profile, singleRecord, rankedRecord }) {
   return (
     <section className="public-profile-page" aria-label="Dados públicos do perfil">
       <div className="public-profile-stats-grid">
-        <PublicProfileStatCard
-          image={singleTrans}
-          alt="Single Trans"
-          value={singleValue}
-        />
+        <div className="public-profile-stat-card-container" style={{ position: 'relative' }}>
+          <PublicProfileStatCard
+            image={singleTrans}
+            alt="Single Trans"
+            value={singleValue}
+          />
+          <button
+            type="button"
+            className="public-profile-play-button"
+            onClick={() => onPlayGame && onPlayGame('single')}
+            aria-label="Jogar Single Player"
+            title="Jogar Single Player"
+            style={{
+              position: 'absolute',
+              bottom: '10px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              padding: '8px 16px',
+              backgroundColor: '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              zIndex: 10
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#45a049'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#4CAF50'}
+          >
+            ▶ JOGAR
+          </button>
+        </div>
 
-        <PublicProfileStatCard
-          image={rankedTrans}
-          alt="Ranked Trans"
-          value={rankedValue}
-        />
+        <div className="public-profile-stat-card-container" style={{ position: 'relative' }}>
+          <PublicProfileStatCard
+            image={rankedTrans}
+            alt="Ranked Trans"
+            value={rankedValue}
+          />
+          <button
+            type="button"
+            className="public-profile-play-button"
+            onClick={() => onPlayGame && onPlayGame('ranked')}
+            aria-label="Jogar Ranked"
+            title="Jogar Ranked"
+            style={{
+              position: 'absolute',
+              bottom: '10px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              padding: '8px 16px',
+              backgroundColor: '#FF9800',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              zIndex: 10
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#e68900'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#FF9800'}
+          >
+            ▶ JOGAR
+          </button>
+        </div>
       </div>
     </section>
   );

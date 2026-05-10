@@ -1,12 +1,8 @@
 class SettingsScene extends Phaser.Scene {
 
-  constructor() { 
-    super('SettingsScene'); 
-    console.log('SettingsScene constructor called');
-  }
+  constructor() { super('SettingsScene'); }
 
   create() {
-    console.log('SettingsScene create called');
     const W = this.scale.width;
     const H = this.scale.height;
 

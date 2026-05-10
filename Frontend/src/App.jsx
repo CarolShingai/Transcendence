@@ -566,6 +566,7 @@ function App() {
 
   const handleGoToGameWithOrigin = (origin) => {
     if (!isAuthenticated) return;
+    setViewedProfile(null);
     setGameOrigin(origin || null);
     setView('game');
   };
@@ -728,6 +729,7 @@ function App() {
 
   const goToHome = () => {
     if (!isAuthenticated) return;
+    setViewedProfile(null);
     setView('home');
   };
 
@@ -744,6 +746,7 @@ function App() {
 
   const handleExitGame = () => {
     if (!isAuthenticated) return;
+    setViewedProfile(null);
     setView('home');
   };
 
@@ -870,7 +873,7 @@ function App() {
                 loading={loading}
               />
             ) : isProfileView ? (
-              <PublicProfileCard profile={viewedProfile || profile} />
+              <PublicProfileCard profile={viewedProfile || profile} onPlayGame={handleGoToGameWithOrigin} />
             ) : null}
           </main>
 
