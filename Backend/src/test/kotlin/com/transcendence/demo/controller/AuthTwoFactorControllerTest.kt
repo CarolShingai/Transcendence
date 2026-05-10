@@ -208,7 +208,7 @@ class AuthTwoFactorControllerTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request))
             )
-                .andExpect(status().is3xxRedirection)
+                .andExpect(status().isUnauthorized)
         }
 
         @Test
