@@ -147,7 +147,22 @@ function HomeFriendsCard({
         </div>
       ) : (
         <div className="friends-invites-list">
-           {invites.map((invite) => (
+           {invites.map((invite) => {
+              const isSentInvite = invite.direction === 'sent';
+              const displayName = isSentInvite
+                ? (invite.receiverName || 'Convite pendente')
+                : (invite.requesterName || 'Convite pendente');
+              const displayNickname = isSentInvite
+                ? invite.receiverNickname
+                : invite.requesterNickname;
+              const displayProfilePic = isSentInvite
+                ? invite.receiverProfilePic
+                : invite.requesterProfilePic;
+              const displayAvatarUrl = isSentInvite
+                ? invite.receiverAvatarUrl
+                : invite.requesterAvatarUrl;
+
+              return (
               <article
                 key={invite.requestId || invite.id}
                 className="friend-item friend-invite-item"
@@ -162,37 +177,54 @@ function HomeFriendsCard({
                   }
                 }}
               >
-                <div className="friend-avatar" aria-hidden="true">{getInitials(invite.name || invite.requesterName)}</div>
+                <div className="friend-avatar" aria-hidden="true">
+                  {displayAvatarUrl ? (
+                    <img
+                      src={displayAvatarUrl}
+                      alt={displayName}
+                      className="friend-avatar-image"
+                    />
+                  ) : (
+                    getInitials(displayName)
+                  )}
+                </div>
               <div className="friend-info">
-                <div className="friend-name">{invite.name || invite.requesterName || 'Convite pendente'}</div>
-                <div className="friend-nickname">{invite.nickname ? `@${invite.nickname}` : 'Solicitação pendente'}</div>
+                <div className="friend-name">{displayName}</div>
+                <div className="friend-nickname">{displayNickname ? `@${displayNickname}` : 'Solicitação pendente'}</div>
               </div>
               <div className="friend-action-group">
-                <button
-                  type="button"
-                  className="friend-action-button friend-accept-button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleInviteAction(invite, onAcceptInvite);
-                  }}
-                  disabled={isInviteProcessing(invite)}
-                >
-                  Aceitar
-                </button>
-                <button
-                  type="button"
-                  className="friend-action-button friend-reject-button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleInviteAction(invite, onRejectInvite);
-                  }}
-                  disabled={isInviteProcessing(invite)}
-                >
-                  Recusar
-                </button>
+                {isSentInvite ? (
+                  <span className="invite-status-pending">PENDENTE</span>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="friend-action-button friend-accept-button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleInviteAction(invite, onAcceptInvite);
+                      }}
+                      disabled={isInviteProcessing(invite)}
+                    >
+                      Aceitar
+                    </button>
+                    <button
+                      type="button"
+                      className="friend-action-button friend-reject-button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleInviteAction(invite, onRejectInvite);
+                      }}
+                      disabled={isInviteProcessing(invite)}
+                    >
+                      Recusar
+                    </button>
+                  </>
+                )}
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       );
     }
