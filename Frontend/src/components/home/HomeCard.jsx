@@ -9,6 +9,8 @@ const EMPTY_CARDS = [{ id: 'single' }, { id: 'ranked' }, { id: 'friends' }];
 
 function HomeCard({
   matches = [],
+  rankedPlayers = [],
+  currentUserId = null,
   friends = [],
   invites = [],
   onlineUsers = [],
@@ -18,7 +20,8 @@ function HomeCard({
   onSendInvite,
   onAcceptInvite,
   onRejectInvite,
-  onSearchUsers
+  onSearchUsers,
+  onLoadAllUsers
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -52,6 +55,8 @@ function HomeCard({
           image={rankedTrans}
           imageAlt="Ranked"
           matches={matches}
+          rankedPlayers={rankedPlayers}
+          currentUserId={currentUserId}
           onPlayGame={onPlayGame}
           gameType="ranked"
         />
@@ -70,6 +75,7 @@ function HomeCard({
           onAcceptInvite={onAcceptInvite}
           onRejectInvite={onRejectInvite}
           onSearchUsers={onSearchUsers}
+          onLoadAllUsers={onLoadAllUsers}
         />
       ),
     },

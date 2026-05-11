@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import './App.css';
 import LoginHeader from './components/layout/LoginHeader';
 import HomeHeader from './components/layout/HomeHeader';
@@ -18,7 +19,6 @@ import PublicProfileCard from './components/profile/PublicProfileCard';
 import HomeCard from './components/home/HomeCard';
 import GameCard from './components/game/GameCard';
 import api from './services/api';
-import createWebSocketClient from './services/ws';
 import PrivacyPolicyCard from './components/layout/PrivacyPolicyCard';
 import TermsOfUseCard from './components/layout/TermsOfUseCard';
 import usePresenceWebSocket from './hooks/usePresenceWebSocket';
@@ -31,6 +31,78 @@ const avatarOptions = avatarContext
     const moduleValue = avatarContext(key);
     return moduleValue?.default || moduleValue;
   });
+
+const MATCH_SCENE_MAP_IDS = {
+  AmazonasScene: 1,
+  CerradoScene: 2,
+  MataatlanticaScene: 3,
+  GameScene: 4,
+  amazonas: 1,
+  cerrado: 2,
+  mataatlantica: 3,
+  savana: 4
+};
+
+const MATCH_QUEUE_STORAGE_KEY = 'transcendence_match_queue_v1';
+
+const loadMatchQueue = () => {
+  try {
+    const raw = localStorage.getItem(MATCH_QUEUE_STORAGE_KEY);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_err) {
+    return [];
+  }
+};
+
+const saveMatchQueue = (queue) => {
+  try {
+    localStorage.setItem(MATCH_QUEUE_STORAGE_KEY, JSON.stringify(queue));
+  } catch (_err) {
+    // ignore quota / storage errors
+  }
+};
+
+const sanitizeMatchPayload = (payload) => {
+  const normalizedMapId = resolveMatchMapId(payload);
+  if (!normalizedMapId) {
+    return null;
+  }
+
+  return {
+    clientMatchId: payload?.clientMatchId || null,
+    mapId: normalizedMapId,
+    score: Number.isFinite(Number(payload?.score)) ? Number(payload.score) : null,
+    durationSeconds: Number.isFinite(Number(payload?.durationSeconds)) ? Number(payload.durationSeconds) : null,
+    metadata: payload?.metadata || {},
+    reportedAt: payload?.reportedAt || new Date().toISOString()
+  };
+};
+
+const isRetryableMatchError = (error) => {
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    message.includes('network error') ||
+    message.includes('timed out') ||
+    message.includes('failed to fetch') ||
+    message.includes('request aborted') ||
+    message.includes('load failed')
+  );
+};
+
+const resolveMatchMapId = (payload) => {
+  const directMapId = Number(payload?.mapId);
+  if (Number.isInteger(directMapId) && directMapId > 0) {
+    return directMapId;
+  }
+
+  const sceneKey = payload?.metadata?.sceneKey || payload?.sceneKey || '';
+  const phaseId = payload?.metadata?.phaseId || payload?.phaseId || '';
+
+  return MATCH_SCENE_MAP_IDS[sceneKey] || MATCH_SCENE_MAP_IDS[phaseId] || null;
+};
 
 function App() {
   const pathToErrorView = (pathname) => {
@@ -83,6 +155,7 @@ function App() {
   }, [resolveAvatarFromProfilePic, resolveAvatarUrl]);
 
   const profileFromUser = useCallback((user, fallbackProfile = null) => ({
+    id: user?.id ?? fallbackProfile?.id ?? null,
     name: user?.name || '',
     nickname: user?.nickname || '',
     email: user?.email || '',
@@ -115,18 +188,6 @@ function App() {
     direction: request?.direction || null,
     createdAt: request?.createdAt
   });
-
-  const resolvePublicRecordValue = (source, fallback = 0) => {
-    if (source === null || source === undefined || source === '') {
-      return fallback;
-    }
-
-    if (typeof source === 'number' && Number.isFinite(source)) {
-      return source;
-    }
-
-    return source;
-  };
 
   const normalizeFriend = (friend) => ({
     id: friend?.id,
@@ -206,9 +267,13 @@ function App() {
   }), []);
   const [profile, setProfile] = useState(null);
   const [viewedProfile, setViewedProfile] = useState(null);
+  const [viewedProfileOverlay, setViewedProfileOverlay] = useState(null);
+  const [overlayDialogSize, setOverlayDialogSize] = useState(null);
   const [friends, setFriends] = useState([]);
   const [invites, setInvites] = useState([]);
   const [optimisticInvites, setOptimisticInvites] = useState([]);
+  const [homeMatches, setHomeMatches] = useState([]);
+  const [rankedPlayers, setRankedPlayers] = useState([]);
 
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
   const [twoFactorSetup, setTwoFactorSetup] = useState(null);
@@ -267,6 +332,59 @@ function App() {
     return { friends: nextFriends, invites: nextInvites };
   }, []);
 
+  const normalizeMatchHistoryItem = useCallback((match) => {
+    const mapId = Number(match?.mapId) || Number(match?.map?.id) || 0;
+    const mapName = match?.mapName || match?.map?.name || `Fase ${mapId || '-'}`;
+    const score = Number(match?.score);
+
+    return {
+      id: match?.id,
+      createdAt: match?.createdAt,
+      mapId,
+      mapName,
+      score: Number.isFinite(score) ? score : null,
+      durationSeconds: Number.isFinite(Number(match?.durationSeconds)) ? Number(match.durationSeconds) : null,
+    };
+  }, []);
+
+  const normalizeRankedPlayer = useCallback((player) => ({
+    position: Number(player?.position) || 0,
+    userId: Number(player?.userId) || 0,
+    nickname: player?.nickname || '',
+    bestScore: Number.isFinite(Number(player?.bestScore)) ? Number(player.bestScore) : 0,
+  }), []);
+
+  const refreshMatchHistory = useCallback(async (token = localStorage.getItem('transcendence_token')) => {
+    if (!token) {
+      setHomeMatches([]);
+      return [];
+    }
+
+    try {
+      const matches = await api.listMyMatches(token);
+      const normalizedMatches = Array.isArray(matches) ? matches.map(normalizeMatchHistoryItem) : [];
+      setHomeMatches(normalizedMatches);
+      return normalizedMatches;
+    } catch (error) {
+      console.warn('[App.refreshMatchHistory] Failed to load matches', error);
+      setHomeMatches([]);
+      return [];
+    }
+  }, [normalizeMatchHistoryItem]);
+
+  const refreshRankedLeaderboard = useCallback(async () => {
+    try {
+      const players = await api.listRankedPlayers();
+      const normalizedPlayers = Array.isArray(players) ? players.map(normalizeRankedPlayer) : [];
+      setRankedPlayers(normalizedPlayers);
+      return normalizedPlayers;
+    } catch (error) {
+      console.warn('[App.refreshRankedLeaderboard] Failed to load ranked leaderboard', error);
+      setRankedPlayers([]);
+      return [];
+    }
+  }, [normalizeRankedPlayer]);
+
   const syncProfileFromToken = useCallback(async (targetView = 'home') => {
     const token = localStorage.getItem('transcendence_token');
     if (!token) {
@@ -274,6 +392,8 @@ function App() {
       setProfileForm(emptyProfileForm);
       setFriends([]);
       setInvites([]);
+      setHomeMatches([]);
+      setRankedPlayers([]);
       setView('login');
       return null;
     }
@@ -293,6 +413,8 @@ function App() {
       setProfileForm(profileFromUser(resolved, null));
       setView(targetView);
       await refreshFriendshipData(token);
+      await refreshMatchHistory(token);
+      await refreshRankedLeaderboard();
 
       try {
         localStorage.setItem('transcendence_profile', JSON.stringify(resolved));
@@ -309,12 +431,14 @@ function App() {
       setProfileForm(emptyProfileForm);
       setFriends([]);
       setInvites([]);
+      setHomeMatches([]);
+      setRankedPlayers([]);
       setView('login');
       return null;
     } finally {
       setLoading(false);
     }
-  }, [refreshFriendshipData, emptyProfileForm, normalizeBackendUser, profileFromUser]);
+  }, [refreshFriendshipData, refreshMatchHistory, refreshRankedLeaderboard, emptyProfileForm, normalizeBackendUser, profileFromUser]);
 
   useEffect(() => {
     const routeView = pathToErrorView(window.location.pathname);
@@ -350,8 +474,10 @@ function App() {
     }
 
     void refreshFriendshipData();
+    void refreshMatchHistory();
+    void refreshRankedLeaderboard();
     return undefined;
-  }, [isAuthenticated, view, refreshFriendshipData]);
+  }, [isAuthenticated, view, refreshFriendshipData, refreshMatchHistory, refreshRankedLeaderboard]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -579,11 +705,12 @@ function App() {
   };
 
   const [gameOrigin, setGameOrigin] = useState(null);
+  const [gameOverlayOpen, setGameOverlayOpen] = useState(false);
 
   const handleGoToGameWithOrigin = (origin) => {
     if (!isAuthenticated) return;
     setGameOrigin(origin || null);
-    setView('game');
+    setGameOverlayOpen(true);
   };
 
   const handleProfileSave = (event) => {
@@ -632,22 +759,32 @@ function App() {
       throw new Error('Invalid friend selection');
     }
 
-    const response = await api.sendFriendRequest(token, receiverId);
-    const optimisticInvite = normalizeInvite({
-      ...response,
-      id: response?.id ?? Date.now(),
-      receiverId,
-      receiverName: user?.name || response?.receiverName || '',
-      status: response?.status || 'PENDING',
-      direction: 'sent'
-    });
-    const nextOptimisticInvites = [
-      ...optimisticInvites.filter((item) => String(item.id) !== String(optimisticInvite.id)),
-      optimisticInvite,
-    ];
-    setOptimisticInvites(nextOptimisticInvites);
-    await refreshFriendshipData(token, nextOptimisticInvites);
-    return response;
+    try {
+      const response = await api.sendFriendRequest(token, receiverId);
+      const optimisticInvite = normalizeInvite({
+        ...response,
+        id: response?.id ?? Date.now(),
+        receiverId,
+        receiverName: user?.name || response?.receiverName || '',
+        status: response?.status || 'PENDING',
+        direction: 'sent'
+      });
+      const nextOptimisticInvites = [
+        ...optimisticInvites.filter((item) => String(item.id) !== String(optimisticInvite.id)),
+        optimisticInvite,
+      ];
+      setOptimisticInvites(nextOptimisticInvites);
+      await refreshFriendshipData(token, nextOptimisticInvites);
+      return response;
+    } catch (error) {
+      const message = String(error?.message || '').toLowerCase();
+      if (message.includes('already exists') || message.includes('already friend') || message.includes('duplicate')) {
+        setError('Convite já existe ou usuários já são amigos');
+        return null;
+      }
+
+      throw error;
+    }
   };
 
   const handleAcceptFriendRequest = async (requestId) => {
@@ -736,11 +873,53 @@ function App() {
     setView('profileEdit');
   };
 
+  const computeOverlaySize = useCallback(() => {
+    try {
+      const homeEl = document.querySelector('.home-card');
+      if (!homeEl) {
+        setOverlayDialogSize(null);
+        return;
+      }
+      const rect = homeEl.getBoundingClientRect();
+      // take 100% (increased 30% from 98%)
+      const width = Math.max(0, rect.width * 1.0);
+      const height = Math.max(0, rect.height * 1.0);
+      setOverlayDialogSize({ width, height });
+    } catch (err) {
+      setOverlayDialogSize(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!viewedProfileOverlay) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setViewedProfileOverlay(null);
+    };
+    // compute size when overlay opens
+    computeOverlaySize();
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('resize', computeOverlaySize);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', computeOverlaySize);
+    };
+  }, [viewedProfileOverlay, computeOverlaySize]);
+
   const openPublicProfile = (publicProfile) => {
+    // If user is on the home view, open profile as an overlay and keep home view
+    if (view === 'home') {
+      setViewedProfileOverlay(publicProfile || null);
+      setError('');
+      return;
+    }
+
     setViewedProfile(publicProfile || null);
     setError('');
     setView('profile');
   };
+
+
+  
 
   const goToHome = () => {
     if (!isAuthenticated) return;
@@ -749,19 +928,149 @@ function App() {
 
   const handleSearchUsers = async (query) => {
     const token = localStorage.getItem('transcendence_token');
+    console.log('[App.handleSearchUsers] Query:', query, 'Token exists:', !!token);
 
     if (!token) {
+      console.warn('[App.handleSearchUsers] No token in localStorage');
       return [];
     }
 
-    const users = await api.searchUsers(token, query);
-    return Array.isArray(users) ? users : [];
+    try {
+      const users = await api.searchUsers(token, query);
+      console.log('[App.handleSearchUsers] Users returned:', users);
+      return Array.isArray(users) ? users : [];
+    } catch (error) {
+      console.error('[App.handleSearchUsers] Error:', error);
+      return [];
+    }
+  };
+
+  const handleLoadAllUsers = async () => {
+    const token = localStorage.getItem('transcendence_token');
+    console.log('[App.handleLoadAllUsers] Loading all users, Token exists:', !!token);
+
+    if (!token) {
+      console.warn('[App.handleLoadAllUsers] No token in localStorage');
+      return [];
+    }
+
+    try {
+      const users = await api.listAllUsers(token);
+      console.log('[App.handleLoadAllUsers] All users loaded:', users);
+      return Array.isArray(users) ? users : [];
+    } catch (error) {
+      console.error('[App.handleLoadAllUsers] Error:', error);
+      return [];
+    }
   };
 
   const handleExitGame = () => {
     if (!isAuthenticated) return;
-    setView('home');
+    setGameOverlayOpen(false);
   };
+
+  const handleMatchCompletedMessage = useCallback(async (event) => {
+    if (event.origin !== window.location.origin) {
+      return;
+    }
+
+    const message = event?.data;
+    if (!message || message.type !== 'MATCH_COMPLETED') {
+      return;
+    }
+
+    const token = localStorage.getItem('transcendence_token');
+    if (!token) {
+      return;
+    }
+
+    const payload = message.payload || {};
+    const normalized = sanitizeMatchPayload(payload);
+    if (!normalized) {
+      console.warn('[App.handleMatchCompletedMessage] Unable to resolve mapId from payload', payload);
+      return;
+    }
+
+    try {
+      await api.createMatch(token, normalized);
+      void refreshMatchHistory(token);
+      void refreshRankedLeaderboard();
+    } catch (error) {
+      if (isRetryableMatchError(error)) {
+        const queue = loadMatchQueue();
+        const queueItemKey = normalized.clientMatchId || `${normalized.mapId}_${normalized.reportedAt}`;
+        const nextQueue = [
+          ...queue.filter((item) => (item?.clientMatchId || item?.queueKey) !== queueItemKey),
+          { ...normalized, queueKey: queueItemKey, attempts: 0 }
+        ];
+
+        saveMatchQueue(nextQueue);
+        console.warn('[App.handleMatchCompletedMessage] Match queued for retry:', queueItemKey);
+        return;
+      }
+
+      console.error('[App.handleMatchCompletedMessage] Failed to persist match:', error);
+      setError(error?.message || 'Failed to save match result');
+    }
+  }, []);
+
+  const flushQueuedMatches = useCallback(async () => {
+    const token = localStorage.getItem('transcendence_token');
+    if (!token) {
+      return;
+    }
+
+    const queue = loadMatchQueue();
+    if (queue.length === 0) {
+      return;
+    }
+
+    const remaining = [];
+    let didPersistAny = false;
+
+    for (const item of queue) {
+      try {
+        await api.createMatch(token, item);
+        didPersistAny = true;
+      } catch (error) {
+        if (isRetryableMatchError(error)) {
+          remaining.push({
+            ...item,
+            attempts: Number(item?.attempts || 0) + 1
+          });
+          continue;
+        }
+
+        console.error('[App.flushQueuedMatches] Dropping non-retryable match:', error);
+      }
+    }
+
+    saveMatchQueue(remaining);
+    if (didPersistAny) {
+      void refreshMatchHistory(token);
+      void refreshRankedLeaderboard();
+    }
+  }, [refreshMatchHistory, refreshRankedLeaderboard]);
+
+  useEffect(() => {
+    window.addEventListener('message', handleMatchCompletedMessage);
+    return () => window.removeEventListener('message', handleMatchCompletedMessage);
+  }, [handleMatchCompletedMessage]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return undefined;
+    }
+
+    void flushQueuedMatches();
+
+    const onOnline = () => {
+      void flushQueuedMatches();
+    };
+
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [isAuthenticated, flushQueuedMatches]);
 
   
   const isLoginView = !isAuthenticated && view === 'login';
@@ -776,15 +1085,11 @@ function App() {
   const isError5xxView = view === 'error5xx';
   const isErrorView = isError4xxView || isError5xxView;
   const bannerMessage = isLoginView || isRegisterView || isProfileView || isEditProfileView ? '' : error;
-  const gameEndpoint = process.env.REACT_APP_GAME_ENDPOINT || '/game';
-  const publicSingleRecord = resolvePublicRecordValue(
-    profile?.records?.single ?? profile?.singleRecord ?? profile?.singleScore ?? profile?.singleWins ?? 0,
-    0
-  );
-  const publicRankedRecord = resolvePublicRecordValue(
-    profile?.records?.ranked ?? profile?.rankedRecord ?? profile?.rankedScore ?? profile?.rankedWins ?? 0,
-    0
-  );
+  const gameEndpoint = process.env.REACT_APP_GAME_ENDPOINT || '/game/index.html';
+  const publicProfileDisplay = viewedProfile || profile;
+  const publicRankPosition = publicProfileDisplay?.id
+    ? rankedPlayers.find((player) => String(player.userId) === String(publicProfileDisplay.id))?.position ?? null
+    : null;
 
   const goToPrivacyPolicy = () => setView('privacyPolicy');
   const goToTermsOfUse = () => setView('termsOfUse');
@@ -866,7 +1171,7 @@ function App() {
             ) : isTwoFactorLoginView ? (
               <TwoFactorLoginCard
                 code={twoFactorLoginCode}
-                error={error}
+                matches={homeMatches}
                 onCodeChange={handleTwoFactorLoginCodeChange}
                 onVerify={handleTwoFactorLoginVerify}
                 onBackToLogin={handleBackToLoginFromTwoFactor}
@@ -885,6 +1190,9 @@ function App() {
             ) : isHomeView ? (
               <HomeCard
                 onPlayGame={handleGoToGameWithOrigin}
+                matches={homeMatches}
+                rankedPlayers={rankedPlayers}
+                currentUserId={profile?.id}
                 friends={friends}
                 invites={invites}
                 onOpenProfile={openPublicProfile}
@@ -894,6 +1202,7 @@ function App() {
                 onAcceptInvite={handleAcceptFriendRequest}
                 onRejectInvite={handleRejectFriendRequest}
                 onSearchUsers={handleSearchUsers}
+                onLoadAllUsers={handleLoadAllUsers}
               />
             ) : isGameView ? (
               <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
@@ -918,13 +1227,102 @@ function App() {
                 loading={loading}
               />
             ) : isProfileView ? (
-              <PublicProfileCard profile={viewedProfile || profile} />
+              <PublicProfileCard profile={publicProfileDisplay} rankedPosition={publicRankPosition} />
             ) : null}
           </main>
 
           {!isGameView && !isErrorView && !isProfileView && !isEditProfileView && <AppFooter onGoToPrivacyPolicy={goToPrivacyPolicy} onGoToTermsOfUse={goToTermsOfUse} isAuthenticated={isAuthenticated}/>}
         </section>
       </div>
+      {view === 'home' && viewedProfileOverlay && ReactDOM.createPortal(
+        <div
+          className="profile-overlay-backdrop"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1200,
+          }}
+          onClick={() => setViewedProfileOverlay(null)}
+        >
+          <div
+            role="dialog"
+            aria-label="Perfil público"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '80vw',
+              height: '80vh',
+              overflow: 'hidden',
+              position: 'relative',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <div className="game-card overlay-profile-container" style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1, height: '100%' }}>
+              <PublicProfileHeader
+                initials={profileFromUser(viewedProfileOverlay)?.nickname?.slice(0,2).toUpperCase() || profileFromUser(viewedProfileOverlay)?.name?.split(' ').map(Boolean).slice(0,2).map(t=>t[0].toUpperCase()).join('') || 'U'}
+                profileImage={profileFromUser(viewedProfileOverlay)?.avatarUrl}
+                name={profileFromUser(viewedProfileOverlay)?.name}
+                nickname={profileFromUser(viewedProfileOverlay)?.nickname}
+                onClose={() => setViewedProfileOverlay(null)}
+              />
+              <div style={{ marginTop: '0.5rem', flex: 1, minHeight: 0, height: '100%' }}>
+                {(() => {
+                  const viewedUserId = profileFromUser(viewedProfileOverlay)?.id;
+                  const rankedData = viewedUserId
+                    ? rankedPlayers.find((player) => String(player.userId) === String(viewedUserId))
+                    : null;
+                  return (
+                    <PublicProfileCard
+                      profile={profileFromUser(viewedProfileOverlay)}
+                      rankedPosition={rankedData?.position ?? null}
+                      bestScore={rankedData?.bestScore ?? null}
+                    />
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      {isAuthenticated && gameOverlayOpen && ReactDOM.createPortal(
+        <div
+          className="game-overlay-backdrop"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1200,
+          }}
+          onClick={() => setGameOverlayOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-label="Jogo"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '90vw',
+              height: '90vh',
+              overflow: 'hidden',
+              position: 'relative',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

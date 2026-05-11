@@ -67,9 +67,10 @@ Frontend/
 
 ## API Integration
 
-The frontend is configured to proxy API requests to the backend:
-- API calls to `/api/*` are forwarded to `http://backend:8080`
-- In development mode, configure your proxy in `package.json` if needed
+The frontend resolves the API base automatically:
+- In local development on port 3000, it uses `https://localhost:8082`
+- In production and Docker/Nginx, it uses the same-origin `/api` proxy
+- You can override it with `REACT_APP_API_URL` if needed
 
 ## Key Technologies
 

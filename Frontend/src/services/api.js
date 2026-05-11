@@ -1,4 +1,14 @@
-const API_BASE = process.env.REACT_APP_API_URL || 'https://localhost:8082';
+const API_BASE = (() => {
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+
+  if (typeof window !== 'undefined' && window.location?.port === '3000') {
+    return 'https://localhost:8082';
+  }
+
+  return '/api';
+})();
 
 let httpErrorHandler = null;
 
@@ -216,6 +226,20 @@ export async function searchUsers(token, query) {
   }
 }
 
+export async function listAllUsers(token) {
+  try {
+    const res = await fetch(`${API_BASE}/users`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    const data = await handleResponse(res);
+    return unwrapList(data, 'users');
+  } catch (error) {
+    throw new Error(error?.message || 'Network error during users list');
+  }
+}
+
 export async function sendFriendRequest(token, receiverId) {
   try {
     const res = await fetch(`${API_BASE}/friends/request`, {
@@ -256,6 +280,46 @@ export async function rejectFriendRequest(token, requestId) {
   }
 }
 
+export async function createMatch(token, data) {
+  try {
+    return request('/matches', {
+      method: 'POST',
+      token,
+      body: data,
+    });
+  } catch (error) {
+    throw new Error(error?.message || 'Network error while registering match');
+  }
+}
+
+export async function listMyMatches(token) {
+  try {
+    const res = await fetch(`${API_BASE}/matches`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    const data = await handleResponse(res);
+    return unwrapList(data, 'matches');
+  } catch (error) {
+    throw new Error(error?.message || 'Network error while loading match history');
+  }
+}
+
+export async function listRankedPlayers() {
+  try {
+    const res = await fetch(`${API_BASE}/ranked`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const data = await handleResponse(res);
+    return unwrapList(data, 'players');
+  } catch (error) {
+    throw new Error(error?.message || 'Network error while loading ranked leaderboard');
+  }
+}
+
 const api = {
   login,
   verifyTwoFactor,
@@ -268,10 +332,14 @@ const api = {
   enableTwoFactor,
   listFriends,
   listPendingRequests,
+  listAllUsers,
   searchUsers,
   sendFriendRequest,
   acceptFriendRequest,
   rejectFriendRequest,
+  createMatch,
+  listMyMatches,
+  listRankedPlayers,
   getGoogleOAuthUrl
 };
 

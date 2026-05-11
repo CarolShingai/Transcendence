@@ -37,6 +37,8 @@ class SecurityConfig(
 		"/auth/oauth2/authorize/google",
 		"/auth/oauth2/authorize/google/success",
 		"/auth/oauth2/authorize/google/failure",
+		"/ranked",
+		"/api/ranked",
 		"/ws",
 		"/ws/**",
 		"/error",
