@@ -84,7 +84,7 @@ function HomeFriendsCard({
   };
 
   const renderFriendItem = (friend) => {
-    const friendStatus = resolveStatus(friend.status).toLowerCase();
+    const friendStatus = resolveStatus(friend).toLowerCase();
 
     return (
       <article
@@ -111,7 +111,7 @@ function HomeFriendsCard({
           <div className="friend-nickname">@{friend.nickname}</div>
         </div>
         <div className={`friend-status friend-status-${friendStatus}`}>
-          {resolveStatus(friend.status)}
+          {resolveStatus(friend)}
         </div>
       </article>
     );
