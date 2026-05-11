@@ -568,10 +568,9 @@ function App() {
 
       setTwoFactorSetup(null);
       setTwoFactorCode('');
-      setTwoFactorMessage('2FA ativado com sucesso.');
       setProfile((previous) => previous ? { ...previous, twoFactorEnabled: true } : previous);
       setProfileForm((previous) => ({ ...previous, twoFactorEnabled: true }));
-      await syncProfileFromToken('profile');
+      await syncProfileFromToken('profileEdit');
     } catch (err) {
       setTwoFactorMessage(err?.message || 'Codigo invalido.');
     } finally {

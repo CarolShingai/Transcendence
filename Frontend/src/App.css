@@ -879,6 +879,13 @@
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+  transition: background-color 0.7s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: rgba(233, 243, 238, 0.95);
+  border-color: rgba(29, 122, 83, 0.55);
+  color: #246c50;
 }
 
 .two-factor-panel {
@@ -893,6 +900,7 @@
 
 .two-factor-panel h3 {
   margin: 0;
+  text-align: center;
 }
 
 .two-factor-setup {
@@ -902,6 +910,7 @@
 
 .two-factor-qr {
   width: min(180px, 100%);
+  justify-self: center;
   border-radius: 12px;
   border: 1px solid rgba(14, 43, 35, 0.16);
   background: #fff;
@@ -921,6 +930,18 @@
   margin: 0;
   color: var(--accent-dark);
   font-weight: 700;
+}
+
+.success-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.success-check {
+  color: #1f8f4d;
+  font-weight: 900;
+  line-height: 1.2;
 }
 
 .home-card {
