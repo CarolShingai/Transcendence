@@ -111,14 +111,22 @@ function ProfileCard({
             />
 
             <div className="two-factor-panel">
-              <h3>Autenticacao de dois fatores</h3>
+              <h3>Autenticação de dois fatores</h3>
               {profileForm.twoFactorEnabled ? (
-                <p className="success-message">2FA ativado. O login por senha vai pedir o codigo do app autenticador.</p>
+                <p className="success-message">
+                  <span className="success-check" aria-hidden="true">✔</span>
+                  <span>
+                    2FA ativado com sucesso.
+                    <br />
+                    <br />
+                    O login por senha vai pedir o codigo do app autenticador.
+                  </span>
+                </p>
               ) : (
                 <>
                   <p className="support-text">Ative o 2FA para proteger sua conta com um app autenticador.</p>
                   <button type="button" className="secondary-button" onClick={onTwoFactorSetup} disabled={loading}>
-                    Ativar autenticacao de dois fatores
+                    Ativar autenticação de dois fatores
                   </button>
                 </>
               )}
@@ -128,7 +136,7 @@ function ProfileCard({
                   <img
                     className="two-factor-qr"
                     src={`data:image/png;base64,${twoFactorSetup.qrCodeUrl}`}
-                    alt="QR Code para autenticacao de dois fatores"
+                    alt="QR Code para autenticação de dois fatores"
                   />
                   <p className="support-text">Escaneie o QR Code ou insira este codigo manualmente:</p>
                   <code className="two-factor-secret">{twoFactorSetup.tempSecret}</code>
