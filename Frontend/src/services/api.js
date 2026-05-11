@@ -1,4 +1,14 @@
-const API_BASE = process.env.REACT_APP_API_URL || 'https://localhost:8082';
+const API_BASE = (() => {
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+
+  if (typeof window !== 'undefined' && window.location?.port === '3000') {
+    return 'https://localhost:8082';
+  }
+
+  return '/api';
+})();
 
 let httpErrorHandler = null;
 
