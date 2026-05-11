@@ -1,6 +1,6 @@
 package com.transcendence.demo.service
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.transcendence.demo.entity.Match
 import com.transcendence.demo.repository.MatchRepository
 import com.transcendence.demo.repository.MapRepository
@@ -13,9 +13,9 @@ import org.springframework.transaction.annotation.Transactional
 class MatchService(
     private val matchRepository: MatchRepository,
     private val mapRepository: MapRepository,
-    private val userRepository: UserRepository,
-    private val objectMapper: ObjectMapper
+    private val userRepository: UserRepository
 ) {
+    private val objectMapper = jacksonObjectMapper()
 
     data class MatchCreationResult(
         val match: Match,
@@ -65,13 +65,13 @@ class MatchService(
 
         return try {
             MatchCreationResult(matchRepository.save(match), created = true)
-        } catch (_: DataIntegrityViolationException) {
+        } catch (e: DataIntegrityViolationException) {
             if (normalizedClientMatchId.isNullOrBlank()) {
-                throw
+                throw e
             }
 
             val existing = matchRepository.findByClientMatchId(normalizedClientMatchId)
-                ?: throw
+                ?: throw e
 
             MatchCreationResult(existing, created = false)
         }
