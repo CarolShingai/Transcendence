@@ -123,9 +123,20 @@ function HomeFriendsCard({
       return null;
     }
 
-    const response = await onSendInvite(user);
-    setSentInviteIds((previous) => (previous.includes(user.id) ? previous : [...previous, user.id]));
-    return response;
+    try {
+      const response = await onSendInvite(user);
+      if (response) {
+        setSentInviteIds((previous) => (previous.includes(user.id) ? previous : [...previous, user.id]));
+      }
+      return response;
+    } catch (error) {
+      const message = String(error?.message || '').toLowerCase();
+      if (message.includes('already exists') || message.includes('already friend') || message.includes('duplicate')) {
+        return null;
+      }
+
+      throw error;
+    }
   };
 
   const handleInviteAction = async (invite, action) => {

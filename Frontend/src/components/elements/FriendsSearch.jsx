@@ -107,6 +107,13 @@ function FriendsSearch({ onSendInvite, onSearchUsers, onLoadAllUsers, onOpenProf
     setPendingInviteIds((prev) => [...prev, String(user.id)]);
     try {
       return await onSendInvite(user);
+    } catch (error) {
+      const message = String(error?.message || '').toLowerCase();
+      if (message.includes('already exists') || message.includes('already friend') || message.includes('duplicate')) {
+        return null;
+      }
+
+      throw error;
     } finally {
       setPendingInviteIds((prev) => prev.filter((id) => id !== String(user.id)));
     }

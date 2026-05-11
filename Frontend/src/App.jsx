@@ -759,22 +759,32 @@ function App() {
       throw new Error('Invalid friend selection');
     }
 
-    const response = await api.sendFriendRequest(token, receiverId);
-    const optimisticInvite = normalizeInvite({
-      ...response,
-      id: response?.id ?? Date.now(),
-      receiverId,
-      receiverName: user?.name || response?.receiverName || '',
-      status: response?.status || 'PENDING',
-      direction: 'sent'
-    });
-    const nextOptimisticInvites = [
-      ...optimisticInvites.filter((item) => String(item.id) !== String(optimisticInvite.id)),
-      optimisticInvite,
-    ];
-    setOptimisticInvites(nextOptimisticInvites);
-    await refreshFriendshipData(token, nextOptimisticInvites);
-    return response;
+    try {
+      const response = await api.sendFriendRequest(token, receiverId);
+      const optimisticInvite = normalizeInvite({
+        ...response,
+        id: response?.id ?? Date.now(),
+        receiverId,
+        receiverName: user?.name || response?.receiverName || '',
+        status: response?.status || 'PENDING',
+        direction: 'sent'
+      });
+      const nextOptimisticInvites = [
+        ...optimisticInvites.filter((item) => String(item.id) !== String(optimisticInvite.id)),
+        optimisticInvite,
+      ];
+      setOptimisticInvites(nextOptimisticInvites);
+      await refreshFriendshipData(token, nextOptimisticInvites);
+      return response;
+    } catch (error) {
+      const message = String(error?.message || '').toLowerCase();
+      if (message.includes('already exists') || message.includes('already friend') || message.includes('duplicate')) {
+        setError('Convite já existe ou usuários já são amigos');
+        return null;
+      }
+
+      throw error;
+    }
   };
 
   const handleAcceptFriendRequest = async (requestId) => {
