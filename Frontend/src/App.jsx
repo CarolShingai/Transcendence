@@ -844,7 +844,7 @@ function App() {
   const isError5xxView = view === 'error5xx';
   const isErrorView = isError4xxView || isError5xxView;
   const bannerMessage = isLoginView || isRegisterView || isProfileView || isEditProfileView ? '' : error;
-  const gameEndpoint = process.env.REACT_APP_GAME_ENDPOINT || '/game';
+  const gameEndpoint = process.env.REACT_APP_GAME_ENDPOINT || '/game/index.html';
   const publicSingleRecord = resolvePublicRecordValue(
     profile?.records?.single ?? profile?.singleRecord ?? profile?.singleScore ?? profile?.singleWins ?? 0,
     0
