@@ -78,6 +78,14 @@ function FriendsSearch({ onSendInvite, onSearchUsers, onLoadAllUsers, onOpenProf
     }
 
     let cancelled = false;
+    
+    // If query is empty, no need to set loading or search
+    if (trimmed.length === 0) {
+      console.log('[FriendsSearch] Query cleared, showing all users');
+      setLoading(false);
+      return undefined;
+    }
+
     setLoading(true);
     console.log('[FriendsSearch] Searching for:', trimmed);
     

@@ -62,13 +62,15 @@ function PublicProfileStatCard({ image, alt, label = 'RECORD:', value }) {
         }}
       >
         <span className="public-profile-stat-label">{label}</span>
-        <strong className="public-profile-stat-value">{resolveRecordValue(value)}</strong>
+        <strong className="public-profile-stat-value" style={{ fontSize: '2.4rem' }}>
+          {resolveRecordValue(value)}{label === 'RECORD:' ? ' KM' : ''}
+        </strong>
       </div>
     </article>
   );
 }
 
-function PublicProfileCard({ profile, singleRecord, rankedRecord, rankedPosition }) {
+function PublicProfileCard({ profile, singleRecord, rankedRecord, rankedPosition, bestScore }) {
   const resolveRecord = (p, type, fallback = 0) => {
     if (!p) return fallback;
     if (type === 'single') {
@@ -81,7 +83,10 @@ function PublicProfileCard({ profile, singleRecord, rankedRecord, rankedPosition
     );
   };
 
-  const singleValue = profile ? resolveRecord(profile, 'single', 0) : resolveRecordValue(singleRecord);
+  // If bestScore is provided from ranked data, use it for single value
+  const singleValue = bestScore 
+    ? String(Math.round(bestScore))
+    : (profile ? resolveRecord(profile, 'single', 0) : resolveRecordValue(singleRecord));
   const rankedValue = rankedPosition ? `#${rankedPosition}` : 'Jogador não pontuou ainda!';
 
   return (

@@ -1271,12 +1271,19 @@ function App() {
                 onClose={() => setViewedProfileOverlay(null)}
               />
               <div style={{ marginTop: '0.5rem', flex: 1, minHeight: 0, height: '100%' }}>
-                <PublicProfileCard
-                  profile={profileFromUser(viewedProfileOverlay)}
-                  rankedPosition={profileFromUser(viewedProfileOverlay)?.id
-                    ? rankedPlayers.find((player) => String(player.userId) === String(profileFromUser(viewedProfileOverlay).id))?.position ?? null
-                    : null}
-                />
+                {(() => {
+                  const viewedUserId = profileFromUser(viewedProfileOverlay)?.id;
+                  const rankedData = viewedUserId
+                    ? rankedPlayers.find((player) => String(player.userId) === String(viewedUserId))
+                    : null;
+                  return (
+                    <PublicProfileCard
+                      profile={profileFromUser(viewedProfileOverlay)}
+                      rankedPosition={rankedData?.position ?? null}
+                      bestScore={rankedData?.bestScore ?? null}
+                    />
+                  );
+                })()}
               </div>
             </div>
           </div>
