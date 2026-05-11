@@ -11,6 +11,8 @@ function HomeCard({
   matches = [],
   friends = [],
   invites = [],
+  onlineUsers = [],
+  isWsConnected = false,
   onPlayGame,
   onOpenProfile,
   onSendInvite,
@@ -61,6 +63,8 @@ function HomeCard({
         <HomeFriendsCard
           friends={friends}
           invites={invites}
+          onlineUsers={onlineUsers}
+          isWsConnected={isWsConnected}
           onOpenProfile={onOpenProfile}
           onSendInvite={onSendInvite}
           onAcceptInvite={onAcceptInvite}

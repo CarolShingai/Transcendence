@@ -11,6 +11,8 @@ const FRIENDS_TABS = [
 function HomeFriendsCard({
   friends = [],
   invites = [],
+  onlineUsers = [],
+  isWsConnected = false,
   onOpenProfile,
   onSendInvite,
   onAcceptInvite,
@@ -20,6 +22,7 @@ function HomeFriendsCard({
   const [activeTab, setActiveTab] = useState('friends');
   const [sentInviteIds, setSentInviteIds] = useState([]);
   const [processingInviteIds, setProcessingInviteIds] = useState([]);
+  const onlineUserIds = new Set(onlineUsers.map((u) => u.id));
 
 
   const getInitials = (name = '') => name
@@ -29,11 +32,13 @@ function HomeFriendsCard({
     .map((token) => token[0].toUpperCase())
     .join('');
 
-  const normalizeStatus = (raw) => {
-    const s = (raw || '').toString().trim().toLowerCase();
-    if (!s) return 'Offline';
-    if (s === 'offline' || s === 'desconectado' || s === 'desconectada') return 'Offline';
-    return 'Online';
+  const resolveStatus = (friend) => {
+    if (isWsConnected && friend?.id != null) {
+      return onlineUserIds.has(friend.id) ? 'Online' : 'Offline';
+    }
+  
+    const rawStatus = (friend?.status || '').toString().trim().toLowerCase();
+    return rawStatus === 'online' ? 'Online' : 'Offline';
   };
 
   const openProfile = (profile) => {
@@ -79,7 +84,7 @@ function HomeFriendsCard({
   };
 
   const renderFriendItem = (friend) => {
-    const friendStatus = normalizeStatus(friend.status).toLowerCase();
+    const friendStatus = resolveStatus(friend).toLowerCase();
 
     return (
       <article
@@ -106,7 +111,7 @@ function HomeFriendsCard({
           <div className="friend-nickname">@{friend.nickname}</div>
         </div>
         <div className={`friend-status friend-status-${friendStatus}`}>
-          {normalizeStatus(friend.status)}
+          {resolveStatus(friend)}
         </div>
       </article>
     );
