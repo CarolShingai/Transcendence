@@ -1,6 +1,6 @@
-package com.transcendence.repository
+package com.transcendence.demo.repository
 
-import com.transcendence.entity.MapEntity
+import com.transcendence.demo.entity.MapEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 

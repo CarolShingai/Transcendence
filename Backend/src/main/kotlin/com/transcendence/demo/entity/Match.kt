@@ -1,4 +1,4 @@
-package com.transcendence.entity
+package com.transcendence.demo.entity
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -8,6 +8,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import org.hibernate.annotations.CreationTimestamp
 import java.time.OffsetDateTime
 
 @Entity
@@ -25,14 +26,16 @@ data class Match(
     @JoinColumn(name = "map_id", nullable = false)
     val map: MapEntity,
 
+    @Column(nullable = true)
     val score: Int? = null,
 
-    @Column(name = "duration_seconds")
+    @Column(name = "duration_seconds", nullable = true)
     val durationSeconds: Int? = null,
 
     @Column(columnDefinition = "jsonb")
     val metadata: String? = null,
 
-    @Column(name = "created_at")
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: OffsetDateTime? = null
 )

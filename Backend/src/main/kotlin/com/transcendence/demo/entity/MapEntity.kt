@@ -1,4 +1,4 @@
-package com.transcendence.entity
+package com.transcendence.demo.entity
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -15,5 +15,5 @@ data class MapEntity(
     val id: Long? = null,
 
     @Column(nullable = false)
-    val name: String
+    var name: String = ""
 )
