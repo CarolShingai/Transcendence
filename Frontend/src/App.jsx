@@ -44,6 +44,55 @@ const MATCH_SCENE_MAP_IDS = {
   savana: 4
 };
 
+const MATCH_QUEUE_STORAGE_KEY = 'transcendence_match_queue_v1';
+
+const loadMatchQueue = () => {
+  try {
+    const raw = localStorage.getItem(MATCH_QUEUE_STORAGE_KEY);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_err) {
+    return [];
+  }
+};
+
+const saveMatchQueue = (queue) => {
+  try {
+    localStorage.setItem(MATCH_QUEUE_STORAGE_KEY, JSON.stringify(queue));
+  } catch (_err) {
+    // ignore quota / storage errors
+  }
+};
+
+const sanitizeMatchPayload = (payload) => {
+  const normalizedMapId = resolveMatchMapId(payload);
+  if (!normalizedMapId) {
+    return null;
+  }
+
+  return {
+    clientMatchId: payload?.clientMatchId || null,
+    mapId: normalizedMapId,
+    score: Number.isFinite(Number(payload?.score)) ? Number(payload.score) : null,
+    durationSeconds: Number.isFinite(Number(payload?.durationSeconds)) ? Number(payload.durationSeconds) : null,
+    metadata: payload?.metadata || {},
+    reportedAt: payload?.reportedAt || new Date().toISOString()
+  };
+};
+
+const isRetryableMatchError = (error) => {
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    message.includes('network error') ||
+    message.includes('timed out') ||
+    message.includes('failed to fetch') ||
+    message.includes('request aborted') ||
+    message.includes('load failed')
+  );
+};
+
 const resolveMatchMapId = (payload) => {
   const directMapId = Number(payload?.mapId);
   if (Number.isInteger(directMapId) && directMapId > 0) {
@@ -875,29 +924,84 @@ function App() {
     }
 
     const payload = message.payload || {};
-    const mapId = resolveMatchMapId(payload);
-    if (!mapId) {
+    const normalized = sanitizeMatchPayload(payload);
+    if (!normalized) {
       console.warn('[App.handleMatchCompletedMessage] Unable to resolve mapId from payload', payload);
       return;
     }
 
     try {
-      await api.createMatch(token, {
-        mapId,
-        score: Number.isFinite(Number(payload.score)) ? Number(payload.score) : null,
-        durationSeconds: Number.isFinite(Number(payload.durationSeconds)) ? Number(payload.durationSeconds) : null,
-        metadata: payload.metadata || {}
-      });
+      await api.createMatch(token, normalized);
     } catch (error) {
+      if (isRetryableMatchError(error)) {
+        const queue = loadMatchQueue();
+        const queueItemKey = normalized.clientMatchId || `${normalized.mapId}_${normalized.reportedAt}`;
+        const nextQueue = [
+          ...queue.filter((item) => (item?.clientMatchId || item?.queueKey) !== queueItemKey),
+          { ...normalized, queueKey: queueItemKey, attempts: 0 }
+        ];
+
+        saveMatchQueue(nextQueue);
+        console.warn('[App.handleMatchCompletedMessage] Match queued for retry:', queueItemKey);
+        return;
+      }
+
       console.error('[App.handleMatchCompletedMessage] Failed to persist match:', error);
       setError(error?.message || 'Failed to save match result');
     }
+  }, []);
+
+  const flushQueuedMatches = useCallback(async () => {
+    const token = localStorage.getItem('transcendence_token');
+    if (!token) {
+      return;
+    }
+
+    const queue = loadMatchQueue();
+    if (queue.length === 0) {
+      return;
+    }
+
+    const remaining = [];
+
+    for (const item of queue) {
+      try {
+        await api.createMatch(token, item);
+      } catch (error) {
+        if (isRetryableMatchError(error)) {
+          remaining.push({
+            ...item,
+            attempts: Number(item?.attempts || 0) + 1
+          });
+          continue;
+        }
+
+        console.error('[App.flushQueuedMatches] Dropping non-retryable match:', error);
+      }
+    }
+
+    saveMatchQueue(remaining);
   }, []);
 
   useEffect(() => {
     window.addEventListener('message', handleMatchCompletedMessage);
     return () => window.removeEventListener('message', handleMatchCompletedMessage);
   }, [handleMatchCompletedMessage]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return undefined;
+    }
+
+    void flushQueuedMatches();
+
+    const onOnline = () => {
+      void flushQueuedMatches();
+    };
+
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [isAuthenticated, flushQueuedMatches]);
 
   
   const isLoginView = !isAuthenticated && view === 'login';

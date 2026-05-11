@@ -52,19 +52,22 @@ class MatchController(
                 .body(CreateMatchResponseDTO(false, "User not found"))
 
         return try {
-            val match = matchService.createMatch(
+            val result = matchService.createMatch(
                 userId = user.id!!,
                 mapId = request.mapId,
                 score = request.score,
                 durationSeconds = request.durationSeconds,
-                metadata = request.metadata
+                metadata = request.metadata,
+                clientMatchId = request.clientMatchId
             )
 
-            ResponseEntity.status(HttpStatus.CREATED).body(
+            val status = if (result.created) HttpStatus.CREATED else HttpStatus.OK
+
+            ResponseEntity.status(status).body(
                 CreateMatchResponseDTO(
                     success = true,
-                    message = "Match registered successfully",
-                    matchId = match.id,
+                    message = if (result.created) "Match registered successfully" else "Match already registered",
+                    matchId = result.match.id,
                     userId = user.id,
                     mapId = request.mapId
                 )

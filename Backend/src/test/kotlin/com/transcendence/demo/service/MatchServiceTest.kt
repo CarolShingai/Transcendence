@@ -6,6 +6,8 @@ import com.transcendence.demo.repository.MatchRepository
 import com.transcendence.demo.repository.MapRepository
 import com.transcendence.demo.repository.UserRepository
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -52,18 +54,49 @@ class MatchServiceTest {
             val user = createTestUser("player@example.com", "player")
             val map = createTestMap("Amazonas")
 
-            val created = matchService.createMatch(
+            val result = matchService.createMatch(
                 userId = user.id!!,
                 mapId = map.id!!,
                 score = 42,
                 durationSeconds = 180,
-                metadata = mapOf("mode" to "ranked", "winner" to true)
+                metadata = mapOf("mode" to "ranked", "winner" to true),
+                clientMatchId = "match-abc-123"
             )
 
-            assertEquals(user.id, created.user.id)
-            assertEquals(map.id, created.map.id)
-            assertEquals(42, created.score)
-            assertEquals(180, created.durationSeconds)
+            assertTrue(result.created)
+            assertEquals(user.id, result.match.user.id)
+            assertEquals(map.id, result.match.map.id)
+            assertEquals(42, result.match.score)
+            assertEquals(180, result.match.durationSeconds)
+        }
+
+        @Test
+        fun `should return the same match when client id is repeated`() {
+            val user = createTestUser("repeat@example.com", "repeat")
+            val map = createTestMap("Cerrado")
+
+            val first = matchService.createMatch(
+                userId = user.id!!,
+                mapId = map.id!!,
+                score = 10,
+                durationSeconds = 60,
+                metadata = mapOf("mode" to "single"),
+                clientMatchId = "repeat-001"
+            )
+
+            val second = matchService.createMatch(
+                userId = user.id!!,
+                mapId = map.id!!,
+                score = 999,
+                durationSeconds = 999,
+                metadata = mapOf("mode" to "single"),
+                clientMatchId = "repeat-001"
+            )
+
+            assertTrue(first.created)
+            assertFalse(second.created)
+            assertEquals(first.match.id, second.match.id)
+            assertEquals(1, matchRepository.count())
         }
 
         @Test

@@ -32,6 +32,9 @@ data class Match(
     @Column(name = "duration_seconds", nullable = true)
     val durationSeconds: Int? = null,
 
+    @Column(name = "client_match_id", unique = true, length = 120)
+    val clientMatchId: String? = null,
+
     @Column(name = "metadata")
     val metadata: String? = null,
 

@@ -7,6 +7,7 @@ import com.transcendence.demo.entity.MapEntity
 import com.transcendence.demo.entity.User
 import com.transcendence.demo.providers.JwtTokenGenerator
 import com.transcendence.demo.repository.MapRepository
+import com.transcendence.demo.repository.MatchRepository
 import com.transcendence.demo.repository.UserRepository
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -42,6 +43,9 @@ class MatchControllerTest {
     private lateinit var mapRepository: MapRepository
 
     @Autowired
+    private lateinit var matchRepository: MatchRepository
+
+    @Autowired
     private lateinit var jwtTokenGenerator: JwtTokenGenerator
 
     private val passwordEncoder = BCryptPasswordEncoder()
@@ -49,6 +53,7 @@ class MatchControllerTest {
     @BeforeEach
     fun setup() {
         mapRepository.deleteAll()
+        matchRepository.deleteAll()
         userRepository.deleteAll()
     }
 
@@ -65,7 +70,8 @@ class MatchControllerTest {
                 mapId = map.id!!,
                 score = 120,
                 durationSeconds = 240,
-                metadata = mapOf("mode" to "ranked")
+                metadata = mapOf("mode" to "ranked"),
+                clientMatchId = "controller-match-001"
             )
 
             mockMvc.perform(
@@ -83,6 +89,41 @@ class MatchControllerTest {
         }
 
         @Test
+        fun `should return ok when the same client match id is sent twice`() {
+            val user = createTestUser("repeatmatch@example.com", "repeatmatch")
+            val map = createTestMap("Amazonas")
+            val token = jwtTokenGenerator.generateToken(user.id!!, user.email)
+            val request = CreateMatchRequestDTO(
+                mapId = map.id!!,
+                score = 90,
+                durationSeconds = 200,
+                metadata = mapOf("mode" to "ranked"),
+                clientMatchId = "controller-repeat-001"
+            )
+
+            mockMvc.perform(
+                post("/api/matches")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request))
+                    .header("Authorization", "Bearer $token")
+            )
+                .andExpect(status().isCreated)
+
+            mockMvc.perform(
+                post("/api/matches")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request))
+                    .header("Authorization", "Bearer $token")
+            )
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Match already registered"))
+                .andExpect(jsonPath("$.matchId").isNumber)
+
+            org.junit.jupiter.api.Assertions.assertEquals(1, matchRepository.count())
+        }
+
+        @Test
         fun `should return not found when map does not exist`() {
             val user = createTestUser("missingmap@example.com", "missingmap")
             val token = jwtTokenGenerator.generateToken(user.id!!, user.email)
@@ -90,7 +131,8 @@ class MatchControllerTest {
                 mapId = 9999,
                 score = 10,
                 durationSeconds = 60,
-                metadata = null
+                metadata = null,
+                clientMatchId = "missing-map-001"
             )
 
             mockMvc.perform(
@@ -111,7 +153,8 @@ class MatchControllerTest {
                 mapId = map.id!!,
                 score = 10,
                 durationSeconds = 60,
-                metadata = null
+                metadata = null,
+                clientMatchId = "no-token-001"
             )
 
             mockMvc.perform(

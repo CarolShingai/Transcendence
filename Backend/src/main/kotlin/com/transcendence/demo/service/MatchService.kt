@@ -5,6 +5,7 @@ import com.transcendence.demo.entity.Match
 import com.transcendence.demo.repository.MatchRepository
 import com.transcendence.demo.repository.MapRepository
 import com.transcendence.demo.repository.UserRepository
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -16,14 +17,20 @@ class MatchService(
     private val objectMapper: ObjectMapper
 ) {
 
+    data class MatchCreationResult(
+        val match: Match,
+        val created: Boolean
+    )
+
     @Transactional
     fun createMatch(
         userId: Long,
         mapId: Long,
         score: Int? = null,
         durationSeconds: Int? = null,
-        metadata: Map<String, Any>? = null
-    ): Match {
+        metadata: Map<String, Any>? = null,
+        clientMatchId: String? = null
+    ): MatchCreationResult {
         if (userId <= 0) {
             throw IllegalArgumentException("Invalid user id")
         }
@@ -37,6 +44,14 @@ class MatchService(
         val map = mapRepository.findById(mapId).orElse(null)
             ?: throw NoSuchElementException("Map not found")
 
+        val normalizedClientMatchId = clientMatchId?.trim()?.takeIf { it.isNotBlank() }
+        if (!normalizedClientMatchId.isNullOrBlank()) {
+            val existing = matchRepository.findByClientMatchId(normalizedClientMatchId)
+            if (existing != null) {
+                return MatchCreationResult(existing, created = false)
+            }
+        }
+
         val metadataJson = metadata?.let { objectMapper.writeValueAsString(it) }
 
         val match = Match(
@@ -44,9 +59,21 @@ class MatchService(
             map = map,
             score = score,
             durationSeconds = durationSeconds,
+            clientMatchId = normalizedClientMatchId,
             metadata = metadataJson
         )
 
-        return matchRepository.save(match)
+        return try {
+            MatchCreationResult(matchRepository.save(match), created = true)
+        } catch (_: DataIntegrityViolationException) {
+            if (normalizedClientMatchId.isNullOrBlank()) {
+                throw
+            }
+
+            val existing = matchRepository.findByClientMatchId(normalizedClientMatchId)
+                ?: throw
+
+            MatchCreationResult(existing, created = false)
+        }
     }
 }
