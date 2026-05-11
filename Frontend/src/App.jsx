@@ -19,7 +19,6 @@ import PublicProfileCard from './components/profile/PublicProfileCard';
 import HomeCard from './components/home/HomeCard';
 import GameCard from './components/game/GameCard';
 import api from './services/api';
-import createWebSocketClient from './services/ws';
 import PrivacyPolicyCard from './components/layout/PrivacyPolicyCard';
 import TermsOfUseCard from './components/layout/TermsOfUseCard';
 import usePresenceWebSocket from './hooks/usePresenceWebSocket';
@@ -156,6 +155,7 @@ function App() {
   }, [resolveAvatarFromProfilePic, resolveAvatarUrl]);
 
   const profileFromUser = useCallback((user, fallbackProfile = null) => ({
+    id: user?.id ?? fallbackProfile?.id ?? null,
     name: user?.name || '',
     nickname: user?.nickname || '',
     email: user?.email || '',
@@ -188,18 +188,6 @@ function App() {
     direction: request?.direction || null,
     createdAt: request?.createdAt
   });
-
-  const resolvePublicRecordValue = (source, fallback = 0) => {
-    if (source === null || source === undefined || source === '') {
-      return fallback;
-    }
-
-    if (typeof source === 'number' && Number.isFinite(source)) {
-      return source;
-    }
-
-    return source;
-  };
 
   const normalizeFriend = (friend) => ({
     id: friend?.id,
@@ -1088,14 +1076,10 @@ function App() {
   const isErrorView = isError4xxView || isError5xxView;
   const bannerMessage = isLoginView || isRegisterView || isProfileView || isEditProfileView ? '' : error;
   const gameEndpoint = process.env.REACT_APP_GAME_ENDPOINT || '/game/index.html';
-  const publicSingleRecord = resolvePublicRecordValue(
-    profile?.records?.single ?? profile?.singleRecord ?? profile?.singleScore ?? profile?.singleWins ?? 0,
-    0
-  );
-  const publicRankedRecord = resolvePublicRecordValue(
-    profile?.records?.ranked ?? profile?.rankedRecord ?? profile?.rankedScore ?? profile?.rankedWins ?? 0,
-    0
-  );
+  const publicProfileDisplay = viewedProfile || profile;
+  const publicRankPosition = publicProfileDisplay?.id
+    ? rankedPlayers.find((player) => String(player.userId) === String(publicProfileDisplay.id))?.position ?? null
+    : null;
 
   const goToPrivacyPolicy = () => setView('privacyPolicy');
   const goToTermsOfUse = () => setView('termsOfUse');
@@ -1233,7 +1217,7 @@ function App() {
                 loading={loading}
               />
             ) : isProfileView ? (
-              <PublicProfileCard profile={viewedProfile || profile} />
+              <PublicProfileCard profile={publicProfileDisplay} rankedPosition={publicRankPosition} />
             ) : null}
           </main>
 
@@ -1277,7 +1261,12 @@ function App() {
                 onClose={() => setViewedProfileOverlay(null)}
               />
               <div style={{ marginTop: '0.5rem', flex: 1, minHeight: 0, height: '100%' }}>
-                <PublicProfileCard profile={profileFromUser(viewedProfileOverlay)} />
+                <PublicProfileCard
+                  profile={profileFromUser(viewedProfileOverlay)}
+                  rankedPosition={profileFromUser(viewedProfileOverlay)?.id
+                    ? rankedPlayers.find((player) => String(player.userId) === String(profileFromUser(viewedProfileOverlay).id))?.position ?? null
+                    : null}
+                />
               </div>
             </div>
           </div>

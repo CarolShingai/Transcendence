@@ -14,7 +14,7 @@ function resolveRecordValue(recordValue) {
   return String(recordValue);
 }
 
-function PublicProfileStatCard({ image, alt, value }) {
+function PublicProfileStatCard({ image, alt, label = 'RECORD:', value }) {
   return (
     <article
       className="public-profile-stat-card"
@@ -61,14 +61,14 @@ function PublicProfileStatCard({ image, alt, value }) {
           boxSizing: 'border-box',
         }}
       >
-        <span className="public-profile-stat-label">RECORD:</span>
+        <span className="public-profile-stat-label">{label}</span>
         <strong className="public-profile-stat-value">{resolveRecordValue(value)}</strong>
       </div>
     </article>
   );
 }
 
-function PublicProfileCard({ profile, singleRecord, rankedRecord }) {
+function PublicProfileCard({ profile, singleRecord, rankedRecord, rankedPosition }) {
   const resolveRecord = (p, type, fallback = 0) => {
     if (!p) return fallback;
     if (type === 'single') {
@@ -82,7 +82,7 @@ function PublicProfileCard({ profile, singleRecord, rankedRecord }) {
   };
 
   const singleValue = profile ? resolveRecord(profile, 'single', 0) : resolveRecordValue(singleRecord);
-  const rankedValue = profile ? resolveRecord(profile, 'ranked', 0) : resolveRecordValue(rankedRecord);
+  const rankedValue = rankedPosition ? `#${rankedPosition}` : 'Jogador não pontuou ainda!';
 
   return (
     <section className="public-profile-page" aria-label="Dados públicos do perfil">
@@ -90,12 +90,14 @@ function PublicProfileCard({ profile, singleRecord, rankedRecord }) {
         <PublicProfileStatCard
           image={singleTrans}
           alt="Single Trans"
+          label="RECORD:"
           value={singleValue}
         />
 
         <PublicProfileStatCard
           image={rankedTrans}
           alt="Ranked Trans"
+          label="POSIÇÃO:"
           value={rankedValue}
         />
       </div>
