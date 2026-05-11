@@ -1283,7 +1283,7 @@
 
 .home-card-match-item {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr 1.8fr auto;
   gap: 0.8rem;
   align-items: center;
   padding: 0.8rem 0.95rem;
@@ -1304,7 +1304,17 @@
   text-overflow: ellipsis;
 }
 
-.home-card-match-time {
+.home-card-match-stage {
+  min-width: 0;
+  text-align: center;
+  font-weight: 700;
+  color: #1a6a49;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-card-match-km {
   justify-self: end;
   font-weight: 700;
   color: #0f5f3e;

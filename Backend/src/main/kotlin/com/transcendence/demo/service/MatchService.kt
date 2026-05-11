@@ -1,6 +1,7 @@
 package com.transcendence.demo.service
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.transcendence.demo.DTO.Response.MatchHistoryItemResponseDTO
 import com.transcendence.demo.entity.Match
 import com.transcendence.demo.repository.MatchRepository
 import com.transcendence.demo.repository.MapRepository
@@ -21,6 +22,24 @@ class MatchService(
         val match: Match,
         val created: Boolean
     )
+
+    @Transactional(readOnly = true)
+    fun listMatchesForUser(userId: Long): List<MatchHistoryItemResponseDTO> {
+        if (userId <= 0) {
+            throw IllegalArgumentException("Invalid user id")
+        }
+
+        return matchRepository.findAllByUser_IdOrderByCreatedAtDesc(userId).map { match ->
+            MatchHistoryItemResponseDTO(
+                id = match.id ?: 0L,
+                createdAt = match.createdAt ?: throw IllegalStateException("Match createdAt is missing"),
+                mapId = match.map.id ?: 0L,
+                mapName = match.map.name,
+                score = match.score,
+                durationSeconds = match.durationSeconds
+            )
+        }
+    }
 
     @Transactional
     fun createMatch(

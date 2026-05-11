@@ -10,17 +10,49 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.security.oauth2.core.user.OAuth2User
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/api/matches")
+@RequestMapping("/matches")
 class MatchController(
     private val matchService: MatchService,
     private val userService: UserService
 ) {
+
+    @Operation(
+        summary = "Lista o histórico de partidas do usuário autenticado",
+        security = [SecurityRequirement(name = "bearerAuth")]
+    )
+    @GetMapping
+    fun listMyMatches(authentication: Authentication?): ResponseEntity<Any> {
+        if (authentication == null || !authentication.isAuthenticated) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(mapOf("success" to false, "message" to "Unauthorized"))
+        }
+
+        val email = when (val principal = authentication.principal) {
+            is OAuth2User -> principal.getAttribute<String>("email")
+            is String -> principal
+            else -> null
+        }
+
+        if (email.isNullOrBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(mapOf("success" to false, "message" to "User email not found in token"))
+        }
+
+        val user = userService.getUserProfileByEmail(email)
+            ?: return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(mapOf("success" to false, "message" to "User not found"))
+
+        val matches = matchService.listMatchesForUser(user.id!!)
+
+        return ResponseEntity.ok(mapOf("matches" to matches))
+    }
 
     @Operation(
         summary = "Registra uma partida finalizada do usuário autenticado",

@@ -282,13 +282,27 @@ export async function rejectFriendRequest(token, requestId) {
 
 export async function createMatch(token, data) {
   try {
-    return request('/api/matches', {
+    return request('/matches', {
       method: 'POST',
       token,
       body: data,
     });
   } catch (error) {
     throw new Error(error?.message || 'Network error while registering match');
+  }
+}
+
+export async function listMyMatches(token) {
+  try {
+    const res = await fetch(`${API_BASE}/matches`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    const data = await handleResponse(res);
+    return unwrapList(data, 'matches');
+  } catch (error) {
+    throw new Error(error?.message || 'Network error while loading match history');
   }
 }
 
@@ -310,6 +324,7 @@ const api = {
   acceptFriendRequest,
   rejectFriendRequest,
   createMatch,
+  listMyMatches,
   getGoogleOAuthUrl
 };
 

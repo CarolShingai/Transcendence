@@ -284,6 +284,7 @@ function App() {
   const [friends, setFriends] = useState([]);
   const [invites, setInvites] = useState([]);
   const [optimisticInvites, setOptimisticInvites] = useState([]);
+  const [homeMatches, setHomeMatches] = useState([]);
 
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
   const [twoFactorSetup, setTwoFactorSetup] = useState(null);
@@ -342,6 +343,39 @@ function App() {
     return { friends: nextFriends, invites: nextInvites };
   }, []);
 
+  const normalizeMatchHistoryItem = useCallback((match) => {
+    const mapId = Number(match?.mapId) || Number(match?.map?.id) || 0;
+    const mapName = match?.mapName || match?.map?.name || `Fase ${mapId || '-'}`;
+    const score = Number(match?.score);
+
+    return {
+      id: match?.id,
+      createdAt: match?.createdAt,
+      mapId,
+      mapName,
+      score: Number.isFinite(score) ? score : null,
+      durationSeconds: Number.isFinite(Number(match?.durationSeconds)) ? Number(match.durationSeconds) : null,
+    };
+  }, []);
+
+  const refreshMatchHistory = useCallback(async (token = localStorage.getItem('transcendence_token')) => {
+    if (!token) {
+      setHomeMatches([]);
+      return [];
+    }
+
+    try {
+      const matches = await api.listMyMatches(token);
+      const normalizedMatches = Array.isArray(matches) ? matches.map(normalizeMatchHistoryItem) : [];
+      setHomeMatches(normalizedMatches);
+      return normalizedMatches;
+    } catch (error) {
+      console.warn('[App.refreshMatchHistory] Failed to load matches', error);
+      setHomeMatches([]);
+      return [];
+    }
+  }, [normalizeMatchHistoryItem]);
+
   const syncProfileFromToken = useCallback(async (targetView = 'home') => {
     const token = localStorage.getItem('transcendence_token');
     if (!token) {
@@ -349,6 +383,7 @@ function App() {
       setProfileForm(emptyProfileForm);
       setFriends([]);
       setInvites([]);
+      setHomeMatches([]);
       setView('login');
       return null;
     }
@@ -368,6 +403,7 @@ function App() {
       setProfileForm(profileFromUser(resolved, null));
       setView(targetView);
       await refreshFriendshipData(token);
+      await refreshMatchHistory(token);
 
       try {
         localStorage.setItem('transcendence_profile', JSON.stringify(resolved));
@@ -384,12 +420,13 @@ function App() {
       setProfileForm(emptyProfileForm);
       setFriends([]);
       setInvites([]);
+      setHomeMatches([]);
       setView('login');
       return null;
     } finally {
       setLoading(false);
     }
-  }, [refreshFriendshipData, emptyProfileForm, normalizeBackendUser, profileFromUser]);
+  }, [refreshFriendshipData, refreshMatchHistory, emptyProfileForm, normalizeBackendUser, profileFromUser]);
 
   useEffect(() => {
     const routeView = pathToErrorView(window.location.pathname);
@@ -425,8 +462,9 @@ function App() {
     }
 
     void refreshFriendshipData();
+    void refreshMatchHistory();
     return undefined;
-  }, [isAuthenticated, view, refreshFriendshipData]);
+  }, [isAuthenticated, view, refreshFriendshipData, refreshMatchHistory]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -932,6 +970,7 @@ function App() {
 
     try {
       await api.createMatch(token, normalized);
+      void refreshMatchHistory(token);
     } catch (error) {
       if (isRetryableMatchError(error)) {
         const queue = loadMatchQueue();
@@ -963,10 +1002,12 @@ function App() {
     }
 
     const remaining = [];
+    let didPersistAny = false;
 
     for (const item of queue) {
       try {
         await api.createMatch(token, item);
+        didPersistAny = true;
       } catch (error) {
         if (isRetryableMatchError(error)) {
           remaining.push({
@@ -981,7 +1022,10 @@ function App() {
     }
 
     saveMatchQueue(remaining);
-  }, []);
+    if (didPersistAny) {
+      void refreshMatchHistory(token);
+    }
+  }, [refreshMatchHistory]);
 
   useEffect(() => {
     window.addEventListener('message', handleMatchCompletedMessage);
@@ -1106,7 +1150,7 @@ function App() {
             ) : isTwoFactorLoginView ? (
               <TwoFactorLoginCard
                 code={twoFactorLoginCode}
-                error={error}
+                matches={homeMatches}
                 onCodeChange={handleTwoFactorLoginCodeChange}
                 onVerify={handleTwoFactorLoginVerify}
                 onBackToLogin={handleBackToLoginFromTwoFactor}
@@ -1125,6 +1169,7 @@ function App() {
             ) : isHomeView ? (
               <HomeCard
                 onPlayGame={handleGoToGameWithOrigin}
+                matches={homeMatches}
                 friends={friends}
                 invites={invites}
                 onOpenProfile={openPublicProfile}
