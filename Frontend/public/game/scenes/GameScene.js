@@ -10,6 +10,13 @@ class GameScene extends Phaser.Scene {
     amazonas: { name: 'AMAZONAS', id: 'amazonas' }
   };
 
+  static PHASE_MAP_IDS = {
+    savana: 4,
+    cerrado: 2,
+    mataatlantica: 3,
+    amazonas: 1
+  };
+
   constructor() { 
     super('GameScene');
     this._currentPhase = GameScene.PHASES.savana; // Fase padrão
@@ -64,6 +71,9 @@ class GameScene extends Phaser.Scene {
   create() {
     const W = this.scale.width;
     const H = this.scale.height;
+
+    this._startedAt = Date.now();
+    this._matchReported = false;
 
     // Cria o Tyrannus no centro da tela
     this._tyrannus = new Tyrannus(this, W / 2, H / 2);
@@ -273,6 +283,11 @@ class GameScene extends Phaser.Scene {
   }
 
   _gameOver() {
+    if (this._matchReported) {
+      return;
+    }
+    this._matchReported = true;
+
     this._tyrannus.alive = false;
     this._tyrannus.sprite.setVelocity(0, 0);
     this._harpias.stop();
@@ -320,6 +335,20 @@ class GameScene extends Phaser.Scene {
         }
       ).setOrigin(0.5).setDepth(200);
     }
+
+    const durationSeconds = Math.max(1, Math.floor((Date.now() - this._startedAt) / 1000));
+    const mapId = GameScene.PHASE_MAP_IDS[this._currentPhase.id] || 4;
+
+    window.MatchReporter?.postMatch({
+      mapId,
+      score: finalKilometers,
+      durationSeconds,
+      metadata: {
+        sceneKey: this.scene.key,
+        phaseId: this._currentPhase.id,
+        mapName: this._currentPhase.name
+      }
+    });
 
     // Retorna para o menu após 3 segundos
     this.time.delayedCall(2000, () => {

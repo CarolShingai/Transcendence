@@ -25,6 +25,9 @@ class AmazonasScene extends Phaser.Scene {
     const W = this.scale.width;
     const H = this.scale.height;
 
+    this._startedAt = Date.now();
+    this._matchReported = false;
+
     // ── Sistema de mapa em movimento (scrolling) ──────────────────────────
 
     // Cria dois fundos empilhados para criar efeito de loop infinito
@@ -214,6 +217,11 @@ class AmazonasScene extends Phaser.Scene {
   }
 
   _gameOver() {
+    if (this._matchReported) {
+      return;
+    }
+    this._matchReported = true;
+
     // Para o movimento do mapa
     this._mapSpeed = 0;
 
@@ -243,6 +251,19 @@ class AmazonasScene extends Phaser.Scene {
         fill: '#fff'
       }
     ).setOrigin(0.5).setDepth(200);
+
+    const durationSeconds = Math.max(1, Math.floor((Date.now() - this._startedAt) / 1000));
+    const finalKilometers = Math.floor(this._score / 60);
+
+    window.MatchReporter?.postMatch({
+      mapId: 1,
+      score: finalKilometers,
+      durationSeconds,
+      metadata: {
+        sceneKey: this.scene.key,
+        mapName: 'AMAZONAS'
+      }
+    });
 
     // Retorna para o menu após 3 segundos
     this.time.delayedCall(3000, () => {

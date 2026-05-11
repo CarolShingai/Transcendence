@@ -270,6 +270,18 @@ export async function rejectFriendRequest(token, requestId) {
   }
 }
 
+export async function createMatch(token, data) {
+  try {
+    return request('/api/matches', {
+      method: 'POST',
+      token,
+      body: data,
+    });
+  } catch (error) {
+    throw new Error(error?.message || 'Network error while registering match');
+  }
+}
+
 const api = {
   login,
   verifyTwoFactor,
@@ -287,6 +299,7 @@ const api = {
   sendFriendRequest,
   acceptFriendRequest,
   rejectFriendRequest,
+  createMatch,
   getGoogleOAuthUrl
 };
 

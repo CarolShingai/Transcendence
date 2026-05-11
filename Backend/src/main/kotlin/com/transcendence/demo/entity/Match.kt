@@ -32,7 +32,7 @@ data class Match(
     @Column(name = "duration_seconds", nullable = true)
     val durationSeconds: Int? = null,
 
-    @Column(columnDefinition = "jsonb")
+    @Column(name = "metadata")
     val metadata: String? = null,
 
     @CreationTimestamp

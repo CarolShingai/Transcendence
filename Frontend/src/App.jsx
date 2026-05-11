@@ -33,6 +33,29 @@ const avatarOptions = avatarContext
     return moduleValue?.default || moduleValue;
   });
 
+const MATCH_SCENE_MAP_IDS = {
+  AmazonasScene: 1,
+  CerradoScene: 2,
+  MataatlanticaScene: 3,
+  GameScene: 4,
+  amazonas: 1,
+  cerrado: 2,
+  mataatlantica: 3,
+  savana: 4
+};
+
+const resolveMatchMapId = (payload) => {
+  const directMapId = Number(payload?.mapId);
+  if (Number.isInteger(directMapId) && directMapId > 0) {
+    return directMapId;
+  }
+
+  const sceneKey = payload?.metadata?.sceneKey || payload?.sceneKey || '';
+  const phaseId = payload?.metadata?.phaseId || payload?.phaseId || '';
+
+  return MATCH_SCENE_MAP_IDS[sceneKey] || MATCH_SCENE_MAP_IDS[phaseId] || null;
+};
+
 function App() {
   const pathToErrorView = (pathname) => {
     const normalized = `/${String(pathname || '')
@@ -835,6 +858,46 @@ function App() {
     if (!isAuthenticated) return;
     setGameOverlayOpen(false);
   };
+
+  const handleMatchCompletedMessage = useCallback(async (event) => {
+    if (event.origin !== window.location.origin) {
+      return;
+    }
+
+    const message = event?.data;
+    if (!message || message.type !== 'MATCH_COMPLETED') {
+      return;
+    }
+
+    const token = localStorage.getItem('transcendence_token');
+    if (!token) {
+      return;
+    }
+
+    const payload = message.payload || {};
+    const mapId = resolveMatchMapId(payload);
+    if (!mapId) {
+      console.warn('[App.handleMatchCompletedMessage] Unable to resolve mapId from payload', payload);
+      return;
+    }
+
+    try {
+      await api.createMatch(token, {
+        mapId,
+        score: Number.isFinite(Number(payload.score)) ? Number(payload.score) : null,
+        durationSeconds: Number.isFinite(Number(payload.durationSeconds)) ? Number(payload.durationSeconds) : null,
+        metadata: payload.metadata || {}
+      });
+    } catch (error) {
+      console.error('[App.handleMatchCompletedMessage] Failed to persist match:', error);
+      setError(error?.message || 'Failed to save match result');
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('message', handleMatchCompletedMessage);
+    return () => window.removeEventListener('message', handleMatchCompletedMessage);
+  }, [handleMatchCompletedMessage]);
 
   
   const isLoginView = !isAuthenticated && view === 'login';

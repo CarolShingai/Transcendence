@@ -1,11 +1,24 @@
 import React from 'react';
 
 function GameCard({ gameEndpoint = '/game', onExitGame, footerLabel = 'Partida em andamento', gameOrigin = null }) {
+  const iframeSrc = React.useMemo(() => {
+    try {
+      const url = new URL(gameEndpoint, window.location.origin);
+      if (gameOrigin) {
+        url.searchParams.set('gameMode', gameOrigin);
+      }
+      return `${url.pathname}${url.search}${url.hash}`;
+    } catch (_err) {
+      const separator = gameEndpoint.includes('?') ? '&' : '?';
+      return gameOrigin ? `${gameEndpoint}${separator}gameMode=${encodeURIComponent(gameOrigin)}` : gameEndpoint;
+    }
+  }, [gameEndpoint, gameOrigin]);
+
   return (
     <section className="game-card" aria-label="Tela do jogo" style={{ position: 'relative' }}>
       <iframe
         className="game-card-frame"
-        src={gameEndpoint}
+        src={iframeSrc}
         title="Game endpoint"
         aria-label="Jogo"
       />
