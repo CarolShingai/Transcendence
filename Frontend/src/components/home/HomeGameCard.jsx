@@ -58,7 +58,7 @@ const resolveMatchKm = (match) => {
   return km ?? 0;
 };
 
-function HomeGameCard({ title, image, imageAlt, matches = [], onPlayGame, gameType }) {
+function HomeGameCard({ title, image, imageAlt, matches = [], rankedPlayers = [], currentUserId = null, onPlayGame, gameType }) {
   const phaseThreeBestKm = matches.reduce((bestKm, match) => {
     if (!isPhaseThreeMatch(match)) return bestKm;
 
@@ -66,21 +66,42 @@ function HomeGameCard({ title, image, imageAlt, matches = [], onPlayGame, gameTy
     return km > bestKm ? km : bestKm;
   }, 0);
 
+  const currentUserRank = rankedPlayers.find((player) => String(player?.userId) === String(currentUserId));
+  const currentUserPosition = currentUserRank?.position || null;
+
   return (
     <div className="card home-carousel-item-card has-footer-layout" aria-hidden="true">
       <header className="home-card-header" aria-hidden="true">
         <img src={image} alt={imageAlt} className="home-card-header-img" />
         <div className="home-card-record">
-          <div className="home-card-record-label">RECORD:</div>
-          <div className="home-card-record-time">{formatKm(phaseThreeBestKm)}</div>
+          <div className="home-card-record-label">{gameType === 'ranked' ? 'POSIÇÃO:' : 'RECORD:'}</div>
+          <div className="home-card-record-time">
+            {gameType === 'ranked'
+              ? (currentUserPosition ? `#${currentUserPosition}` : '--')
+              : formatKm(phaseThreeBestKm)}
+          </div>
         </div>
       </header>
 
-      <div className="home-card-history-label">HISTÓRICO</div>
+      <div className="home-card-history-label">{gameType === 'ranked' ? 'RANKED' : 'HISTÓRICO'}</div>
       <div className="home-card-history-divider" />
 
-      <div className="home-card-matches-list">
-        {matches.length === 0 ? (
+      <div className={gameType === 'ranked' ? 'home-card-ranked-list' : 'home-card-matches-list'}>
+        {gameType === 'ranked' ? (
+          rankedPlayers.length === 0 ? (
+            <div className="home-card-empty-state">
+              <p>Nenhum jogador ranqueado ainda!</p>
+            </div>
+          ) : (
+            rankedPlayers.map((player) => (
+              <div key={player.userId} className="home-card-ranked-item">
+                <span className="home-card-ranked-position">#{player.position}</span>
+                <span className="home-card-ranked-name">{player.nickname}</span>
+                <span className="home-card-ranked-score">{formatKm(player.bestScore)}</span>
+              </div>
+            ))
+          )
+        ) : matches.length === 0 ? (
           <div className="home-card-empty-state">
             <p>Nenhuma partida registrada!</p>
           </div>
@@ -98,14 +119,20 @@ function HomeGameCard({ title, image, imageAlt, matches = [], onPlayGame, gameTy
       <div className="home-card-body" />
 
       <footer className="home-card-footer" aria-hidden="true">
-        <button
-          type="button"
-          className="home-card-add-friend-button footer-play-button"
-          onClick={() => onPlayGame(gameType)}
-        >
-          <span className="play-icon">▶</span>
-          JOGUE AGORA!
-        </button>
+        {gameType === 'ranked' ? (
+          <div className="home-card-footer-note">
+            total de jogadores rankeados: {rankedPlayers.length}
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="home-card-add-friend-button footer-play-button"
+            onClick={() => onPlayGame(gameType)}
+          >
+            <span className="play-icon">▶</span>
+            JOGUE AGORA!
+          </button>
+        )}
       </footer>
     </div>
   );

@@ -9,6 +9,8 @@ const EMPTY_CARDS = [{ id: 'single' }, { id: 'ranked' }, { id: 'friends' }];
 
 function HomeCard({
   matches = [],
+  rankedPlayers = [],
+  currentUserId = null,
   friends = [],
   invites = [],
   onlineUsers = [],
@@ -53,6 +55,8 @@ function HomeCard({
           image={rankedTrans}
           imageAlt="Ranked"
           matches={matches}
+          rankedPlayers={rankedPlayers}
+          currentUserId={currentUserId}
           onPlayGame={onPlayGame}
           gameType="ranked"
         />

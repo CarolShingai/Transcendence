@@ -1263,6 +1263,16 @@
   flex-direction: column;
   gap: 0.7rem;
 }
+.home-card-ranked-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
 
 .home-card-empty-state {
   flex: 1 1 auto;
@@ -1317,6 +1327,38 @@
 .home-card-match-km {
   justify-self: end;
   font-weight: 700;
+  color: #0f5f3e;
+  white-space: nowrap;
+}
+.home-card-ranked-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.8rem;
+  align-items: center;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid #d6efca;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.65);
+  box-shadow: 0 8px 18px rgba(11, 46, 29, 0.08);
+  font-family: 'Nunito', sans-serif;
+  color: var(--ink);
+}
+.home-card-ranked-position {
+  font-weight: 800;
+  color: #ff9500;
+  white-space: nowrap;
+}
+.home-card-ranked-name {
+  min-width: 0;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.home-card-ranked-score {
+  justify-self: end;
+  font-weight: 800;
   color: #0f5f3e;
   white-space: nowrap;
 }

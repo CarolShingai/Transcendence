@@ -285,6 +285,7 @@ function App() {
   const [invites, setInvites] = useState([]);
   const [optimisticInvites, setOptimisticInvites] = useState([]);
   const [homeMatches, setHomeMatches] = useState([]);
+  const [rankedPlayers, setRankedPlayers] = useState([]);
 
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
   const [twoFactorSetup, setTwoFactorSetup] = useState(null);
@@ -358,6 +359,13 @@ function App() {
     };
   }, []);
 
+  const normalizeRankedPlayer = useCallback((player) => ({
+    position: Number(player?.position) || 0,
+    userId: Number(player?.userId) || 0,
+    nickname: player?.nickname || '',
+    bestScore: Number.isFinite(Number(player?.bestScore)) ? Number(player.bestScore) : 0,
+  }), []);
+
   const refreshMatchHistory = useCallback(async (token = localStorage.getItem('transcendence_token')) => {
     if (!token) {
       setHomeMatches([]);
@@ -376,6 +384,19 @@ function App() {
     }
   }, [normalizeMatchHistoryItem]);
 
+  const refreshRankedLeaderboard = useCallback(async () => {
+    try {
+      const players = await api.listRankedPlayers();
+      const normalizedPlayers = Array.isArray(players) ? players.map(normalizeRankedPlayer) : [];
+      setRankedPlayers(normalizedPlayers);
+      return normalizedPlayers;
+    } catch (error) {
+      console.warn('[App.refreshRankedLeaderboard] Failed to load ranked leaderboard', error);
+      setRankedPlayers([]);
+      return [];
+    }
+  }, [normalizeRankedPlayer]);
+
   const syncProfileFromToken = useCallback(async (targetView = 'home') => {
     const token = localStorage.getItem('transcendence_token');
     if (!token) {
@@ -384,6 +405,7 @@ function App() {
       setFriends([]);
       setInvites([]);
       setHomeMatches([]);
+      setRankedPlayers([]);
       setView('login');
       return null;
     }
@@ -404,6 +426,7 @@ function App() {
       setView(targetView);
       await refreshFriendshipData(token);
       await refreshMatchHistory(token);
+      await refreshRankedLeaderboard();
 
       try {
         localStorage.setItem('transcendence_profile', JSON.stringify(resolved));
@@ -421,12 +444,13 @@ function App() {
       setFriends([]);
       setInvites([]);
       setHomeMatches([]);
+      setRankedPlayers([]);
       setView('login');
       return null;
     } finally {
       setLoading(false);
     }
-  }, [refreshFriendshipData, refreshMatchHistory, emptyProfileForm, normalizeBackendUser, profileFromUser]);
+  }, [refreshFriendshipData, refreshMatchHistory, refreshRankedLeaderboard, emptyProfileForm, normalizeBackendUser, profileFromUser]);
 
   useEffect(() => {
     const routeView = pathToErrorView(window.location.pathname);
@@ -463,8 +487,9 @@ function App() {
 
     void refreshFriendshipData();
     void refreshMatchHistory();
+    void refreshRankedLeaderboard();
     return undefined;
-  }, [isAuthenticated, view, refreshFriendshipData, refreshMatchHistory]);
+  }, [isAuthenticated, view, refreshFriendshipData, refreshMatchHistory, refreshRankedLeaderboard]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -971,6 +996,7 @@ function App() {
     try {
       await api.createMatch(token, normalized);
       void refreshMatchHistory(token);
+      void refreshRankedLeaderboard();
     } catch (error) {
       if (isRetryableMatchError(error)) {
         const queue = loadMatchQueue();
@@ -1024,8 +1050,9 @@ function App() {
     saveMatchQueue(remaining);
     if (didPersistAny) {
       void refreshMatchHistory(token);
+      void refreshRankedLeaderboard();
     }
-  }, [refreshMatchHistory]);
+  }, [refreshMatchHistory, refreshRankedLeaderboard]);
 
   useEffect(() => {
     window.addEventListener('message', handleMatchCompletedMessage);
@@ -1170,6 +1197,8 @@ function App() {
               <HomeCard
                 onPlayGame={handleGoToGameWithOrigin}
                 matches={homeMatches}
+                rankedPlayers={rankedPlayers}
+                currentUserId={profile?.id}
                 friends={friends}
                 invites={invites}
                 onOpenProfile={openPublicProfile}

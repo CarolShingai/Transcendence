@@ -306,6 +306,20 @@ export async function listMyMatches(token) {
   }
 }
 
+export async function listRankedPlayers() {
+  try {
+    const res = await fetch(`${API_BASE}/ranked`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const data = await handleResponse(res);
+    return unwrapList(data, 'players');
+  } catch (error) {
+    throw new Error(error?.message || 'Network error while loading ranked leaderboard');
+  }
+}
+
 const api = {
   login,
   verifyTwoFactor,
@@ -325,6 +339,7 @@ const api = {
   rejectFriendRequest,
   createMatch,
   listMyMatches,
+  listRankedPlayers,
   getGoogleOAuthUrl
 };
 

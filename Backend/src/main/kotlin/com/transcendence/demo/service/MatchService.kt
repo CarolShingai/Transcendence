@@ -2,6 +2,7 @@ package com.transcendence.demo.service
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.transcendence.demo.DTO.Response.MatchHistoryItemResponseDTO
+import com.transcendence.demo.DTO.Response.RankedPlayerResponseDTO
 import com.transcendence.demo.entity.Match
 import com.transcendence.demo.repository.MatchRepository
 import com.transcendence.demo.repository.MapRepository
@@ -22,6 +23,18 @@ class MatchService(
         val match: Match,
         val created: Boolean
     )
+
+    @Transactional(readOnly = true)
+    fun listRankedPlayers(): List<RankedPlayerResponseDTO> {
+        return matchRepository.findRankedPhaseThreePlayers().mapIndexed { index, player ->
+            RankedPlayerResponseDTO(
+                position = index + 1,
+                userId = player.userId,
+                nickname = player.nickname,
+                bestScore = player.bestScore
+            )
+        }
+    }
 
     @Transactional(readOnly = true)
     fun listMatchesForUser(userId: Long): List<MatchHistoryItemResponseDTO> {

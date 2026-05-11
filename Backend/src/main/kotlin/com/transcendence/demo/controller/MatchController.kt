@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/matches")
+@RequestMapping(value = ["/matches", "/api/matches"])
 class MatchController(
     private val matchService: MatchService,
     private val userService: UserService
