@@ -87,7 +87,7 @@ function PublicProfileCard({ profile, singleRecord, rankedRecord, rankedPosition
   const singleValue = bestScore 
     ? String(Math.round(bestScore))
     : (profile ? resolveRecord(profile, 'single', 0) : resolveRecordValue(singleRecord));
-  const rankedValue = rankedPosition ? `#${rankedPosition}` : 'Jogador não pontuou ainda!';
+  const rankedValue = rankedPosition ? `#${rankedPosition}` : 'Jogador ainda não pontuou!';
 
   return (
     <section className="public-profile-page" aria-label="Dados públicos do perfil">
