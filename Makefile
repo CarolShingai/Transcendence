@@ -9,7 +9,7 @@ CERT_FILE= ./Backend/certs/keystore-dev.p12
 cert:
 	@if [ ! -f $(CERT_FILE) ]; then \
 		echo ">> Gerando keystore..."; \
-		KEYSTORE_PASSWORD=changeit ./certs/generate-keystore.sh dev; \
+		KEYSTORE_PASSWORD=changeit ./Backend/certs/generate-keystore.sh dev; \
 	else \
 		echo ">> Keystore já existe"; \
 	fi
