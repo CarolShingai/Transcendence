@@ -13,6 +13,7 @@ function HomeFriendsCard({
   invites = [],
   onlineUsers = [],
   isWsConnected = false,
+  currentUserId = null,
   onOpenProfile,
   onSendInvite,
   onAcceptInvite,
@@ -255,6 +256,7 @@ function HomeFriendsCard({
           onLoadAllUsers={onLoadAllUsers}
           onOpenProfile={onOpenProfile}
           friendIds={friends.map((f) => f.id)}
+          currentUserId={currentUserId}
         />
       );
     }

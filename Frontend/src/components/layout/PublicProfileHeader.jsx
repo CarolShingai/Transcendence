@@ -27,15 +27,12 @@ function PublicProfileHeader({ initials, profileImage, name, nickname, onClose }
       </div>
 
       <div
-        className="public-profile-summary"
+        className="public-profile-summary header-center-item"
         style={{
           position: 'absolute',
           left: '50%',
           top: '50%',
           transform: 'translate(-50%, -50%)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
         }}
       >
         <h1

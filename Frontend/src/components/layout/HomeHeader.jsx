@@ -39,7 +39,7 @@ function HomeHeader({ initials, profileImage, onGoToProfile, onGoToEditProfile,o
         )}
       </div>
 
-      <img className="home-header-logo" src={transLogo} alt="Transcendence" />
+      <img className="home-header-logo header-center-item" src={transLogo} alt="Transcendence" />
 
       <div className="home-header-actions" aria-label="Acoes da home">
         <button

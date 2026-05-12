@@ -22,7 +22,7 @@ function resolveAvatarUrlFrom(profilePic, avatarUrl) {
   return avatarOptions[numericPic - 1] || '';
 }
 
-function FriendsSearch({ onSendInvite, onSearchUsers, onLoadAllUsers, onOpenProfile, sentInviteIds = [], friendIds = [], debounceMs = 1000 }) {
+function FriendsSearch({ onSendInvite, onSearchUsers, onLoadAllUsers, onOpenProfile, sentInviteIds = [], friendIds = [], currentUserId = null, debounceMs = 1000 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -61,6 +61,7 @@ function FriendsSearch({ onSendInvite, onSearchUsers, onLoadAllUsers, onOpenProf
 
   const friendIdSet = useMemo(() => new Set((friendIds || []).map((id) => String(id))), [friendIds]);
   const sentIdSet = useMemo(() => new Set((sentInviteIds || []).map((id) => String(id))), [sentInviteIds]);
+  const currentUserIdStr = currentUserId == null ? null : String(currentUserId);
 
   // Handle search/filter with debounce
   useEffect(() => {
@@ -130,6 +131,9 @@ function FriendsSearch({ onSendInvite, onSearchUsers, onLoadAllUsers, onOpenProf
   const visibleResults = useMemo(() => {
     const filtered = (results || []).filter((user) => {
       const idStr = String(user?.id);
+      if (currentUserIdStr && idStr === currentUserIdStr) {
+        return false;
+      }
       if (friendIdSet.has(idStr)) {
         console.log(`[FriendsSearch] Filtering out ${user.name} (id: ${user.id}) - already friend`);
         return false;
@@ -146,7 +150,7 @@ function FriendsSearch({ onSendInvite, onSearchUsers, onLoadAllUsers, onOpenProf
     });
     console.log(`[FriendsSearch] Visible results: ${filtered.length} / ${results.length}`);
     return filtered;
-  }, [results, friendIdSet, sentIdSet, pendingInviteIds]);
+  }, [results, friendIdSet, sentIdSet, pendingInviteIds, currentUserIdStr]);
 
   return (
     <>

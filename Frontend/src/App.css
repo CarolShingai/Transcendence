@@ -237,6 +237,10 @@
 
 .public-profile-summary {
   min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   text-align: center;
   color: #efffe8;
 }
@@ -485,6 +489,10 @@
   filter: drop-shadow(0 4px 10px rgba(2, 24, 14, 0.22));
 }
 
+.header-center-item {
+  display: block;
+}
+
 .header-icon-button {
   width: clamp(39px, 5.4vh, 56px);
   height: clamp(39px, 5.4vh, 56px);
@@ -504,7 +512,8 @@
 }
 
 .header-icon-button-edit,
-.header-icon-button-view {
+.header-icon-button-view,
+.header-icon-button-back {
   color: var(--accent);
   border: 1px solid #c3ddb7;
   background: var(--card);
@@ -512,6 +521,12 @@
 }
 
 .header-view-icon {
+  width: 58%;
+  height: 58%;
+  display: block;
+}
+
+.header-back-icon {
   width: 58%;
   height: 58%;
   display: block;
@@ -1892,13 +1907,22 @@
   }
 
   .App-header-edit {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: auto 1fr auto;
     align-items: center;
   }
 
   .App-header-home .header-user-slot,
   .home-header-actions {
     margin: 0;
+  }
+
+  .header-user-slot {
+    width: clamp(32px, 4.8vh, 44px);
+    height: clamp(32px, 4.8vh, 44px);
+  }
+
+  .header-user-fallback {
+    font-size: clamp(0.72rem, 1.8vh, 0.9rem);
   }
 
   .App-header-home .header-user-slot {
@@ -1909,8 +1933,53 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
+  .App-header-profile .public-profile-close-button {
+    min-height: clamp(32px, 4.4vh, 44px);
+    padding: 0 0.75rem;
+    font-size: clamp(0.75rem, 1.6vw, 0.9rem);
+  }
+
+  .App-header-profile .public-profile-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    max-width: calc(100% - 6.5rem);
+  }
+
+  .App-header-profile .public-profile-separator {
+    display: none;
+  }
+
+  .App-header-profile .public-profile-name,
+  .App-header-profile .public-profile-nickname {
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  .App-header-profile .public-profile-name {
+    font-size: clamp(0.82rem, 3.6vw, 1rem);
+  }
+
+  .App-header-profile .public-profile-nickname {
+    font-size: clamp(0.75rem, 3vw, 0.92rem);
+  }
+
   .home-header-actions {
     justify-self: end;
+  }
+
+  .header-icon-button {
+    width: clamp(32px, 4.4vh, 44px);
+    height: clamp(32px, 4.4vh, 44px);
+    font-size: clamp(1.15rem, 3vh, 1.55rem);
+  }
+
+  .home-header-actions {
+    gap: 0.3rem;
+  }
+
+  .header-center-item {
+    display: none;
   }
 
   .home-header-title {
@@ -1924,30 +1993,6 @@
   }
   .edit-header-title {
     font-size: clamp(0.88rem, 2.9vw, 1.1rem);
-  }
-
-  .App-header-edit .edit-header-logo {
-    width: min(48vw, 220px);
-    max-height: calc(100% - 0.2rem);
-  }
-
-  .home-header-logo {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: min(62vw, 280px);
-    transform: translate(-50%, -50%);
-    z-index: 0;
-    pointer-events: none;
-  }
-
-  .App-header-edit .home-header-logo {
-    position: static;
-    left: auto;
-    top: auto;
-    width: min(48vw, 220px);
-    transform: none;
-    z-index: 1;
   }
 
   .home-header-actions {
@@ -1985,6 +2030,112 @@
   .public-profile-stat-card {
     aspect-ratio: auto;
     min-height: 320px;
+  }
+
+  .home-carousel-item-card {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .home-carousel-item-card-folder {
+    padding-top: 0;
+  }
+
+  .home-card-header {
+    position: static;
+    height: auto;
+    min-height: 0;
+    padding: 0.7rem 0.75rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.45rem 0.75rem;
+    align-items: center;
+  }
+
+  .home-carousel-item-card-folder .home-card-header {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .home-card-header-img {
+    position: static;
+    left: auto;
+    top: auto;
+    transform: none;
+    transform-origin: center center;
+    max-height: 2.75rem;
+    width: min(100%, 7rem);
+    justify-self: start;
+  }
+
+  .home-card-header-img-center {
+    width: min(70%, 13rem);
+    max-width: 100%;
+    justify-self: center;
+  }
+
+  .home-carousel-item-card-folder .home-card-header-img-center {
+    width: min(75%, 15rem);
+  }
+
+  .home-card-record {
+    position: static;
+    transform: none;
+    justify-self: end;
+    max-width: 100%;
+    gap: 0.1rem;
+  }
+
+  .home-card-record-label {
+    font-size: clamp(0.82rem, 3vw, 1rem);
+  }
+
+  .home-card-record-time {
+    font-size: clamp(1rem, 4.2vw, 1.45rem);
+  }
+
+  .home-card-history-label {
+    font-size: clamp(1rem, 4vw, 1.4rem);
+    padding: 0.35rem 0.75rem;
+  }
+
+  .home-card-history-divider {
+    margin-inline: 0.75rem;
+  }
+
+  .home-card-match-item,
+  .home-card-ranked-item,
+  .friend-item,
+  .friend-invite-item {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.35rem;
+    justify-items: start;
+  }
+
+  .home-card-match-km,
+  .home-card-ranked-score,
+  .friend-status,
+  .invite-status-pending,
+  .friend-action-group {
+    justify-self: start;
+  }
+
+  .friend-action-group {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .friend-action-button {
+    padding: 0.4rem 0.7rem;
+  }
+
+  .friend-action-circle {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    font-size: 0.95rem;
   }
 
   .home-carousel {
