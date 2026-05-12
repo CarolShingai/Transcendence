@@ -293,6 +293,19 @@ class CerradoScene extends Phaser.Scene {
       }
     ).setOrigin(0.5).setDepth(200);
 
+    const durationSeconds = Math.max(1, Math.floor((Date.now() - this._startedAt) / 1000));
+    const finalKilometers = Math.floor(this._score / 60);
+
+    window.MatchReporter?.postMatch({
+      mapId: 2,
+      score: finalKilometers,
+      durationSeconds,
+      metadata: {
+        sceneKey: this.scene.key,
+        mapName: 'CERRADO'
+      }
+    });
+
     // Retorna para o menu após 3 segundos
     this.time.delayedCall(3000, () => {
       this.scene.start('MenuScene');

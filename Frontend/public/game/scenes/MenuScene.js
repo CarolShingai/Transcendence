@@ -19,13 +19,14 @@ class MenuScene extends Phaser.Scene {
     // Título
     this.add.text(W / 2, 80, 'Aves Migratórias', {
       fontSize: '48px',
-      fill: '#90EE90',
+      fill: '#ff9500',
+      fontFamily: 'Courier New',
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     this.add.text(W / 2, 150, 'SELECIONE UMA FASE', {
       fontSize: '24px',
-      fill: '#fff'
+      fill: '#F4FFF0'
     }).setOrigin(0.5);
 
     // Botão Fase 1 (AmazonasScene)
@@ -55,6 +56,7 @@ class MenuScene extends Phaser.Scene {
       .on('pointerover', () => {
         btn2.setFillStyle(0xd9b971);
         textBtn2.setFill('#000');
+        
       })
       .on('pointerout', () => {
         btn2.setFillStyle(0xc9a961);
@@ -84,6 +86,7 @@ class MenuScene extends Phaser.Scene {
       .on('pointerdown', () => {
         this.scene.start('MataatlanticaScene');
       });
+
 
     const textBtn3 = this.add.text(W / 2, 380, 'FASE 3:\nMATA ATLÂNTICA', {
       fontSize: '20px',
