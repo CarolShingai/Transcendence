@@ -6,7 +6,7 @@ class Tyrannus {
   static SPEED         = 300;
   static SPEED_DEFAULT = 300;
 
-  constructor(scene, x, y) {
+  constructor(scene, x, y, baseTexture = 'tyrannus', altTexture = 'tyrannus2') {
     this.scene = scene;
     this.alive = false; // inicia falso; ativado em activate()
 
@@ -26,8 +26,12 @@ class Tyrannus {
     this.magnetRadius   = 200; // Raio de atração do ímã
     this._magnetGraphics = null;
 
+    // Texturas do Tyrannus
+    this._baseTexture = baseTexture;
+    this._altTexture  = altTexture;
+
     // Sprite do Tyrannus
-    this.sprite = scene.physics.add.image(x, y, 'tyrannus');
+    this.sprite = scene.physics.add.image(x, y, this._baseTexture);
     this.sprite.setCollideWorldBounds(true);
     this.sprite.setDepth(10);
 
@@ -86,7 +90,7 @@ class Tyrannus {
     if (this._wingTimer >= this._wingInterval) {
       this._wingTimer = 0;
       this._wingFrame = this._wingFrame === 0 ? 1 : 0;
-      this.sprite.setTexture(this._wingFrame === 0 ? 'tyrannus' : 'tyrannus2');
+      this.sprite.setTexture(this._wingFrame === 0 ? this._baseTexture : this._altTexture);
     }
   }
 

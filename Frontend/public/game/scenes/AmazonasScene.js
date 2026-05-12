@@ -7,9 +7,11 @@ class AmazonasScene extends Phaser.Scene {
   // ── Ciclo de vida ─────────────────────────────────────────────────────────
 
   preload() {
-    // Carrega as imagens do Tyrannus
-    this.load.image('tyrannus', 'assets/images/tyrannus1.png');
-    this.load.image('tyrannus2', 'assets/images/tyrannus2.png');
+    // Carrega as imagens do Tyrannus para as duas variações de cor
+    this.load.image('tyrannus-green', 'assets/images/tyrannus1.png');
+    this.load.image('tyrannus2-green', 'assets/images/tyrannus2.png');
+    this.load.image('tyrannus-red', 'assets/images/tyrannus1-red.png');
+    this.load.image('tyrannus2-red', 'assets/images/tyrannus2-red.png');
     
     // Carrega a imagem do carcará
     this.load.image('carcara', 'assets/images/carcara.png');
@@ -24,9 +26,6 @@ class AmazonasScene extends Phaser.Scene {
   create() {
     const W = this.scale.width;
     const H = this.scale.height;
-
-    this._startedAt = Date.now();
-    this._matchReported = false;
 
     // ── Sistema de mapa em movimento (scrolling) ──────────────────────────
 
@@ -43,8 +42,12 @@ class AmazonasScene extends Phaser.Scene {
 
     this._mapSpeed = 150; // Velocidade do mapa em pixels por segundo
 
+    const selectedSkin = localStorage.getItem('selectedTyrannus') || 'green';
+    const tyrannusTexture = selectedSkin === 'red' ? 'tyrannus-red' : 'tyrannus-green';
+    const tyrannusTexture2 = selectedSkin === 'red' ? 'tyrannus2-red' : 'tyrannus2-green';
+
     // Cria o Tyrannus no centro da tela
-    this._tyrannus = new Tyrannus(this, W / 2, H / 2);
+    this._tyrannus = new Tyrannus(this, W / 2, H / 2, tyrannusTexture, tyrannusTexture2);
     
     // Cria o grupo de carcarás
     this._carcaras = new CarcaraGroup(this);
@@ -217,11 +220,6 @@ class AmazonasScene extends Phaser.Scene {
   }
 
   _gameOver() {
-    if (this._matchReported) {
-      return;
-    }
-    this._matchReported = true;
-
     // Para o movimento do mapa
     this._mapSpeed = 0;
 
@@ -251,19 +249,6 @@ class AmazonasScene extends Phaser.Scene {
         fill: '#fff'
       }
     ).setOrigin(0.5).setDepth(200);
-
-    const durationSeconds = Math.max(1, Math.floor((Date.now() - this._startedAt) / 1000));
-    const finalKilometers = Math.floor(this._score / 60);
-
-    window.MatchReporter?.postMatch({
-      mapId: 1,
-      score: finalKilometers,
-      durationSeconds,
-      metadata: {
-        sceneKey: this.scene.key,
-        mapName: 'AMAZONAS'
-      }
-    });
 
     // Retorna para o menu após 3 segundos
     this.time.delayedCall(3000, () => {
