@@ -32,6 +32,10 @@ dependencies {
     // Swagger/OpenAPI
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.0")
     
+    // Monitoring & Metrics
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("io.micrometer:micrometer-registry-prometheus")
+    
     // Security - BCrypt
     implementation("org.springframework.security:spring-security-crypto:6.2.2")
     
