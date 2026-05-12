@@ -4,6 +4,9 @@ global:
   external_labels:
     monitor: 'transcendence-monitor'
 
+rule_files:
+  - '/etc/prometheus/prometheus-rules.yml'
+
 scrape_configs:
   # Application metrics (Spring Boot Actuator)
   - job_name: 'spring-boot-app'
