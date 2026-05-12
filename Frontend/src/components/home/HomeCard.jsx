@@ -70,6 +70,7 @@ function HomeCard({
           invites={invites}
           onlineUsers={onlineUsers}
           isWsConnected={isWsConnected}
+          currentUserId={currentUserId}
           onOpenProfile={onOpenProfile}
           onSendInvite={onSendInvite}
           onAcceptInvite={onAcceptInvite}
