@@ -33,9 +33,6 @@ function PublicProfileHeader({ initials, profileImage, name, nickname, onClose }
           left: '50%',
           top: '50%',
           transform: 'translate(-50%, -50%)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
         }}
       >
         <h1

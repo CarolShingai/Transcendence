@@ -237,6 +237,10 @@
 
 .public-profile-summary {
   min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   text-align: center;
   color: #efffe8;
 }
@@ -1929,6 +1933,37 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
+  .App-header-profile .public-profile-close-button {
+    min-height: clamp(32px, 4.4vh, 44px);
+    padding: 0 0.75rem;
+    font-size: clamp(0.75rem, 1.6vw, 0.9rem);
+  }
+
+  .App-header-profile .public-profile-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    max-width: calc(100% - 6.5rem);
+  }
+
+  .App-header-profile .public-profile-separator {
+    display: none;
+  }
+
+  .App-header-profile .public-profile-name,
+  .App-header-profile .public-profile-nickname {
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  .App-header-profile .public-profile-name {
+    font-size: clamp(0.82rem, 3.6vw, 1rem);
+  }
+
+  .App-header-profile .public-profile-nickname {
+    font-size: clamp(0.75rem, 3vw, 0.92rem);
+  }
+
   .home-header-actions {
     justify-self: end;
   }
@@ -1995,6 +2030,112 @@
   .public-profile-stat-card {
     aspect-ratio: auto;
     min-height: 320px;
+  }
+
+  .home-carousel-item-card {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .home-carousel-item-card-folder {
+    padding-top: 0;
+  }
+
+  .home-card-header {
+    position: static;
+    height: auto;
+    min-height: 0;
+    padding: 0.7rem 0.75rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.45rem 0.75rem;
+    align-items: center;
+  }
+
+  .home-carousel-item-card-folder .home-card-header {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .home-card-header-img {
+    position: static;
+    left: auto;
+    top: auto;
+    transform: none;
+    transform-origin: center center;
+    max-height: 2.75rem;
+    width: min(100%, 7rem);
+    justify-self: start;
+  }
+
+  .home-card-header-img-center {
+    width: min(70%, 13rem);
+    max-width: 100%;
+    justify-self: center;
+  }
+
+  .home-carousel-item-card-folder .home-card-header-img-center {
+    width: min(75%, 15rem);
+  }
+
+  .home-card-record {
+    position: static;
+    transform: none;
+    justify-self: end;
+    max-width: 100%;
+    gap: 0.1rem;
+  }
+
+  .home-card-record-label {
+    font-size: clamp(0.82rem, 3vw, 1rem);
+  }
+
+  .home-card-record-time {
+    font-size: clamp(1rem, 4.2vw, 1.45rem);
+  }
+
+  .home-card-history-label {
+    font-size: clamp(1rem, 4vw, 1.4rem);
+    padding: 0.35rem 0.75rem;
+  }
+
+  .home-card-history-divider {
+    margin-inline: 0.75rem;
+  }
+
+  .home-card-match-item,
+  .home-card-ranked-item,
+  .friend-item,
+  .friend-invite-item {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.35rem;
+    justify-items: start;
+  }
+
+  .home-card-match-km,
+  .home-card-ranked-score,
+  .friend-status,
+  .invite-status-pending,
+  .friend-action-group {
+    justify-self: start;
+  }
+
+  .friend-action-group {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .friend-action-button {
+    padding: 0.4rem 0.7rem;
+  }
+
+  .friend-action-circle {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    font-size: 0.95rem;
   }
 
   .home-carousel {
