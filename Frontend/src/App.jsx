@@ -1086,8 +1086,11 @@ function App() {
   const bannerMessage = isLoginView || isRegisterView || isProfileView || isEditProfileView ? '' : error;
   const gameEndpoint = process.env.REACT_APP_GAME_ENDPOINT || '/game/index.html';
   const publicProfileDisplay = viewedProfile || profile;
+  const publicRankedData = publicProfileDisplay?.id
+    ? rankedPlayers.find((player) => String(player.userId) === String(publicProfileDisplay.id))
+    : null;
   const publicRankPosition = publicProfileDisplay?.id
-    ? rankedPlayers.find((player) => String(player.userId) === String(publicProfileDisplay.id))?.position ?? null
+    ? publicRankedData?.position ?? null
     : null;
 
   const goToPrivacyPolicy = () => setView('privacyPolicy');
@@ -1226,7 +1229,11 @@ function App() {
                 loading={loading}
               />
             ) : isProfileView ? (
-              <PublicProfileCard profile={publicProfileDisplay} rankedPosition={publicRankPosition} />
+              <PublicProfileCard
+                profile={publicProfileDisplay}
+                rankedPosition={publicRankPosition}
+                bestScore={publicRankedData?.bestScore ?? null}
+              />
             ) : null}
           </main>
 

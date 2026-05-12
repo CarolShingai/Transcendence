@@ -83,10 +83,15 @@ function PublicProfileCard({ profile, singleRecord, rankedRecord, rankedPosition
     );
   };
 
-  // If bestScore is provided from ranked data, use it for single value
-  const singleValue = bestScore 
-    ? String(Math.round(bestScore))
-    : (profile ? resolveRecord(profile, 'single', 0) : resolveRecordValue(singleRecord));
+  const resolvedBestScore = Number(bestScore);
+  const hasBestScore = Number.isFinite(resolvedBestScore);
+  const singleValue = hasBestScore
+    ? String(Math.round(resolvedBestScore))
+    : resolveRecordValue(
+        profile
+          ? (resolveRecord(profile, 'single', null) ?? profile?.bestScore ?? profile?.records?.bestScore)
+          : singleRecord
+      );
   const rankedValue = rankedPosition ? `#${rankedPosition}` : 'Jogador ainda não pontuou!';
 
   return (
