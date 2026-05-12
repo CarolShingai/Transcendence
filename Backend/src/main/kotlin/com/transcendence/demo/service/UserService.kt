@@ -371,6 +371,24 @@ class UserService(
         return email.contains("@") && email.contains(".")
     }
 
+    private fun isValidNickname(nickname: String): Boolean {
+        val regex = "^[a-zA-Z0-9_]{3,50}$".toRegex()
+        return regex.matches(nickname)
+    }
+
+    private fun isValidName(name: String): Boolean {
+        return name.length in 3..100
+    }
+
+    private fun isValidPassword(password: String): Boolean {
+        val hasUppercase = password.any { it.isUpperCase() }
+        val hasLowercase = password.any { it.isLowerCase() }
+        val hasDigit = password.any { it.isDigit() }
+        val hasSpecial = password.any { !it.isLetterOrDigit() }
+        val is isValidLength = password.length >= 8
+        return hasUppercase && hasLowercase && hasDigit && hasSpecial && isValidLength
+    }
+
     private fun User.toUserResponseDto(): UserResponseDTO {
         return UserResponseDTO(
             id = id,
