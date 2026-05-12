@@ -11,12 +11,21 @@ function EditHeader({ onGoToHome, onLogout }) {
       <div className="home-header-actions" aria-label="Acoes da edicao">
         <button
           type="button"
-          className=""
+          className="header-icon-button header-icon-button-back"
           onClick={onGoToHome}
-          aria-label="Ir para home"
-          title="Ir para home"
+          aria-label="Voltar para home"
+          title="Voltar para home"
         >
-          🏠
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className="header-back-icon">
+            <path
+              d="M14 6 8 12l6 6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </button>
         <button
           type="button"

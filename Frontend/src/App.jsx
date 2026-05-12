@@ -1080,10 +1080,11 @@ function App() {
   const isGameView = isAuthenticated && view === 'game';
   const isProfileView = isAuthenticated && view === 'profile';
   const isProfileEditView = isAuthenticated && view === 'profileEdit';
+  const isEditingProfile = isEditProfileView || isProfileEditView;
   const isError4xxView = view === 'error4xx';
   const isError5xxView = view === 'error5xx';
   const isErrorView = isError4xxView || isError5xxView;
-  const bannerMessage = isLoginView || isRegisterView || isProfileView || isEditProfileView ? '' : error;
+  const bannerMessage = isLoginView || isRegisterView || isProfileView || isEditingProfile ? '' : error;
   const gameEndpoint = process.env.REACT_APP_GAME_ENDPOINT || '/game/index.html';
   const publicProfileDisplay = viewedProfile || profile;
   const publicRankedData = publicProfileDisplay?.id
@@ -1111,7 +1112,7 @@ function App() {
             <LoginHeader />
           ) : isRegisterView ? (
             <RegisterHeader onGoToLogin={handleRegisterExit} />
-          ) : isHomeView || isProfileEditView ? (
+          ) : isHomeView ? (
             <HomeHeader
               initials={initials}
               profileImage={profile?.avatarUrl}
@@ -1120,7 +1121,7 @@ function App() {
               onGoToEditProfile={goToEditProfile}
               onLogout={handleLogout}
             />
-          ) : isEditProfileView ? (
+          ) : isEditingProfile ? (
             <EditHeader onGoToHome={goToHome} onLogout={handleLogout} />
           ) : isProfileView ? (
             <PublicProfileHeader
@@ -1159,7 +1160,7 @@ function App() {
             </>
           ) : null}
 
-          <main className={`App-main ${isGameView ? 'App-main-game' : ''} ${isProfileView ? 'App-main-profile' : ''} ${isEditProfileView ? 'App-main-profile' : ''}`}>
+          <main className={`App-main ${isGameView ? 'App-main-game' : ''} ${isProfileView ? 'App-main-profile' : ''} ${isEditingProfile ? 'App-main-profile' : ''}`}>
             {isLoginView ? (
               <LoginCard
                 loginForm={loginForm}
@@ -1237,7 +1238,7 @@ function App() {
             ) : null}
           </main>
 
-          {!isGameView && !isErrorView && !isProfileView && !isEditProfileView && <AppFooter onGoToPrivacyPolicy={goToPrivacyPolicy} onGoToTermsOfUse={goToTermsOfUse} isAuthenticated={isAuthenticated}/>}
+          {!isGameView && !isErrorView && !isProfileView && !isEditingProfile && <AppFooter onGoToPrivacyPolicy={goToPrivacyPolicy} onGoToTermsOfUse={goToTermsOfUse} isAuthenticated={isAuthenticated}/>} 
         </section>
       </div>
       {view === 'home' && viewedProfileOverlay && ReactDOM.createPortal(

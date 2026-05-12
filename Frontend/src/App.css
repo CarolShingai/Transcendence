@@ -504,7 +504,8 @@
 }
 
 .header-icon-button-edit,
-.header-icon-button-view {
+.header-icon-button-view,
+.header-icon-button-back {
   color: var(--accent);
   border: 1px solid #c3ddb7;
   background: var(--card);
@@ -512,6 +513,12 @@
 }
 
 .header-view-icon {
+  width: 58%;
+  height: 58%;
+  display: block;
+}
+
+.header-back-icon {
   width: 58%;
   height: 58%;
   display: block;
