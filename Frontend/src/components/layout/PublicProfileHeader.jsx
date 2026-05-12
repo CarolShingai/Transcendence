@@ -27,7 +27,7 @@ function PublicProfileHeader({ initials, profileImage, name, nickname, onClose }
       </div>
 
       <div
-        className="public-profile-summary"
+        className="public-profile-summary header-center-item"
         style={{
           position: 'absolute',
           left: '50%',

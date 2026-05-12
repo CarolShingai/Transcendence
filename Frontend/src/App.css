@@ -485,6 +485,10 @@
   filter: drop-shadow(0 4px 10px rgba(2, 24, 14, 0.22));
 }
 
+.header-center-item {
+  display: block;
+}
+
 .header-icon-button {
   width: clamp(39px, 5.4vh, 56px);
   height: clamp(39px, 5.4vh, 56px);
@@ -1899,13 +1903,22 @@
   }
 
   .App-header-edit {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: auto 1fr auto;
     align-items: center;
   }
 
   .App-header-home .header-user-slot,
   .home-header-actions {
     margin: 0;
+  }
+
+  .header-user-slot {
+    width: clamp(32px, 4.8vh, 44px);
+    height: clamp(32px, 4.8vh, 44px);
+  }
+
+  .header-user-fallback {
+    font-size: clamp(0.72rem, 1.8vh, 0.9rem);
   }
 
   .App-header-home .header-user-slot {
@@ -1920,6 +1933,20 @@
     justify-self: end;
   }
 
+  .header-icon-button {
+    width: clamp(32px, 4.4vh, 44px);
+    height: clamp(32px, 4.4vh, 44px);
+    font-size: clamp(1.15rem, 3vh, 1.55rem);
+  }
+
+  .home-header-actions {
+    gap: 0.3rem;
+  }
+
+  .header-center-item {
+    display: none;
+  }
+
   .home-header-title {
     grid-row: 1;
     grid-column: 2;
@@ -1931,30 +1958,6 @@
   }
   .edit-header-title {
     font-size: clamp(0.88rem, 2.9vw, 1.1rem);
-  }
-
-  .App-header-edit .edit-header-logo {
-    width: min(48vw, 220px);
-    max-height: calc(100% - 0.2rem);
-  }
-
-  .home-header-logo {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: min(62vw, 280px);
-    transform: translate(-50%, -50%);
-    z-index: 0;
-    pointer-events: none;
-  }
-
-  .App-header-edit .home-header-logo {
-    position: static;
-    left: auto;
-    top: auto;
-    width: min(48vw, 220px);
-    transform: none;
-    z-index: 1;
   }
 
   .home-header-actions {

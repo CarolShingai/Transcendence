@@ -6,7 +6,7 @@ function EditHeader({ onGoToHome, onLogout }) {
     <header className="App-header App-header-home App-header-edit">
       <h1 className="edit-header-title">Editar perfil!</h1>
 
-      <img className="home-header-logo edit-header-logo" src={transLogo} alt="Transcendence" />
+      <img className="home-header-logo edit-header-logo header-center-item" src={transLogo} alt="Transcendence" />
 
       <div className="home-header-actions" aria-label="Acoes da edicao">
         <button
