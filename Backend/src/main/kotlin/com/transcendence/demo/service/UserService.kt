@@ -385,7 +385,7 @@ class UserService(
         val hasLowercase = password.any { it.isLowerCase() }
         val hasDigit = password.any { it.isDigit() }
         val hasSpecial = password.any { !it.isLetterOrDigit() }
-        val is isValidLength = password.length >= 8
+        val isValidLength = password.length >= 8
         return hasUppercase && hasLowercase && hasDigit && hasSpecial && isValidLength
     }
 
