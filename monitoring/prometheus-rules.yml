@@ -1,0 +1,39 @@
+groups:
+  - name: memory_alerts
+    interval: 15s
+    rules:
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Uso de memória moderado detectado"
+          description: "O consumo de memória está acima de 50% (valor atual: {{ $value | humanize }}%) no host {{ $labels.instance }}"
+
+      - alert: CriticalMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Uso crítico de memória detectado"
+          description: "O consumo de memória está acima de 80% (valor atual: {{ $value | humanize }}%) no host {{ $labels.instance }}"
+
+      - alert: HighCPUUsage
+        expr: (100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alto uso de CPU detectado"
+          description: "O consumo de CPU está acima de 80% (valor atual: {{ $value | humanize }}%) no host {{ $labels.instance }}"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lowerfs|squashfs|vfat"} / node_filesystem_size_bytes) * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Espaço em disco baixo"
+          description: "Espaço disponível em disco está abaixo de 15% (valor atual: {{ $value | humanize }}%) no host {{ $labels.instance }} - dispositivo: {{ $labels.device }}"

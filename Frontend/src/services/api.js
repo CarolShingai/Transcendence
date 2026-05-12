@@ -3,8 +3,19 @@ const API_BASE = (() => {
     return process.env.REACT_APP_API_URL;
   }
 
-  if (typeof window !== 'undefined' && window.location?.port === '3000') {
-    return 'https://localhost:8082';
+  if (typeof window !== 'undefined' && window.location) {
+    const { hostname, port } = window.location;
+
+    // GitHub Codespaces forwards each port to a dedicated subdomain (e.g. *-3000.*).
+    // Replace the current port suffix in hostname with backend port 8082.
+    if (hostname.includes('.github.dev')) {
+      const backendHost = hostname.replace(/-\d+\./, '-8082.');
+      return `https://${backendHost}`;
+    }
+
+    if (port === '3000') {
+      return 'https://localhost:8082';
+    }
   }
 
   return '/api';

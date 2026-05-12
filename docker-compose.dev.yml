@@ -34,7 +34,8 @@ services:
       SSL_KEYSTORE_PASSWORD: ${SSL_KEYSTORE_PASSWORD:-changeit}
       SSL_KEYSTORE_TYPE: ${SSL_KEYSTORE_TYPE:-PKCS12}
       SSL_KEY_ALIAS: ${SSL_KEY_ALIAS_DEV:-transcendence-dev}
-      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS_DEV:-http://localhost:3000}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS_DEV:-http://localhost:3000,https://${CODESPACE_NAME}-3000.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}}
+      APP_FRONTEND_BASE_URL: ${APP_FRONTEND_BASE_URL_DEV:-https://${CODESPACE_NAME}-3000.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}}
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/transcendence_db
       SPRING_DATASOURCE_USERNAME: transcendence_user
       SPRING_DATASOURCE_PASSWORD: transcendence_pass
@@ -45,6 +46,7 @@ services:
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI_DEV:-https://${CODESPACE_NAME}-8082.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}/login/oauth2/code/google}
     volumes:
       - ./Backend:/workspace
       - gradle_cache_dev:/root/.gradle
@@ -79,7 +81,7 @@ services:
     image: prom/node-exporter:latest
     container_name: transcendence-node-exporter-dev
     ports:
-      - "9101:9100"
+      - "9102:9100"
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -99,6 +101,7 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
       - prometheus_data_dev:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
