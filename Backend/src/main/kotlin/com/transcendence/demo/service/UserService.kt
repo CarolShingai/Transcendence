@@ -51,6 +51,15 @@ class UserService(
         if (userRepository.findByEmail(request.email) != null) {
             return Pair(false, "Email already registered")
         }
+        if (!isValidNickname(request.nickname)) {
+            return Pair(false, "Nickname must be 3-50 characters and can only contain letters, numbers, and underscores")
+        }
+        if (!isValidName(request.name)) {
+            return Pair(false, "Name must be between 3 and 100 characters")
+        }
+        if (!isValidPassword(request.password)) {
+            return Pair(false, "Password must be at least 8 characters and include uppercase, lowercase, digit, and special character")
+        }
         return Pair(true, "User registered successfully")
     }
 
