@@ -95,6 +95,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     container_name: transcendence-prometheus-dev
+    user: "0:0"
     ports:
       - "9090:9090"
     volumes:
