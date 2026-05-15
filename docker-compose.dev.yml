@@ -77,7 +77,6 @@ services:
 
   node-exporter:
     image: prom/node-exporter:latest
-    container_name: transcendence-node-exporter-dev
     ports:
       - "9101:9100"
     volumes:
@@ -94,7 +93,6 @@ services:
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: transcendence-prometheus-dev
     user: "0:0"
     ports:
       - "9090:9090"
@@ -115,7 +113,6 @@ services:
 
   grafana:
     image: grafana/grafana:latest
-    container_name: transcendence-grafana-dev
     ports:
       - "3001:3000"
     environment:

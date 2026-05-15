@@ -211,8 +211,7 @@ class FriendshipControllerTest {
                 patch("/friends/${friendship.id}/reject")
                     .header("Authorization", "Bearer $token")
             )
-                .andExpect(status().isOk)
-                .andExpect(jsonPath("$.status").value("REJECTED"))
+                .andExpect(status().isNoContent)
         }
 
         @Test

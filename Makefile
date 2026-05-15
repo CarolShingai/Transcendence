@@ -1,7 +1,7 @@
 COMPOSE_FILE := docker-compose.dev.yml
 COMPOSE := docker compose -f $(COMPOSE_FILE)
 
-.PHONY: back front start down logs ps restart db reset-db reset-db-dev reset-db-prod
+.PHONY: back front start down logs ps restart db reset-db reset-db-dev reset-db-prod clean-legacy reset-dev
 
 # Gerar certificado autoassinado para HTTPS
 CERT_FILE= ./Backend/certs/keystore-dev.p12
@@ -55,3 +55,23 @@ db:
 
 prune:
 	docker system prune -a --volumes -f
+
+# Remove legacy containers left by previous compose projects that used
+# fixed container names (e.g. "transcendence-*" or older stacks). This
+# helps avoid port/name conflicts when bringing the dev stack up.
+clean-legacy:
+	@command -v docker >/dev/null 2>&1 || { echo "docker not found, skipping legacy cleanup"; exit 0; }
+	@echo "Stopping/removing legacy containers (transcendence-*, final_trans-*)..."
+	@containers=$$(docker ps -a --filter "name=transcendence-" --filter "name=final_trans-" --format "{{.Names}}") ; \
+	if [ -n "$$containers" ]; then \
+	  for c in $$containers; do docker rm -f $$c || true; done ; \
+	  echo "Removed:"; echo "$$containers"; \
+	else \
+	  echo "No legacy containers found"; \
+	fi
+
+
+# Reset dev environment: remove legacy containers then start the stack
+reset-dev: clean-legacy
+	@echo "Starting development stack (reset)...";
+	$(MAKE) start

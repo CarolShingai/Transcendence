@@ -115,7 +115,38 @@ function FriendsSearch({ onSendInvite, onSearchUsers, onLoadAllUsers, onOpenProf
     if (typeof onSendInvite !== 'function') return null;
     setPendingInviteIds((prev) => [...prev, String(user.id)]);
     try {
-      return await onSendInvite(user);
+      const result = await onSendInvite(user);
+
+      // If send succeeded, refresh loaded users (so the invitee is removed)
+      if (result != null) {
+        if (typeof onLoadAllUsers === 'function') {
+          setLoading(true);
+          try {
+            const users = await onLoadAllUsers();
+            setResults(Array.isArray(users) ? users : []);
+          } catch (e) {
+            console.error('[FriendsSearch] Error reloading users after invite:', e);
+          } finally {
+            setLoading(false);
+          }
+        } else if (typeof onSearchUsers === 'function' && query.trim().length > 0) {
+          try {
+            const data = await onSearchUsers(query.trim());
+            setResults(Array.isArray(data) ? data : []);
+          } catch (e) {
+            console.error('[FriendsSearch] Error re-searching users after invite:', e);
+          }
+        }
+
+        // Notify other components that friends data changed
+        try {
+          window.dispatchEvent(new CustomEvent('friends:changed', { detail: { type: 'invite-sent', userId: user.id } }));
+        } catch (e) {
+          /* ignore in non-browser environments */
+        }
+      }
+
+      return result;
     } catch (error) {
       const message = String(error?.message || '').toLowerCase();
       if (message.includes('already exists') || message.includes('already friend') || message.includes('duplicate')) {
@@ -152,6 +183,36 @@ function FriendsSearch({ onSendInvite, onSearchUsers, onLoadAllUsers, onOpenProf
     return filtered;
   }, [results, friendIdSet, sentIdSet, pendingInviteIds, currentUserIdStr]);
 
+  // Listen for global events indicating friends data changed (accept/reject elsewhere)
+  useEffect(() => {
+    let cancelled = false;
+    const handler = async (ev) => {
+      if (cancelled) return;
+      if (typeof onLoadAllUsers === 'function') {
+        setLoading(true);
+        try {
+          const users = await onLoadAllUsers();
+          if (!cancelled) setResults(Array.isArray(users) ? users : []);
+        } catch (e) {
+          console.error('[FriendsSearch] Error reloading users on friends:changed:', e);
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      }
+    };
+
+    try {
+      window.addEventListener('friends:changed', handler);
+    } catch (e) {
+      // ignore in non-browser envs
+    }
+
+    return () => {
+      cancelled = true;
+      try { window.removeEventListener('friends:changed', handler); } catch (e) {}
+    };
+  }, [onLoadAllUsers]);
+
   return (
     <>
       <input
@@ -165,6 +226,20 @@ function FriendsSearch({ onSendInvite, onSearchUsers, onLoadAllUsers, onOpenProf
 
       <div className="friends-search-results">
         {loading && <div className="friends-search-loading">Carregando...</div>}
+
+        {/* Caso apenas o próprio usuário exista no sistema: mostra empty-state igual à aba 'Amigos' */}
+        {!loading && visibleResults.length === 0 && results.length === 1 && currentUserIdStr && String(results[0]?.id) === currentUserIdStr && (
+          <div className="friends-empty-state">
+            <p>Ninguém disponível para adicionar!</p>
+          </div>
+        )}
+
+        {/* Caso inicial: há usuários no sistema, mas após filtrar amigos/convites nada resta */}
+        {!loading && visibleResults.length === 0 && results.length > 0 && query.trim().length === 0 && !(results.length === 1 && currentUserIdStr && String(results[0]?.id) === currentUserIdStr) && (
+          <div className="friends-empty-state">
+            <p>Ninguém disponível para adicionar!</p>
+          </div>
+        )}
 
         {!loading && visibleResults.length === 0 && results.length === 0 && query.trim().length === 0 && (
           <div className="friends-search-no-results" style={{ color: '#d9534f', fontSize: '0.85rem', marginTop: '8px' }}>

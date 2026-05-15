@@ -411,8 +411,38 @@ MONITORING_ENABLED=true
 
 3. **Generate SSL certificates** (for HTTPS):
 ```bash
-make generate-certificates
+make cert
 ```
+
+**Developer Helpers**
+
+- `make cert`: generate local PKCS12 keystore for HTTPS (dev).
+- `make clean-legacy`: remove legacy containers from older compose runs that may hold fixed names or ports (use when ports are unexpectedly in use).
+- `make reset-dev`: runs `clean-legacy` then `make start` to reset and bring the dev stack up.
+
+Friends list auto-refresh (frontend)
+
+- The `FriendsSearch` component now automatically refreshes its user list after you successfully send an invite and also listens for a global browser event to reload when other friend actions happen (accept/reject).
+- If you implement accept/reject handlers elsewhere (e.g. in the pending requests UI), dispatch the following event so `FriendsSearch` updates automatically:
+
+```javascript
+// notify any listeners that friends data changed
+window.dispatchEvent(new CustomEvent('friends:changed', { detail: { type: 'invite-accepted', requestId: 123 } }));
+```
+
+- `FriendsSearch` will also behave correctly when the initial set of users contains only the current user or when all results are filtered out because they are already friends or have pending invites: it shows a placeholder item with the message `Ninguém disponível para adicionar!` in the same style as friend items.
+
+Files changed:
+
+- `Frontend/src/components/elements/FriendsSearch.jsx`: now auto-reloads after invite, listens for `friends:changed`, and renders the standardized placeholder.
+- `Makefile`: added `clean-legacy` and `reset-dev` targets.
+- `Backend`: reject friend requests now delete the request (so rejected users can be invited again); controller returns `204 No Content`.
+
+Recommended workflow:
+
+1. When changing friend state from any UI, dispatch `friends:changed` so all components stay in sync.
+2. Use `make reset-dev` to clear legacy containers and start a clean dev environment.
+
 
 ### Running the Project
 

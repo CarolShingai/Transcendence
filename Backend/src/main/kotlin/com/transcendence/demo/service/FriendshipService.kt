@@ -52,15 +52,15 @@ class FriendshipService(
         return friendshipMapper.toDTO(friendshipRepository.save(friendship), receiver.id)
     }
 
-    fun rejectFriendRequest(requesterEmail: String, requestId: Long): FriendshipResponseDTO {
+    fun rejectFriendRequest(requesterEmail: String, requestId: Long) {
         val receiver = findAuthenticatedUser(requesterEmail)
         val friendship = findFriendshipById(requestId)
 
         ensureReceiverIsOwner(receiver, friendship)
         ensureRequestIsPending(friendship)
 
-        friendship.status = FriendshipStatus.REJECTED
-        return friendshipMapper.toDTO(friendshipRepository.save(friendship), receiver.id)
+        // Delete the friendship request so it behaves as if it was never sent
+        friendshipRepository.delete(friendship)
     }
 
     @Transactional(readOnly = true)

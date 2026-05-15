@@ -66,7 +66,8 @@ class FriendshipController(
         val email = resolveEmail(authentication)
             ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
 
-        return ResponseEntity.ok(friendshipService.rejectFriendRequest(email, requestId))
+        friendshipService.rejectFriendRequest(email, requestId)
+        return ResponseEntity.noContent().build()
     }
 
     @Operation(

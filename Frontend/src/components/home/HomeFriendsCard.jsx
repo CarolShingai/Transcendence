@@ -140,6 +140,19 @@ function HomeFriendsCard({
     }
   };
 
+  // Initialize sentInviteIds from incoming invites prop (already-sent invites)
+  React.useEffect(() => {
+    if (!Array.isArray(invites)) return;
+    const sent = invites
+      .filter((inv) => inv.direction === 'sent')
+      .map((inv) => (inv.receiverId != null ? inv.receiverId : inv.id))
+      .filter((id) => id != null);
+    setSentInviteIds((prev) => {
+      const merged = Array.from(new Set([...(prev || []), ...sent]));
+      return merged;
+    });
+  }, [invites]);
+
   const handleInviteAction = async (invite, action) => {
     const requestId = invite.requestId || invite.id;
     if (!requestId || typeof action !== 'function') {
