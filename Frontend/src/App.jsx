@@ -1093,12 +1093,29 @@ function App() {
   const publicRankPosition = publicProfileDisplay?.id
     ? publicRankedData?.position ?? null
     : null;
+  const [privacyOverlayOpen, setPrivacyOverlayOpen] = React.useState(false);
+  const [termsOverlayOpen, setTermsOverlayOpen] = React.useState(false);
 
-  const goToPrivacyPolicy = () => setView('privacyPolicy');
-  const goToTermsOfUse = () => setView('termsOfUse');
+  const goToPrivacyPolicy = () => setPrivacyOverlayOpen(true);
+  const goToTermsOfUse = () => setTermsOverlayOpen(true);
 
-  const isPrivacyPolicyView = view === 'privacyPolicy';
-  const isTermsOfUseView = view === 'termsOfUse';
+  // Listen for global open-overlay events as a fallback (in case props/handlers
+  // are not wired correctly from some pages). This ensures footer buttons work
+  // even on login or special pages.
+  useEffect(() => {
+    const onOpenPrivacy = () => setPrivacyOverlayOpen(true);
+    const onOpenTerms = () => setTermsOverlayOpen(true);
+    try {
+      window.addEventListener('open:privacy-overlay', onOpenPrivacy);
+      window.addEventListener('open:terms-overlay', onOpenTerms);
+    } catch (e) {}
+    return () => {
+      try {
+        window.removeEventListener('open:privacy-overlay', onOpenPrivacy);
+        window.removeEventListener('open:terms-overlay', onOpenTerms);
+      } catch (e) {}
+    };
+  }, []);
 
   return (
     <div className="App">
@@ -1134,30 +1151,6 @@ function App() {
                 goToHome();
               }}
             />
-          ) : isPrivacyPolicyView ? (
-            <>
-              <HomeHeader
-                initials={initials}
-                profileImage={profile?.avatarUrl}
-                welcomeName={profile?.nickname || profile?.name || 'Viajante'}
-                onGoToProfile={goToProfile}
-                onGoToEditProfile={goToEditProfile}
-                onLogout={handleLogout}
-              />
-              <PrivacyPolicyCard onBack={() => setView('home')} />
-            </>
-          ) : isTermsOfUseView ? (
-            <>
-              <HomeHeader
-                initials={initials}
-                profileImage={profile?.avatarUrl}
-                welcomeName={profile?.nickname || profile?.name || 'Viajante'}
-                onGoToProfile={goToProfile}
-                onGoToEditProfile={goToEditProfile}
-                onLogout={handleLogout}
-              />
-              <TermsOfUseCard onBack={() => setView('home')} />
-            </>
           ) : null}
 
           <main className={`App-main ${isGameView ? 'App-main-game' : ''} ${isProfileView ? 'App-main-profile' : ''} ${isEditingProfile ? 'App-main-profile' : ''}`}>
@@ -1326,6 +1319,72 @@ function App() {
             }}
           >
             <GameCard gameEndpoint={gameEndpoint} onExitGame={handleExitGame} gameOrigin={gameOrigin} />
+          </div>
+        </div>,
+        document.body
+      )}
+      {privacyOverlayOpen && ReactDOM.createPortal(
+        <div
+          className="policy-overlay-backdrop"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1200,
+          }}
+          onClick={() => setPrivacyOverlayOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-label="Política de Privacidade"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '80vw',
+              height: '80vh',
+              overflow: 'auto',
+              position: 'relative',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <PrivacyPolicyCard onBack={() => setPrivacyOverlayOpen(false)} />
+          </div>
+        </div>,
+        document.body
+      )}
+      {termsOverlayOpen && ReactDOM.createPortal(
+        <div
+          className="policy-overlay-backdrop"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1200,
+          }}
+          onClick={() => setTermsOverlayOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-label="Termos de Uso"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '80vw',
+              height: '80vh',
+              overflow: 'auto',
+              position: 'relative',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <TermsOfUseCard onBack={() => setTermsOverlayOpen(false)} />
           </div>
         </div>,
         document.body
