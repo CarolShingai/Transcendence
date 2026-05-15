@@ -63,6 +63,24 @@ class FriendshipService(
         friendshipRepository.delete(friendship)
     }
 
+    fun removeFriend(requesterEmail: String, friendId: Long) {
+        val user = findAuthenticatedUser(requesterEmail)
+        val friend = findUserById(friendId)
+
+        if (user.id == friend.id) {
+            throw IllegalArgumentException("You cannot remove yourself as a friend")
+        }
+
+        val friendship = friendshipRepository.findByUserIds(user.id!!, friend.id!!)
+            ?: throw IllegalArgumentException("Friendship not found")
+
+        if (friendship.status != FriendshipStatus.ACCEPTED) {
+            throw IllegalArgumentException("Only accepted friendships can be removed")
+        }
+
+        friendshipRepository.delete(friendship)
+    }
+
     @Transactional(readOnly = true)
     fun listPendingRequests(requesterEmail: String): List<FriendshipResponseDTO> {
         val user = findAuthenticatedUser(requesterEmail)

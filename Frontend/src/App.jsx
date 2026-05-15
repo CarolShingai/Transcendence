@@ -810,6 +810,17 @@ function App() {
     return response;
   };
 
+  const handleRemoveFriend = async (friendId) => {
+    const token = localStorage.getItem('transcendence_token');
+
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    await api.removeFriend(token, friendId);
+    await refreshFriendshipData(token);
+  };
+
   const handleLogout = async () => {
     setError('');
     setLoading(true);
@@ -1197,6 +1208,7 @@ function App() {
                 onSendInvite={handleSendFriendRequest}
                 onAcceptInvite={handleAcceptFriendRequest}
                 onRejectInvite={handleRejectFriendRequest}
+                onRemoveFriend={handleRemoveFriend}
                 onSearchUsers={handleSearchUsers}
                 onLoadAllUsers={handleLoadAllUsers}
               />

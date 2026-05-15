@@ -280,6 +280,19 @@ export async function rejectFriendRequest(token, requestId) {
   }
 }
 
+export async function removeFriend(token, friendId) {
+  try {
+    const res = await fetch(`${API_BASE}/friends/${friendId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', ...authHeader(token) }
+    });
+
+    return handleResponse(res);
+  } catch (error) {
+    throw new Error(error?.message || 'Network error while removing friend');
+  }
+}
+
 export async function createMatch(token, data) {
   try {
     return request('/matches', {
@@ -337,6 +350,7 @@ const api = {
   sendFriendRequest,
   acceptFriendRequest,
   rejectFriendRequest,
+  removeFriend,
   createMatch,
   listMyMatches,
   listRankedPlayers,

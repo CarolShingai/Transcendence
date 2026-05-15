@@ -67,4 +67,21 @@ interface FriendshipRepository : JpaRepository<Friendship, Long> {
         nativeQuery = true
     )
     fun findFriends(@Param("userId") userId: Long): List<User>
+
+    @Query(
+        """
+        select f
+        from Friendship f
+        where f.status = com.transcendence.demo.entity.FriendshipStatus.ACCEPTED
+          and (
+            (f.requester.id = :firstUserId and f.receiver.id = :secondUserId)
+            or
+            (f.requester.id = :secondUserId and f.receiver.id = :firstUserId)
+          )
+        """
+    )
+    fun findByUserIds(
+        @Param("firstUserId") firstUserId: Long,
+        @Param("secondUserId") secondUserId: Long
+    ): Friendship?
 }

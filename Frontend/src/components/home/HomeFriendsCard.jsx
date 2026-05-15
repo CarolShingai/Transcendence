@@ -18,12 +18,14 @@ function HomeFriendsCard({
   onSendInvite,
   onAcceptInvite,
   onRejectInvite,
+  onRemoveFriend,
   onSearchUsers,
   onLoadAllUsers,
 }) {
   const [activeTab, setActiveTab] = useState('friends');
   const [sentInviteIds, setSentInviteIds] = useState([]);
   const [processingInviteIds, setProcessingInviteIds] = useState([]);
+  const [processingFriendIds, setProcessingFriendIds] = useState([]);
   const onlineUserIds = new Set(onlineUsers.map((u) => u.id));
 
 
@@ -54,6 +56,22 @@ function HomeFriendsCard({
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       openProfile(friend);
+    }
+  };
+
+  const handleRemoveFriendAction = async (friend) => {
+    if (typeof onRemoveFriend !== 'function') {
+      return;
+    }
+
+    setProcessingFriendIds((previous) => [...previous, friend.id]);
+
+    try {
+      await onRemoveFriend(friend.id);
+    } catch (error) {
+      console.error('Error removing friend:', error);
+    } finally {
+      setProcessingFriendIds((previous) => previous.filter((id) => id !== friend.id));
     }
   };
 
@@ -115,6 +133,19 @@ function HomeFriendsCard({
         <div className={`friend-status friend-status-${friendStatus}`}>
           {resolveStatus(friend)}
         </div>
+        <button
+          type="button"
+          className="friend-action-button friend-reject-button"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleRemoveFriendAction(friend);
+          }}
+          disabled={processingFriendIds.includes(friend.id)}
+          title="Desfazer amizade"
+          aria-label="Desfazer amizade"
+        >
+          Desfazer
+        </button>
       </article>
     );
   };
